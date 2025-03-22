@@ -1,0 +1,5 @@
+# entire-project
+**/node_modules/
+
+# web-client
+/web-client/.next/
