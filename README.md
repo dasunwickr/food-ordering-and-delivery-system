@@ -19,10 +19,10 @@ food-ordering-platform/
 │   │   ├── src/
 │   │   ├── Dockerfile
 │   │   └── pom.xml
-│   ├── payment-service/            # Flask (Python)
+│   ├── payment-service/            # Express (Node.js)
 │   │   ├── src/
 │   │   ├── Dockerfile
-│   │   └── requirements.txt
+│   │   └── package.json
 │   ├── delivery-service/           # Node.js + Socket.io
 │   │   ├── src/
 │   │   ├── Dockerfile
