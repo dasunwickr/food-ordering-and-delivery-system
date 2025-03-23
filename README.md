@@ -4,7 +4,7 @@
 1. `frontend` - The web client for the food ordering and delivery system.
 
 ## Folder Structure
-
+```bash
 food-ordering-platform/
 ├── backend/
 │   ├── user-service/              # Spring Boot (Java)
@@ -57,3 +57,4 @@ food-ordering-platform/
 ├── readme.txt                     # Deployment steps
 ├── members.txt
 └── report.pdf
+```
