@@ -4,10 +4,10 @@
 1. Auth Service - Dasun
 2. Delivery Service - Dasun
 3. Geolocation Service -
-4. Notification Service -
-5. Order Service -
-6. Payment Service -
-7. Restaurant Service -
-8. Reviews & Ratings Service -
-9. User Service -
+4. Notification Service - Dhanuka
+5. Order Service - Kavindi  
+6. Payment Service - Dewmini
+7. Menu Service - Dhanuka 
+8. Reviews & Ratings Service - Kavindi
+9. User Service - Dewnimi
 10. Search Service -
