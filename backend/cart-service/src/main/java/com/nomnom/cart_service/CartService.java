@@ -1,6 +1,5 @@
 package com.nomnom.cart_service;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
@@ -8,8 +7,11 @@ import java.util.Optional;
 @Service
 public class CartService {
 
-    @Autowired
-    private CartRepository cartRepository;
+    private final CartRepository cartRepository;
+
+    public CartService(CartRepository cartRepository) {
+        this.cartRepository = cartRepository;
+    }
 
     // Create a new cart for a specific customer and restaurant
     private Cart createNewCart(String customerId, String restaurantId) {
@@ -74,19 +76,13 @@ public class CartService {
 
     // Remove an item from the cart
     public Cart removeItemFromCart(String customerId, String restaurantId, String itemId) {
-        Cart cart = getCart(customerId, restaurantId);
-
-        // Find the item in the cart
-        Optional<CartItem> optionalCartItem = cart.getItems().stream()
-                .filter(item -> item.getItemId().equals(itemId))
-                .findFirst();
-
-        if (optionalCartItem.isPresent()) {
-            // Remove the item from the cart
-            cart.getItems().remove(optionalCartItem.get());
-        }
-
-        return cartRepository.save(cart);
+        return Optional.ofNullable(getCart(customerId, restaurantId))
+                .filter(cart -> {
+                    cart.getItems().removeIf(item -> item.getItemId().equals(itemId));
+                    return true; // Ensure the filter always passes
+                })
+                .map(cartRepository::save)
+                .orElseThrow(() -> new RuntimeException("Cart not found"));
     }
 
     // Clear a specific cart
