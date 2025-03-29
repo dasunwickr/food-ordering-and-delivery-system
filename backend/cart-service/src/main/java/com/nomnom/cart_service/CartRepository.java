@@ -1,5 +1,6 @@
 package com.nomnom.cart_service;
 
+import com.nomnom.cart_service.model.Cart;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
 

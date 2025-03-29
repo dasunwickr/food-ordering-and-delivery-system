@@ -1,5 +1,7 @@
 package com.nomnom.cart_service;
 
+import com.nomnom.cart_service.model.Cart;
+import com.nomnom.cart_service.model.CartItem;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
