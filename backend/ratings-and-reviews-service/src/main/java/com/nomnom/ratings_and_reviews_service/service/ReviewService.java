@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class ReviewService implements IReviewService {
@@ -28,5 +29,31 @@ public class ReviewService implements IReviewService {
     @Override
     public List<Review> getReviewsByTarget(Long targetId, Review.TargetType targetType) {
         return reviewRepository.findByTargetIdAndTargetType(targetId, targetType);
+    }
+
+    @Override
+    public Optional<Review> getReviewById(Long id) {
+        return reviewRepository.findById(id);
+    }
+
+    @Override
+    public Review updateReview(Long id, ReviewDTO reviewDTO) {
+        Optional<Review> optionalReview = reviewRepository.findById(id);
+        if (optionalReview.isPresent()) {
+            Review review = optionalReview.get();
+            review.setCustomerId(reviewDTO.getCustomerId());
+            review.setTargetId(reviewDTO.getTargetId());
+            review.setTargetType(reviewDTO.getTargetType());
+            review.setRating(reviewDTO.getRating());
+            review.setReview(reviewDTO.getReview());
+            return reviewRepository.save(review);
+        } else {
+            throw new RuntimeException("Review not found with ID: " + id);
+        }
+    }
+
+    @Override
+    public void deleteReview(Long id) {
+        reviewRepository.deleteById(id);
     }
 }
