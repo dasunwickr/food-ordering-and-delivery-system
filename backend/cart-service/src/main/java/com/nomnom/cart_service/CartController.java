@@ -2,6 +2,7 @@ package com.nomnom.cart_service;
 
 import com.nomnom.cart_service.model.Cart;
 import com.nomnom.cart_service.model.CartItem;
+import com.nomnom.cart_service.service.CartService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
