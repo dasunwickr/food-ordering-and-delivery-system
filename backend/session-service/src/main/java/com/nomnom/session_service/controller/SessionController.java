@@ -34,6 +34,7 @@ public class SessionController {
         return ResponseEntity.noContent().build();
     }
 
+    @DeleteMapping("/{userId}")
     public ResponseEntity<Void> revokeAllSessions(@PathVariable String userId) {
         sessionService.revokeAllSessions(userId);
         return ResponseEntity.noContent().build();
