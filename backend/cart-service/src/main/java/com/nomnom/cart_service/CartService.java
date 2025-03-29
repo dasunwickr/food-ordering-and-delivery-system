@@ -2,6 +2,7 @@ package com.nomnom.cart_service;
 
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -100,5 +101,10 @@ public class CartService {
             default -> 0.0; // Default price if item name is not recognized
         };
         return basePrice * quantity;
+    }
+
+    //get all carts
+    public List<Cart> getAllCarts() {
+        return cartRepository.findAll();
     }
 }

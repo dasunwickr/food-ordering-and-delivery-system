@@ -1,14 +1,17 @@
 package com.nomnom.cart_service;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
+@RequiredArgsConstructor
 @RequestMapping("/api/cart")
 public class CartController {
 
-    @Autowired
-    private CartService cartService;
+    private final CartService cartService;
 
     // Get cart for a specific customer and restaurant
     @GetMapping("/{customerId}/{restaurantId}")
@@ -48,5 +51,10 @@ public class CartController {
     @DeleteMapping("/clear/{customerId}/{restaurantId}")
     public void clearCart(@PathVariable String customerId, @PathVariable String restaurantId) {
         cartService.clearCart(customerId, restaurantId);
+    }
+
+    @GetMapping("/getAll")
+    public List<Cart> getAllCarts() {
+        return cartService.getAllCarts();
     }
 }
