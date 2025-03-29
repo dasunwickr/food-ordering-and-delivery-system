@@ -2,6 +2,7 @@ package com.nomnom.cart_service;
 
 import com.nomnom.cart_service.model.Cart;
 import com.nomnom.cart_service.model.CartItem;
+import com.nomnom.cart_service.repository.CartRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.List;

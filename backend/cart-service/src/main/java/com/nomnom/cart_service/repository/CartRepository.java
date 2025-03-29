@@ -1,4 +1,4 @@
-package com.nomnom.cart_service;
+package com.nomnom.cart_service.repository;
 
 import com.nomnom.cart_service.model.Cart;
 import org.springframework.data.mongodb.repository.MongoRepository;
