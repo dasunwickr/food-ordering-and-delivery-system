@@ -15,8 +15,7 @@ public class CartItem {
     private double price;
     private double totalPrice;
 
-    // Helper method to update the total price when quantity changes
     public void updateTotalPrice() {
-        this.totalPrice = this.price * this.quantity;
+        this.totalPrice = this.price * this.quantity; // Recalculate total price
     }
 }

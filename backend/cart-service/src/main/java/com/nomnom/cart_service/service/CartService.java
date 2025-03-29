@@ -33,7 +33,6 @@ public class CartService implements ICart {
     @Override
     public Cart addItemToCart(String customerId, String restaurantId, CartItemRequest item) {
         Cart cart = getCart(customerId, restaurantId);
-
         Optional<CartItem> existingItem = cart.getItems().stream()
                 .filter(i -> i.getItemId().equals(item.getItemId()))
                 .findFirst();
@@ -41,20 +40,19 @@ public class CartService implements ICart {
         if (existingItem.isPresent()) {
             CartItem cartItem = existingItem.get();
             cartItem.setQuantity(cartItem.getQuantity() + item.getQuantity());
-            cartItem.setPrice(calculateItemPrice(cartItem.getItemName(), cartItem.getQuantity()));
+            cartItem.setPrice(item.getUnitPrice()); // Use the provided unit price
             cartItem.updateTotalPrice();
         } else {
             CartItem newItem = new CartItem(
                     item.getItemId(),
                     item.getItemName(),
                     item.getQuantity(),
-                    calculateItemPrice(item.getItemName(), item.getQuantity()),
+                    item.getUnitPrice(), // Use the provided unit price
                     0
             );
             newItem.updateTotalPrice();
             cart.getItems().add(newItem);
         }
-
         cart.recalculateTotalPrice();
         return cartRepository.save(cart);
     }
@@ -62,23 +60,19 @@ public class CartService implements ICart {
     @Override
     public Cart updateCartItemQuantity(String customerId, String restaurantId, String itemId, int newQuantity) {
         Cart cart = getCart(customerId, restaurantId);
-
         Optional<CartItem> optionalCartItem = cart.getItems().stream()
                 .filter(i -> i.getItemId().equals(itemId))
                 .findFirst();
 
         if (optionalCartItem.isPresent()) {
             CartItem cartItem = optionalCartItem.get();
-
             if (newQuantity <= 0) {
-                cart.getItems().remove(cartItem);
+                cart.getItems().remove(cartItem); // Remove item if quantity is zero or negative
             } else {
-                cartItem.setQuantity(newQuantity);
-                cartItem.setPrice(calculateItemPrice(cartItem.getItemName(), cartItem.getQuantity()));
-                cartItem.updateTotalPrice();
+                cartItem.setQuantity(newQuantity); // Update quantity
+                cartItem.updateTotalPrice(); // Recalculate total price using existing unit price
             }
         }
-
         cart.recalculateTotalPrice();
         return cartRepository.save(cart);
     }
@@ -117,6 +111,7 @@ public class CartService implements ICart {
         private String itemId;
         private String itemName;
         private int quantity;
+        private double unitPrice; // Added field for unit price
 
         public String getItemId() {
             return itemId;
@@ -140,6 +135,14 @@ public class CartService implements ICart {
 
         public void setQuantity(int quantity) {
             this.quantity = quantity;
+        }
+
+        public double getUnitPrice() {
+            return unitPrice;
+        }
+
+        public void setUnitPrice(double unitPrice) {
+            this.unitPrice = unitPrice;
         }
     }
 }

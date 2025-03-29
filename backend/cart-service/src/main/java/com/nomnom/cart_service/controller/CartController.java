@@ -8,6 +8,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/cart")
@@ -51,6 +53,15 @@ public class CartController {
         cartService.clearCart(customerId, restaurantId);
         return ResponseEntity.noContent().build();
     }
+
+    @GetMapping("/getAll")
+    public ResponseEntity<List<CartDTO>> getAllCarts(){
+        List<CartDTO> cartDTOs = cartService.getAllCarts().stream()
+                .map(this::mapToCartDTO)
+                .toList();
+        return ResponseEntity.ok(cartDTOs);
+    }
+
 
     private CartDTO mapToCartDTO(com.nomnom.cart_service.model.Cart cart) {
         return new CartDTO(
