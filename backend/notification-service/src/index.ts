@@ -3,9 +3,9 @@ import { WebSocketServer } from 'ws';
 import http from 'http';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
-import { logger } from './utils/logger'; // Corrected path
-import { placeOrder } from './controllers/orderController'; // Corrected path
-import { websocketUtils } from './utils/websocketUtils'; // Corrected path
+import { logger } from './utils/logger';
+import { websocketUtils } from './utils/websocketUtils';
+import { broadcastEmailsController } from './controllers/emailBroadcastController'; // Import the new controller
 
 // Load environment variables
 dotenv.config();
@@ -51,11 +51,8 @@ wss.on('connection', (ws) => {
   });
 });
 
-// Route to place an order
-app.post('/orders', placeOrder);
-
-// // Route to update order status
-// app.put('/orders/:id/status', updateOrderStatus);
+// Route to broadcast emails
+app.post('/broadcast-emails', broadcastEmailsController); // Use the new controller
 
 // Start the server
 server.listen(PORT, () => {
