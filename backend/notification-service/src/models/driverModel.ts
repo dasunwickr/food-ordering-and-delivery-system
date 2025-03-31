@@ -6,7 +6,7 @@ export interface IDriver extends Document {
   phoneNumber: string; // Driver's phone number
   email: string; // Driver's email
   orderId: string; // Order ID assigned to the driver
-  status: 'allocated' | 'in-progress' | 'delivered'; // Delivery status
+  status: 'allocated' | 'in-progress' | 'delivered' | 'Order Preparation Completed'; // Delivery status
   createdAt: Date;
   updatedAt: Date;
 }
@@ -17,7 +17,7 @@ const driverSchema = new Schema<IDriver>({
   phoneNumber: { type: String, required: true },
   email: { type: String, required: true },
   orderId: { type: String, required: true },
-  status: { type: String, enum: ['allocated', 'in-progress', 'delivered'], default: 'allocated' },
+  status: { type: String, enum: ['allocated', 'in-progress', 'delivered','Order Preparation Completed'], default: 'allocated' },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
 });
