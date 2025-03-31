@@ -3,6 +3,7 @@ import { OrderModel } from '../models/orderModel';
 import { websocketUtils } from '../utils/websocketUtils';
 import { sendSMS, sendEmail, sendOrderStatusNotification } from '../services/notificationService';
 
+
 // Place or update an order
 export const placeOrder = async (req: Request, res: Response): Promise<void> => {
   const { userId, orderId, phoneNumber, email, status } = req.body;
@@ -27,7 +28,6 @@ export const placeOrder = async (req: Request, res: Response): Promise<void> => 
       if (userSocket) {
         userSocket.send(JSON.stringify({ type: 'orderUpdated', orderId, status }));
       }
-
       // Send order status notification (SMS and Email)
       await sendOrderStatusNotification(status, phoneNumber, email, orderId);
 
@@ -42,7 +42,7 @@ export const placeOrder = async (req: Request, res: Response): Promise<void> => 
       if (userSocket) {
         userSocket.send(JSON.stringify({ type: 'orderPlaced', orderId }));
       }
-
+      
       // Send order status notification (SMS and Email)
       await sendOrderStatusNotification(status, phoneNumber, email, orderId);
 

@@ -9,10 +9,10 @@
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>com.nomnom</groupId>
-	<artifactId>cart-service</artifactId>
+	<artifactId>user-service</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>cart-service</name>
-	<description>NomNom Cart Service</description>
+	<name>user-service</name>
+	<description>NomNom User Service</description>
 	<url/>
 	<licenses>
 		<license/>
@@ -56,10 +56,11 @@
 			<scope>test</scope>
 		</dependency>
 		<dependency>
-			<groupId>me.paulschwarz</groupId>
-			<artifactId>spring-dotenv</artifactId>
-			<version>4.0.0</version>
+			<groupId>jakarta.persistence</groupId>
+			<artifactId>jakarta.persistence-api</artifactId>
+			<version>3.2.0</version>
 		</dependency>
+
 	</dependencies>
 
 	<build>
