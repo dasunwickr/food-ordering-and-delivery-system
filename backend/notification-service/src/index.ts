@@ -9,6 +9,7 @@ import {broadcastEmailsWithTemplateController  } from './controllers/emailBroadc
 import { placeOrder } from './controllers/orderController';
 import { allocateDelivery } from './controllers/driverController';
 
+
 // Load environment variables
 dotenv.config();
 
@@ -54,6 +55,7 @@ wss.on('connection', (ws) => {
 });
 
 
+
 app.post('/orders',placeOrder)
 
 // Route to broadcast emails
@@ -61,6 +63,7 @@ app.post('/broadcast-emails', broadcastEmailsWithTemplateController); // Use the
 
 // Route to allocate delivery to a driver
 app.post('/drivers/allocate', allocateDelivery);
+
 
 // Start the server
 server.listen(PORT, () => {

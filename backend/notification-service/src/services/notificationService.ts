@@ -62,6 +62,7 @@ export const sendOrderStatusNotification = async (
     throw error;
   }
 };
+
 // Nodemailer transporter setup
 const emailTransporter = nodemailer.createTransport({
   service: 'Gmail', // Use your email service provider
@@ -135,7 +136,6 @@ export const broadcastEmails = async (
     throw error;
   }
 };
-
 
 // Send customized emails to multiple recipients
 export const sendCustomEmails = async (

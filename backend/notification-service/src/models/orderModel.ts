@@ -3,7 +3,9 @@ import mongoose, { Document, Schema } from 'mongoose';
 export interface IOrder extends Document {
   orderId: string;
   userId: string;
+
   status: 'confirmed' | 'preperation completed' | 'out-for-delivery' | 'delivered' |'cancelled';
+
   createdAt: Date;
   updatedAt: Date;
 }
