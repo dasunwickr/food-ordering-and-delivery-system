@@ -4,8 +4,8 @@ export interface IDelivery extends Document {
   orderId: string;
   driverId?: string;
   status: string;
-  acceptedAt: Date;
-  deliveredAt: Date;
+  acceptedAt?: Date;
+  deliveredAt?: Date;
 }
 
 const deliverySchema: Schema = new Schema(
@@ -17,8 +17,8 @@ const deliverySchema: Schema = new Schema(
       required: true,
       enum: ["PENDING", "ACCEPTED", "IN_PROGRESS", "DELIVERED", "CANCELLED"],
     },
-    acceptedAt: { type: Date, required: true },
-    deliveredAt: { type: Date, required: true },
+    acceptedAt: { type: Date, required: false },
+    deliveredAt: { type: Date, required: false },
   },
   { timestamps: true },
 );
