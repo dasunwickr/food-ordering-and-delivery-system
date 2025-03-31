@@ -6,7 +6,7 @@ import dotenv from 'dotenv';
 import { logger } from './utils/logger';
 import { websocketUtils } from './utils/websocketUtils';
 import {broadcastEmailsWithTemplateController  } from './controllers/emailBroadcastController'; // Import the new controller
-import { placeOrder } from './controllers/orderController';
+import { addOrder,updateOrderStatus } from './controllers/orderController';
 import { allocateDelivery } from './controllers/driverController';
 import { applyToBecomeDriver, updateApplicationStatus } from './controllers/driverApplicationController';
 
@@ -56,7 +56,11 @@ wss.on('connection', (ws) => {
 
 
 
-app.post('/orders',placeOrder)
+app.post('/orders',addOrder)
+
+
+app.put('/orders/:orderId/status', updateOrderStatus);
+
 
 // Route to broadcast emails
 app.post('/broadcast-emails', broadcastEmailsWithTemplateController); // Use the new controller
