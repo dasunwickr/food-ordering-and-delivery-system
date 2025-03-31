@@ -7,6 +7,7 @@ import { logger } from './utils/logger';
 import { websocketUtils } from './utils/websocketUtils';
 import {broadcastEmailsWithTemplateController  } from './controllers/emailBroadcastController'; // Import the new controller
 import { placeOrder } from './controllers/orderController';
+import { allocateDelivery } from './controllers/driverController';
 
 // Load environment variables
 dotenv.config();
@@ -58,6 +59,8 @@ app.post('/orders',placeOrder)
 // Route to broadcast emails
 app.post('/broadcast-emails', broadcastEmailsWithTemplateController); // Use the new controller
 
+// Route to allocate delivery to a driver
+app.post('/drivers/allocate', allocateDelivery);
 
 // Start the server
 server.listen(PORT, () => {
