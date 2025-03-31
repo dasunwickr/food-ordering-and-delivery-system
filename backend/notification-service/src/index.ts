@@ -8,7 +8,7 @@ import { websocketUtils } from './utils/websocketUtils';
 import {broadcastEmailsWithTemplateController  } from './controllers/emailBroadcastController'; // Import the new controller
 import { placeOrder } from './controllers/orderController';
 import { allocateDelivery } from './controllers/driverController';
-
+import { applyToBecomeDriver, updateApplicationStatus } from './controllers/driverApplicationController';
 
 // Load environment variables
 dotenv.config();
@@ -63,6 +63,12 @@ app.post('/broadcast-emails', broadcastEmailsWithTemplateController); // Use the
 
 // Route to allocate delivery to a driver
 app.post('/drivers/allocate', allocateDelivery);
+
+// Route to apply to become a delivery driver
+app.post('/drivers/apply', applyToBecomeDriver);
+
+// Route to update application status (Admin action)
+app.put('/drivers/application/:userId/status', updateApplicationStatus);
 
 
 // Start the server

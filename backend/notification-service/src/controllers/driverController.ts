@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { DriverModel } from '../models/DriverModel';
+import { DriverModel } from '../models/driverModel';
 import { sendSMS, sendEmail } from '../services/notificationService';
 
 // Allocate a delivery to a driver
