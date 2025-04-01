@@ -5,7 +5,10 @@ import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import { logger } from './utils/logger';
 import { websocketUtils } from './utils/websocketUtils';
-import { broadcastEmailsController } from './controllers/emailBroadcastController'; // Import the new controller
+import {broadcastEmailsWithTemplateController  } from './controllers/emailBroadcastController'; // Import the new controller
+import { addOrder,updateOrderStatus } from './controllers/orderController';
+import { allocateDelivery } from './controllers/driverController';
+import { applyToBecomeDriver, updateApplicationStatus } from './controllers/driverApplicationController';
 
 // Load environment variables
 dotenv.config();
@@ -51,8 +54,26 @@ wss.on('connection', (ws) => {
   });
 });
 
+
+
+app.post('/orders',addOrder)
+
+
+app.put('/orders/:orderId/status', updateOrderStatus);
+
+
 // Route to broadcast emails
-app.post('/broadcast-emails', broadcastEmailsController); // Use the new controller
+app.post('/broadcast-emails', broadcastEmailsWithTemplateController); // Use the new controller
+
+// Route to allocate delivery to a driver
+app.post('/drivers/allocate', allocateDelivery);
+
+// Route to apply to become a delivery driver
+app.post('/drivers/apply', applyToBecomeDriver);
+
+// Route to update application status (Admin action)
+app.put('/drivers/application/:userId/status', updateApplicationStatus);
+
 
 // Start the server
 server.listen(PORT, () => {

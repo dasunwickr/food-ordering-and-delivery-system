@@ -3,7 +3,10 @@ import mongoose, { Document, Schema } from 'mongoose';
 export interface IOrder extends Document {
   orderId: string;
   userId: string;
-  status: 'placed' | 'confirmed' | 'out-for-delivery' | 'delivered';
+  phoneNumber: string;
+  email:string,
+  restuarantMail: string | null; // Optional field
+  status: 'confirmed' | 'preperation completed' | 'out-for-delivery' | 'delivered' | 'cancelled';
   createdAt: Date;
   updatedAt: Date;
 }
@@ -11,7 +14,14 @@ export interface IOrder extends Document {
 const orderSchema = new Schema<IOrder>({
   orderId: { type: String, required: true, unique: true },
   userId: { type: String, required: true },
-  status: { type: String, enum: ['placed', 'confirmed', 'out-for-delivery', 'delivered'], default: 'placed' },
+  phoneNumber: { type: String, required: true }, 
+  email:{type:String,required:true},
+  restuarantMail: { type: String, required: false, default: null }, // Optional field
+  status: {
+    type: String,
+    enum: ['confirmed', 'preperation completed', 'out-for-delivery', 'delivered', 'cancelled'],
+    default: 'confirmed',
+  },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
 });
