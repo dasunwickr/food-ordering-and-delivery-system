@@ -7,7 +7,7 @@ const sessionSchema = new mongoose.Schema({
     ipAddress: String,
     createdAt: { type: Date, default: Date.now },
     expiresAt: Date,
-    isValid: { type: Boolean, default: true }
+    isValid: { type: Boolean, default: true },
 });
 
 export default mongoose.model('Session', sessionSchema);
