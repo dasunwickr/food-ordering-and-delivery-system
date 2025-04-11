@@ -22,7 +22,6 @@ const UserSchema = new Schema<IUser>({
 
 export const User = mongoose.model<IUser>('User', UserSchema);
 
-// Derived Schemas
 export const Admin = User.discriminator('admin', new Schema({ roleType: String }));
 export const Customer = User.discriminator('customer', new Schema({ orderHistory: [String] }));
 export const Driver = User.discriminator('driver', new Schema({
