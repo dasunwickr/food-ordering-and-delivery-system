@@ -1,7 +1,7 @@
 package com.nomnom.menu_service.controller;
 
 import com.nomnom.menu_service.model.MenuItems;
-import com.nomnom.menu_service.service.MenuItemService;
+import com.nomnom.menu_service.repository.MenuItemServiceInterface;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -17,7 +17,7 @@ import java.util.List;
 public class MenuController {
 
     @Autowired
-    private MenuItemService MenuService;
+    private MenuItemServiceInterface menuService; // Use the interface here
 
     @PostMapping(value = "/add", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<MenuItems> addMenu(
@@ -30,18 +30,18 @@ public class MenuController {
 
         Boolean isAvailable = Boolean.parseBoolean(availabilityStatus);
 
-        MenuItems menuItem = MenuService.saveItem(itemName,price,category,isAvailable,description, file);
+        MenuItems menuItem = menuService.saveItem(itemName, price, category, isAvailable, description, file);
         return ResponseEntity.ok(menuItem);
     }
 
     @GetMapping("/all")
     public List<MenuItems> getMenuItems() {
-        return MenuService.getAllMenuItems();
+        return menuService.getAllMenuItems();
     }
 
     @GetMapping("/image/{id}")
     public ResponseEntity<byte[]> getUserImage(@PathVariable Long id) {
-        byte[] imageData = MenuService.getUserImage(id);
+        byte[] imageData = menuService.getUserImage(id);
         if (imageData == null) {
             return ResponseEntity.notFound().build();
         }
@@ -50,9 +50,10 @@ public class MenuController {
                 .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"user-image.jpg\"")
                 .body(imageData);
     }
+
     @GetMapping("/{id}")
     public ResponseEntity<MenuItems> getMenuItemById(@PathVariable Long id) {
-        MenuItems menuItem = MenuService.getMenuItemById(id);
+        MenuItems menuItem = menuService.getMenuItemById(id);
         if (menuItem == null) {
             return ResponseEntity.notFound().build();
         }
@@ -70,7 +71,7 @@ public class MenuController {
             @RequestParam(value = "image", required = false) MultipartFile file) throws IOException {
 
         Boolean isAvailable = Boolean.parseBoolean(availabilityStatus);
-        MenuItems updatedItem = MenuService.updateMenuItem(id, itemName, price, category, isAvailable, description, file);
+        MenuItems updatedItem = menuService.updateMenuItem(id, itemName, price, category, isAvailable, description, file);
 
         if (updatedItem == null) {
             return ResponseEntity.notFound().build();
@@ -78,16 +79,13 @@ public class MenuController {
         return ResponseEntity.ok(updatedItem);
     }
 
-    // Delete a Menu Item
     @DeleteMapping("/delete/{id}")
     public ResponseEntity<String> deleteMenuItem(@PathVariable Long id) {
-        boolean deleted = MenuService.deleteMenuItem(id);
+        boolean deleted = menuService.deleteMenuItem(id);
         if (deleted) {
             return ResponseEntity.ok("Menu item deleted successfully.");
         } else {
             return ResponseEntity.status(404).body("Menu item not found.");
         }
     }
-
-
 }
