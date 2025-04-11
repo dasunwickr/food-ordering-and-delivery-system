@@ -1,26 +1,21 @@
+import express from 'express';
+import dotenv from 'dotenv';
+import mongoose from 'mongoose';
 import cors from 'cors';
-import express, { Application, Request, Response } from "express";
-import dotenv from "dotenv"
-import helmet from "helmet"
-import morgan from "morgan";
-import limiter from './src/middleware/rateLimiterUtil';
 
-// For env file
 dotenv.config();
+const app = express();
+const PORT = process.env.PORT || 5000;
 
-const app: Application = express();
-
-app.use(express.json());
-app.use(helmet());
 app.use(cors());
-app.use(morgan('dev'))
-app.use(limiter);
-const port = process.env.PORT || 5000
+app.use(express.json());
 
-app.get("/", (req: Request, res: Response) => {
-    res.send(`Auth service backend!!`);
-})
+app.use('/api/v1/auth', authRoutes);
 
-app.listen(port, () => {
-    console.log(`Server is Fire at https://localhost:${port}`);
-})
+mongoose.connect(process.env.MONGO_URI as string)
+    .then(() => {
+        app.listen(PORT, () => {
+            console.log(`Auth service running on port ${PORT}`);
+        });
+    })
+    .catch(err => console.error('Mongo connection error:', err));

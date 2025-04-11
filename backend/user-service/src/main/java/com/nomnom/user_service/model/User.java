@@ -51,4 +51,8 @@ public abstract class User {
 
     @JsonProperty("password")
     private String password;
+
+    public void setId(String id) {
+        this.id = id;
+    }
 }
