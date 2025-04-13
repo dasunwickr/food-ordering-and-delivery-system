@@ -16,7 +16,7 @@ public class Order {
     @Id
     private String orderId;
     private String customerId;
-    private CustomerDetails customerDetails;
+    private CustomerDetails customerDetails; // Ensure this field exists
     private List<CartItem> cartItems;
     private double orderTotal;
     private double deliveryFee;
@@ -26,4 +26,33 @@ public class Order {
     private DriverDetails driverDetails;
     private Date createdAt = new Date();
     private Date updatedAt = new Date();
+
+    @Data
+    @AllArgsConstructor
+    @NoArgsConstructor
+    public static class CustomerDetails {
+        private String name;
+        private String contact;
+        private String location;
+    }
+
+    @Data
+    @AllArgsConstructor
+    @NoArgsConstructor
+    public static class CartItem {
+        private String itemId;
+        private String itemName;
+        private int quantity;
+        private double price;
+        private double totalPrice;
+    }
+
+    @Data
+    @AllArgsConstructor
+    @NoArgsConstructor
+    public static class DriverDetails {
+        private String driverId;
+        private String driverName;
+        private String vehicleNumber;
+    }
 }

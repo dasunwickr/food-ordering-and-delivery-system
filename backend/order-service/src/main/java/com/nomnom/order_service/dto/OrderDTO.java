@@ -22,4 +22,14 @@ public class OrderDTO {
     private DriverDetailsDTO driverDetails;
     private Date createdAt;
     private Date updatedAt;
+
+    public static class CustomerDetailsDTO {
+        public CustomerDetailsDTO(Object name, Object contact, Object location) {
+        }
+    }
+
+    public static class CartItemDTO {
+        public CartItemDTO(Object itemId, Object itemName, Object quantity, Object price, Object totalPrice) {
+        }
+    }
 }

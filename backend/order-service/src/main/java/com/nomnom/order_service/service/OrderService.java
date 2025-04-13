@@ -1,51 +1,60 @@
 package com.nomnom.order_service.service;
 
+import com.nomnom.order_service.dto.CartDTO;
+import com.nomnom.order_service.dto.CartItemDTO;
 import com.nomnom.order_service.dto.OrderDTO;
 import com.nomnom.order_service.model.Order;
 import com.nomnom.order_service.repository.OrderRepository;
 import com.nomnom.order_service.request.CreateOrderRequest;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.http.ResponseEntity;
 
-import java.util.List;
+import java.util.Date;
+import java.util.UUID;
 
 @Service
 public class OrderService implements IOrderService {
 
-    @Autowired
-    private OrderRepository orderRepository;
+    @Value("${cart.service.url}")
+    private String cartServiceUrl;
 
-    @Autowired
-    private RestTemplate restTemplate;
+    private final OrderRepository orderRepository;
+    private final RestTemplate restTemplate;
 
-    private static final String CART_SERVICE_URL = "http://localhost:8080/api/cart";
+    public OrderService(OrderRepository orderRepository, RestTemplate restTemplate) {
+        this.orderRepository = orderRepository;
+        this.restTemplate = restTemplate;
+    }
 
     @Override
     public OrderDTO createOrder(CreateOrderRequest request) {
         // Fetch cart items from Cart Service
-        String cartUrl = CART_SERVICE_URL + "/" + request.getCustomerId() + "/" + request.getRestaurantId();
-        CartDTO cartDTO = restTemplate.getForObject(cartUrl, CartDTO.class);
+        String cartUrl = cartServiceUrl + "/" + request.getCustomerId() + "/" + request.getRestaurantId();
+        ResponseEntity<CartDTO> response = restTemplate.getForEntity(cartUrl, CartDTO.class);
 
-        if (cartDTO == null || cartDTO.getCartItems().isEmpty()) {
+        if (response.getBody() == null || response.getBody().getItems().isEmpty()) {
             throw new RuntimeException("Cart is empty");
         }
 
+        CartDTO cartDTO = response.getBody();
+
         // Calculate order total
-        double orderTotal = cartDTO.getCartItems().stream()
-                .mapToDouble(CartDTO.CartItemDTO::getTotalPrice)
+        double orderTotal = cartDTO.getItems().stream()
+                .mapToDouble(item -> item.getTotalPrice()) // Fixed non-static method reference
                 .sum();
 
         // Create order
         Order order = new Order();
-        order.setOrderId(java.util.UUID.randomUUID().toString());
+        order.setOrderId(UUID.randomUUID().toString());
         order.setCustomerId(request.getCustomerId());
         order.setCustomerDetails(new Order.CustomerDetails(
                 request.getCustomerName(),
                 request.getCustomerContact(),
                 request.getDeliveryLocation()
         ));
-        order.setCartItems(cartDTO.getCartItems().stream()
+        order.setCartItems(cartDTO.getItems().stream()
                 .map(item -> new Order.CartItem(
                         item.getItemId(),
                         item.getItemName(),
@@ -58,6 +67,8 @@ public class OrderService implements IOrderService {
         order.setTotalAmount(orderTotal + 5.0);
         order.setPaymentType(request.getPaymentType());
         order.setOrderStatus("Pending");
+        order.setCreatedAt(new Date());
+        order.setUpdatedAt(new Date());
 
         // Save order
         Order savedOrder = orderRepository.save(order);
@@ -76,6 +87,7 @@ public class OrderService implements IOrderService {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Order not found"));
         order.setOrderStatus(status);
+        order.setUpdatedAt(new Date());
         orderRepository.save(order);
     }
 
@@ -101,11 +113,9 @@ public class OrderService implements IOrderService {
                 order.getTotalAmount(),
                 order.getPaymentType(),
                 order.getOrderStatus(),
-                new OrderDTO.DriverDetailsDTO(
-                        order.getDriverDetails().getDriverId(),
-                        order.getDriverDetails().getDriverName(),
-                        order.getDriverDetails().getVehicleNumber()
-                )
+                null, // Driver details can be set later
+                order.getCreatedAt(),
+                order.getUpdatedAt()
         );
     }
 }
