@@ -45,4 +45,10 @@ public class OrderController {
     public ResponseEntity<List<OrderDTO>> getOrdersByCustomer(@PathVariable String customerId) {
         return ResponseEntity.ok(orderService.getOrdersByCustomer(customerId));
     }
+
+    @PutMapping("/cancel/{orderId}")
+    public ResponseEntity<Void> cancelOrder(@PathVariable String orderId) {
+        orderService.cancelOrder(orderId);
+        return ResponseEntity.noContent().build();
+    }
 }

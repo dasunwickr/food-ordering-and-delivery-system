@@ -149,4 +149,16 @@ public class OrderService implements IOrderService {
                 .collect(Collectors.toList());
     }
 
+    @Override
+    public void cancelOrder(String orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Order not found"));
+        if (!order.getOrderStatus().equals("Pending")) {
+            throw new RuntimeException("Cannot cancel an order that is not Pending");
+        }
+        order.setOrderStatus("Cancelled");
+        order.setUpdatedAt(new Date());
+        orderRepository.save(order);
+    }
+
 }

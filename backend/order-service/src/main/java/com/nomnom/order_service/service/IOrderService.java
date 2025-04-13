@@ -12,6 +12,7 @@ public interface IOrderService {
     void updateOrderStatus(String orderId, String status);
     List<OrderDTO> getAllOrders();
     List<OrderDTO> getOrdersByCustomer(String customerId);
+    void cancelOrder(String orderId);
 
 
 }
