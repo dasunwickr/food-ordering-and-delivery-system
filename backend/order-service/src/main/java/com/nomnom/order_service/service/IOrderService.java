@@ -11,5 +11,7 @@ public interface IOrderService {
     OrderDTO getOrderById(String orderId);
     void updateOrderStatus(String orderId, String status);
     List<OrderDTO> getAllOrders();
+    List<OrderDTO> getOrdersByCustomer(String customerId);
+
 
 }

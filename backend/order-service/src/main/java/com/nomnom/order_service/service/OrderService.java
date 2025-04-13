@@ -141,4 +141,12 @@ public class OrderService implements IOrderService {
                 .map(this::mapToOrderDTO)
                 .collect(Collectors.toList());
     }
+
+    @Override
+    public List<OrderDTO> getOrdersByCustomer(String customerId) {
+        return orderRepository.findByCustomerId(customerId).stream()
+                .map(this::mapToOrderDTO)
+                .collect(Collectors.toList());
+    }
+
 }
