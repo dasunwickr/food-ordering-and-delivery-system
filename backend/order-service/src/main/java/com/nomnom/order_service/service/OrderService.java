@@ -5,7 +5,7 @@ import com.nomnom.order_service.dto.CartItemDTO;
 import com.nomnom.order_service.dto.OrderDTO;
 import com.nomnom.order_service.model.Order;
 import com.nomnom.order_service.repository.OrderRepository;
-import com.nomnom.order_service.request.CreateOrderRequest;
+import com.nomnom.order_service.request.*;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -161,4 +161,27 @@ public class OrderService implements IOrderService {
         orderRepository.save(order);
     }
 
+    @Override
+    public void assignDriver(String orderId, AssignDriverRequest request) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Order not found"));
+        order.setDriverDetails(new Order.DriverDetails(
+                request.getDriverId(),
+                request.getDriverName(),
+                request.getVehicleNumber()
+        ));
+        order.setOrderStatus("Out for Delivery");
+        order.setUpdatedAt(new Date());
+        orderRepository.save(order);
+    }
+
+    @Override
+    public void applyDiscount(String orderId, ApplyDiscountRequest request) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Order not found"));
+        double discountedAmount = order.getTotalAmount() - request.getDiscountAmount();
+        order.setTotalAmount(discountedAmount < 0 ? 0 : discountedAmount);
+        order.setUpdatedAt(new Date());
+        orderRepository.save(order);
+    }
 }

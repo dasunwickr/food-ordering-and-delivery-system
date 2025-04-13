@@ -1,7 +1,7 @@
 package com.nomnom.order_service.controller;
 
 import com.nomnom.order_service.dto.OrderDTO;
-import com.nomnom.order_service.request.CreateOrderRequest;
+import com.nomnom.order_service.request.*;
 import com.nomnom.order_service.service.IOrderService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -49,6 +49,18 @@ public class OrderController {
     @PutMapping("/cancel/{orderId}")
     public ResponseEntity<Void> cancelOrder(@PathVariable String orderId) {
         orderService.cancelOrder(orderId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PutMapping("/assign-driver/{orderId}")
+    public ResponseEntity<Void> assignDriver(@PathVariable String orderId, @RequestBody AssignDriverRequest request) {
+        orderService.assignDriver(orderId, request);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PutMapping("/apply-discount/{orderId}")
+    public ResponseEntity<Void> applyDiscount(@PathVariable String orderId, @RequestBody ApplyDiscountRequest request) {
+        orderService.applyDiscount(orderId, request);
         return ResponseEntity.noContent().build();
     }
 }
