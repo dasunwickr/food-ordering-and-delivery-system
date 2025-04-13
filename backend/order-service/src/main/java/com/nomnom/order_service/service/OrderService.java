@@ -12,7 +12,9 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.http.ResponseEntity;
 
 import java.util.Date;
+import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 public class OrderService implements IOrderService {
@@ -133,5 +135,10 @@ public class OrderService implements IOrderService {
         orderRepository.save(order);
     }
 
-
+    @Override
+    public List<OrderDTO> getAllOrders() {
+        return orderRepository.findAll().stream()
+                .map(this::mapToOrderDTO)
+                .collect(Collectors.toList());
+    }
 }

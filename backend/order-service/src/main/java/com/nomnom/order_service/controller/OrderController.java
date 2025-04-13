@@ -6,6 +6,8 @@ import com.nomnom.order_service.service.IOrderService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/order")
 public class OrderController {
@@ -32,5 +34,10 @@ public class OrderController {
             @RequestParam String status) {
         orderService.updateOrderStatus(orderId, status);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/getAll")
+    public ResponseEntity<List<OrderDTO>> getAllOrders() {
+        return ResponseEntity.ok(orderService.getAllOrders());
     }
 }
