@@ -19,17 +19,36 @@ public class OrderDTO {
     private double totalAmount;
     private String paymentType;
     private String orderStatus;
-    private DriverDetailsDTO driverDetails;
+    private DriverDetailsDTO driverDetails; // Ensure this field exists
     private Date createdAt;
     private Date updatedAt;
 
+    @Data
+    @AllArgsConstructor
+    @NoArgsConstructor
     public static class CustomerDetailsDTO {
-        public CustomerDetailsDTO(Object name, Object contact, Object location) {
-        }
+        private String name;
+        private String contact;
+        private String location;
     }
 
+    @Data
+    @AllArgsConstructor
+    @NoArgsConstructor
     public static class CartItemDTO {
-        public CartItemDTO(Object itemId, Object itemName, Object quantity, Object price, Object totalPrice) {
-        }
+        private String itemId;
+        private String itemName;
+        private int quantity;
+        private double price;
+        private double totalPrice;
+    }
+
+    @Data
+    @AllArgsConstructor
+    @NoArgsConstructor
+    public static class DriverDetailsDTO {
+        private String driverId;
+        private String driverName;
+        private String vehicleNumber;
     }
 }

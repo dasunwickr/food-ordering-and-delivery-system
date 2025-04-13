@@ -27,7 +27,9 @@ public class OrderController {
     }
 
     @PutMapping("/update-status/{orderId}")
-    public ResponseEntity<Void> updateOrderStatus(@PathVariable String orderId, @RequestParam String status) {
+    public ResponseEntity<Void> updateOrderStatus(
+            @PathVariable String orderId,
+            @RequestParam String status) {
         orderService.updateOrderStatus(orderId, status);
         return ResponseEntity.noContent().build();
     }

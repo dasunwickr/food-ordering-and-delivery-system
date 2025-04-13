@@ -14,4 +14,14 @@ public class CreateOrderRequest {
     private String customerContact;
     private String deliveryLocation;
     private String paymentType;
+    private DriverDetails driverDetails;
+
+    @Data
+    @AllArgsConstructor
+    @NoArgsConstructor
+    public static class DriverDetails {
+        private String driverId;
+        private String driverName;
+        private String vehicleNumber;
+    }
 }

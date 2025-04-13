@@ -42,7 +42,7 @@ public class OrderService implements IOrderService {
 
         // Calculate order total
         double orderTotal = cartDTO.getItems().stream()
-                .mapToDouble(item -> item.getTotalPrice()) // Fixed non-static method reference
+                .mapToDouble(item -> item.getTotalPrice())
                 .sum();
 
         // Create order
@@ -67,28 +67,22 @@ public class OrderService implements IOrderService {
         order.setTotalAmount(orderTotal + 5.0);
         order.setPaymentType(request.getPaymentType());
         order.setOrderStatus("Pending");
+
+        // Map driver details
+        if (request.getDriverDetails() != null) {
+            order.setDriverDetails(new Order.DriverDetails(
+                    request.getDriverDetails().getDriverId(),
+                    request.getDriverDetails().getDriverName(),
+                    request.getDriverDetails().getVehicleNumber()
+            ));
+        }
+
         order.setCreatedAt(new Date());
         order.setUpdatedAt(new Date());
 
         // Save order
         Order savedOrder = orderRepository.save(order);
         return mapToOrderDTO(savedOrder);
-    }
-
-    @Override
-    public OrderDTO getOrderById(String orderId) {
-        Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new RuntimeException("Order not found"));
-        return mapToOrderDTO(order);
-    }
-
-    @Override
-    public void updateOrderStatus(String orderId, String status) {
-        Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new RuntimeException("Order not found"));
-        order.setOrderStatus(status);
-        order.setUpdatedAt(new Date());
-        orderRepository.save(order);
     }
 
     private OrderDTO mapToOrderDTO(Order order) {
@@ -113,9 +107,31 @@ public class OrderService implements IOrderService {
                 order.getTotalAmount(),
                 order.getPaymentType(),
                 order.getOrderStatus(),
-                null, // Driver details can be set later
+                order.getDriverDetails() != null ? new OrderDTO.DriverDetailsDTO(
+                        order.getDriverDetails().getDriverId(),
+                        order.getDriverDetails().getDriverName(),
+                        order.getDriverDetails().getVehicleNumber()
+                ) : null,
                 order.getCreatedAt(),
                 order.getUpdatedAt()
         );
     }
+
+    @Override
+    public OrderDTO getOrderById(String orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Order not found"));
+        return mapToOrderDTO(order);
+    }
+
+    @Override
+    public void updateOrderStatus(String orderId, String status) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Order not found"));
+        order.setOrderStatus(status);
+        order.setUpdatedAt(new Date());
+        orderRepository.save(order);
+    }
+
+
 }

@@ -16,14 +16,14 @@ public class Order {
     @Id
     private String orderId;
     private String customerId;
-    private CustomerDetails customerDetails; // Ensure this field exists
+    private CustomerDetails customerDetails;
     private List<CartItem> cartItems;
     private double orderTotal;
     private double deliveryFee;
     private double totalAmount;
     private String paymentType;
     private String orderStatus;
-    private DriverDetails driverDetails;
+    private DriverDetails driverDetails; // Ensure this field exists
     private Date createdAt = new Date();
     private Date updatedAt = new Date();
 
