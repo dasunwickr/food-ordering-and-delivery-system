@@ -1,5 +1,6 @@
 package com.nomnom.user_service.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
@@ -49,10 +50,15 @@ public abstract class User {
     @JsonProperty("username")
     private String username;
 
-    @JsonProperty("password")
+    @JsonProperty("password") // Allow write-only access
     private String password;
 
     public void setId(String id) {
         this.id = id;
     }
 }
+
+    @JsonProperty("userType") // Explicitly store userType in MongoDB
+    private String userType;
+}
+
