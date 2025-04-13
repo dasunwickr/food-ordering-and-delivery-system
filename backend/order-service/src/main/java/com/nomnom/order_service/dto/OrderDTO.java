@@ -19,7 +19,7 @@ public class OrderDTO {
     private double totalAmount;
     private String paymentType;
     private String orderStatus;
-    private DriverDetailsDTO driverDetails; // Ensure this field exists
+    private DriverDetailsDTO driverDetails;
     private Date createdAt;
     private Date updatedAt;
 

@@ -2,6 +2,7 @@ package com.nomnom.order_service.controller;
 
 import com.nomnom.order_service.dto.OrderDTO;
 import com.nomnom.order_service.request.*;
+import com.nomnom.order_service.response.*;
 import com.nomnom.order_service.service.IOrderService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -28,13 +29,6 @@ public class OrderController {
         return ResponseEntity.ok(orderService.getOrderById(orderId));
     }
 
-    @PutMapping("/update-status/{orderId}")
-    public ResponseEntity<Void> updateOrderStatus(
-            @PathVariable String orderId,
-            @RequestParam String status) {
-        orderService.updateOrderStatus(orderId, status);
-        return ResponseEntity.noContent().build();
-    }
 
     @GetMapping("/getAll")
     public ResponseEntity<List<OrderDTO>> getAllOrders() {
@@ -47,20 +41,36 @@ public class OrderController {
     }
 
     @PutMapping("/cancel/{orderId}")
-    public ResponseEntity<Void> cancelOrder(@PathVariable String orderId) {
+    public ResponseEntity<CancelOrderResponse> cancelOrder(@PathVariable String orderId) {
         orderService.cancelOrder(orderId);
-        return ResponseEntity.noContent().build();
+        OrderDTO updatedOrder = orderService.getOrderById(orderId);
+        CancelOrderResponse response = new CancelOrderResponse("Order has been successfully canceled", updatedOrder);
+        return ResponseEntity.ok(response);
     }
 
     @PutMapping("/assign-driver/{orderId}")
-    public ResponseEntity<Void> assignDriver(@PathVariable String orderId, @RequestBody AssignDriverRequest request) {
+    public ResponseEntity<AssignDriverResponse> assignDriver(@PathVariable String orderId, @RequestBody AssignDriverRequest request) {
         orderService.assignDriver(orderId, request);
-        return ResponseEntity.noContent().build();
+        OrderDTO updatedOrder = orderService.getOrderById(orderId);
+        AssignDriverResponse response = new AssignDriverResponse("Driver has been successfully assigned to the order", updatedOrder);
+        return ResponseEntity.ok(response);
     }
 
     @PutMapping("/apply-discount/{orderId}")
-    public ResponseEntity<Void> applyDiscount(@PathVariable String orderId, @RequestBody ApplyDiscountRequest request) {
+    public ResponseEntity<ApplyDiscountResponse> applyDiscount(@PathVariable String orderId, @RequestBody ApplyDiscountRequest request) {
         orderService.applyDiscount(orderId, request);
-        return ResponseEntity.noContent().build();
+        OrderDTO updatedOrder = orderService.getOrderById(orderId);
+        ApplyDiscountResponse response = new ApplyDiscountResponse("Discount has been successfully applied to the order", updatedOrder);
+        return ResponseEntity.ok(response);
+    }
+
+    @PutMapping("/update-status/{orderId}")
+    public ResponseEntity<UpdateOrderStatusResponse> updateOrderStatus(
+            @PathVariable String orderId,
+            @RequestParam String status) {
+        orderService.updateOrderStatus(orderId, status);
+        OrderDTO updatedOrder = orderService.getOrderById(orderId);
+        UpdateOrderStatusResponse response = new UpdateOrderStatusResponse("Order status has been successfully updated", updatedOrder);
+        return ResponseEntity.ok(response);
     }
 }
