@@ -18,9 +18,10 @@ public class MenuItemService implements MenuItemServiceInterface {
     private MenuItemRepository ItemRepository;
 
     @Override
-    public MenuItems saveItem(String itemName, Double price, String category, Boolean availabilityStatus,
+    public MenuItems saveItem(String itemName,Long restaurantId, Double price, String category, Boolean availabilityStatus,
                               String description, MultipartFile file) throws IOException {
         MenuItems Item = new MenuItems();
+        Item.setRestaurantId(restaurantId);
         Item.setItemName(itemName);
         Item.setPrice(price);
         Item.setCategory(category);
@@ -74,5 +75,10 @@ public class MenuItemService implements MenuItemServiceInterface {
             return true;
         }
         return false;
+    }
+
+    @Override
+    public List<MenuItems> getMenuItemsByRestaurantId(Long restaurantId) {
+        return ItemRepository.findByRestaurantId(restaurantId);
     }
 }

@@ -10,7 +10,7 @@ public class MenuItems {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
+    private Long restaurantId;
     private String itemName;
     private String description;
     private double price;
@@ -30,6 +30,14 @@ public class MenuItems {
         this.price = price;
         this.description = description;
         this.image = image;
+    }
+
+    public Long getRestaurantId() {
+        return restaurantId;
+    }
+
+    public void setRestaurantId(Long restaurantId) {
+        this.restaurantId = restaurantId;
     }
 
     public String getCategory() {
