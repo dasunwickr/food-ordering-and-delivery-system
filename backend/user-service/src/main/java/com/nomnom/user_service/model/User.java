@@ -53,6 +53,7 @@ public abstract class User {
     @JsonProperty("password") // Allow write-only access
     private String password;
 
+
     @JsonProperty("userType") // Explicitly store userType in MongoDB
     private String userType;
 }
