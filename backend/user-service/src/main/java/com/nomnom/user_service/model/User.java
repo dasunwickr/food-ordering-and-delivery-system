@@ -57,3 +57,8 @@ public abstract class User {
     @JsonProperty("userType") // Explicitly store userType in MongoDB
     private String userType;
 }
+
+    @JsonProperty("userType") // Explicitly store userType in MongoDB
+    private String userType;
+}
+
