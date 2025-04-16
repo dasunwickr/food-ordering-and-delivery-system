@@ -9,12 +9,13 @@ import {broadcastEmailsWithTemplateController  } from './controllers/emailBroadc
 import { addOrder,updateOrderStatus } from './controllers/orderController';
 import { allocateDelivery } from './controllers/driverController';
 import { applyToBecomeDriver, updateApplicationStatus } from './controllers/driverApplicationController';
-
+import { processPayment,notifyDriverAboutPaymentDeposit,notifyRestaurantAboutPaymentDeposit } from './controllers/paymentController';
+import { applyToBecomeRestaurant, updateRestaurantApplicationStatus } from './controllers/restaurantController';
 // Load environment variables
 dotenv.config();
 
 // Connect to MongoDB
-mongoose.connect(process.env.MONGO_URI || 'mongodb+srv://Dhanuka:20020502@finacetracker.z0ps6.mongodb.net/?retryWrites=true&w=majority&appName=FinaceTracker')
+mongoose.connect(process.env.MONGO_URI!)
   .then(() => logger.info('Connected to MongoDB'))
   .catch(err => logger.error('MongoDB connection error:', err));
 
@@ -57,11 +58,12 @@ wss.on('connection', (ws) => {
 
 
 app.post('/orders',addOrder)
-
-
+app.post('/process-payment', processPayment);
+app.post('/notify-driver-payment-deposited', notifyDriverAboutPaymentDeposit)
 app.put('/orders/:orderId/status', updateOrderStatus);
-
-
+app.post('/notify-restaurant-payment-deposited', notifyRestaurantAboutPaymentDeposit);
+app.post('/apply-restaurant', applyToBecomeRestaurant);
+app.put('/update-restaurant-status/:email', updateRestaurantApplicationStatus);
 // Route to broadcast emails
 app.post('/broadcast-emails', broadcastEmailsWithTemplateController); // Use the new controller
 
