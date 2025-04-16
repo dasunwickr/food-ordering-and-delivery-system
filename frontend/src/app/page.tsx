@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/button";
 import {
   ResizableHandle,
   ResizablePanel,
@@ -12,6 +13,7 @@ const page = () => {
       <ResizablePanelGroup direction="horizontal">
         <ResizablePanel>One</ResizablePanel>
         <ResizableHandle />
+        <Button>Hello</Button>
         <ResizablePanel>Two</ResizablePanel>
       </ResizablePanelGroup>
       ;
