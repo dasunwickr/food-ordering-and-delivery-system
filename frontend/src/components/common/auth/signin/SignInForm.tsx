@@ -15,7 +15,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { loginSchema } from "@/validators/auth";
 import { zodResolver } from "@hookform/resolvers/zod";
-import GoogleLoginButton from "@/components/common/auth/GoogleLoginButton"; // Import the new GoogleLoginButton
+import GoogleLoginButton from "@/components/common/auth/GoogleLoginButton";
 
 const LoginForm = () => {
   const form = useForm<z.infer<typeof loginSchema>>({
