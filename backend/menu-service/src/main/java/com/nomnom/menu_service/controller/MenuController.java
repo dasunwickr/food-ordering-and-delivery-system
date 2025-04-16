@@ -23,15 +23,18 @@ public class MenuController {
     public ResponseEntity<MenuItems> addMenu(
             @RequestParam("itemName") String itemName,
             @RequestParam("restaurantId")Long restaurantId,
-            @RequestParam("price") Double price,
             @RequestParam("category") String category,
             @RequestParam("availabilityStatus") String availabilityStatus,
             @RequestParam("description") String description,
+            @RequestParam("smallPortionPrice") Double smallPortionPrice,
+            @RequestParam("mediumPortionPrice") Double mediumPortionPrice,
+            @RequestParam("largePortionPrice") Double largePortionPrice,
+            @RequestParam("offer") Double offer,
             @RequestParam("image") MultipartFile file) throws IOException {
 
         Boolean isAvailable = Boolean.parseBoolean(availabilityStatus);
 
-        MenuItems menuItem = menuService.saveItem(itemName,restaurantId, price, category, isAvailable, description, file);
+        MenuItems menuItem = menuService.saveItem(itemName,restaurantId,smallPortionPrice,mediumPortionPrice,largePortionPrice,offer, category, isAvailable, description, file);
         return ResponseEntity.ok(menuItem);
     }
 
@@ -65,14 +68,17 @@ public class MenuController {
     public ResponseEntity<MenuItems> updateMenuItem(
             @PathVariable Long id,
             @RequestParam("itemName") String itemName,
-            @RequestParam("price") Double price,
             @RequestParam("category") String category,
             @RequestParam("availabilityStatus") String availabilityStatus,
             @RequestParam("description") String description,
+            @RequestParam("smallPortionPrice") Double smallPortionPrice,
+            @RequestParam("mediumPortionPrice") Double mediumPortionPrice,
+            @RequestParam("largePortionPrice") Double largePortionPrice,
+            @RequestParam("offer") Double offer,
             @RequestParam(value = "image", required = false) MultipartFile file) throws IOException {
 
         Boolean isAvailable = Boolean.parseBoolean(availabilityStatus);
-        MenuItems updatedItem = menuService.updateMenuItem(id, itemName, price, category, isAvailable, description, file);
+        MenuItems updatedItem = menuService.updateMenuItem(id, itemName,smallPortionPrice,mediumPortionPrice,largePortionPrice,offer, category, isAvailable, description, file);
 
         if (updatedItem == null) {
             return ResponseEntity.notFound().build();

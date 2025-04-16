@@ -18,12 +18,15 @@ public class MenuItemService implements MenuItemServiceInterface {
     private MenuItemRepository ItemRepository;
 
     @Override
-    public MenuItems saveItem(String itemName,Long restaurantId, Double price, String category, Boolean availabilityStatus,
+    public MenuItems saveItem(String itemName,Long restaurantId,Double smallPortionPrice,Double mediumPortionPrice,Double largePortionPrice,Double offer, String category, Boolean availabilityStatus,
                               String description, MultipartFile file) throws IOException {
         MenuItems Item = new MenuItems();
         Item.setRestaurantId(restaurantId);
         Item.setItemName(itemName);
-        Item.setPrice(price);
+        Item.setSmallPortionPrice(smallPortionPrice);
+        Item.setMediumPortionPrice(mediumPortionPrice);
+        Item.setLargePortionPrice(largePortionPrice);
+        Item.setOffer(offer);
         Item.setCategory(category);
         Item.setAvailabilityStatus(availabilityStatus);
         Item.setDescription(description);
@@ -49,15 +52,18 @@ public class MenuItemService implements MenuItemServiceInterface {
     }
 
     @Override
-    public MenuItems updateMenuItem(Long id, String itemName, Double price, String category,
+    public MenuItems updateMenuItem(Long id, String itemName,Double smallPortionPrice,Double mediumPortionPrice,Double largePortionPrice,Double offer, String category,
                                     Boolean availabilityStatus, String description, MultipartFile file) throws IOException {
         Optional<MenuItems> optionalItem = ItemRepository.findById(id);
 
         if (optionalItem.isPresent()) {
             MenuItems item = optionalItem.get();
             item.setItemName(itemName);
-            item.setPrice(price);
             item.setCategory(category);
+            item.setSmallPortionPrice(smallPortionPrice);
+            item.setMediumPortionPrice(mediumPortionPrice);
+            item.setLargePortionPrice(largePortionPrice);
+            item.setOffer(offer);
             item.setAvailabilityStatus(availabilityStatus);
             item.setDescription(description);
             if (file != null && !file.isEmpty()) {
