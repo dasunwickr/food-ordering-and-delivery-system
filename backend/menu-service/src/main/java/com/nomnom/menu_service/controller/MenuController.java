@@ -22,6 +22,7 @@ public class MenuController {
     @PostMapping(value = "/add", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<MenuItems> addMenu(
             @RequestParam("itemName") String itemName,
+            @RequestParam("restaurantId")Long restaurantId,
             @RequestParam("price") Double price,
             @RequestParam("category") String category,
             @RequestParam("availabilityStatus") String availabilityStatus,
@@ -30,7 +31,7 @@ public class MenuController {
 
         Boolean isAvailable = Boolean.parseBoolean(availabilityStatus);
 
-        MenuItems menuItem = menuService.saveItem(itemName, price, category, isAvailable, description, file);
+        MenuItems menuItem = menuService.saveItem(itemName,restaurantId, price, category, isAvailable, description, file);
         return ResponseEntity.ok(menuItem);
     }
 
@@ -87,5 +88,16 @@ public class MenuController {
         } else {
             return ResponseEntity.status(404).body("Menu item not found.");
         }
+    }
+
+    @GetMapping("/restaurant/{restaurantId}")
+    public ResponseEntity<List<MenuItems>> getMenuItemsByRestaurantId(@PathVariable Long restaurantId) {
+        List<MenuItems> menuItems = menuService.getMenuItemsByRestaurantId(restaurantId);
+
+        if (menuItems.isEmpty()) {
+            return ResponseEntity.noContent().build(); // Return 204 No Content if no items found
+        }
+
+        return ResponseEntity.ok(menuItems); // Return 200 OK with the list of menu items
     }
 }
