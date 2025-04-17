@@ -1,4 +1,5 @@
 package com.nomnom.user_service.enums;
 
-public class UserType {
+public enum UserType {
+    ADMIN, CUSTOMER, DELIVERY_DRIVER, RESTAURANT
 }

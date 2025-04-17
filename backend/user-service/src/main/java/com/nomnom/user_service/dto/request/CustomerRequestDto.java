@@ -1,4 +1,4 @@
-package com.nomnom.user_service.dto;
+package com.nomnom.user_service.dto.request;
 
 import lombok.*;
 

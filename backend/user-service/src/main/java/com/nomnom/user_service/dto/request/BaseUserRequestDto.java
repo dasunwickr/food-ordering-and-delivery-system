@@ -1,4 +1,4 @@
-package com.nomnom.user_service.dto;
+package com.nomnom.user_service.dto.request;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -16,4 +16,5 @@ public abstract class BaseUserRequestDto {
     private String email;
     private String contactNumber;
     private String password;
+    private Enum userType;
 }

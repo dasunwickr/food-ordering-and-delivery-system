@@ -16,5 +16,4 @@ public class Driver extends User {
     private String vehicleType;
     private String vehicleNumber;
     private Boolean availabilityStatus;
-    private List<String> assignedOrders;
 }

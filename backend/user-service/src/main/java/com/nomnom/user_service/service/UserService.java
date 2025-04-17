@@ -2,10 +2,11 @@ package com.nomnom.user_service.service;
 
 import com.nomnom.user_service.model.*;
 import com.nomnom.user_service.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCrypt;
-import org.springframework.stereotype.Service;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Optional;
@@ -25,29 +26,36 @@ public class UserService {
             throw new IllegalArgumentException("Email or username already exists");
         }
 
-        // Hash the password before saving
+        // Hash the password
         user.setPassword(hashPassword(user.getPassword()));
 
-        // Ensure userType is set correctly based on subclass
-        if (user instanceof Admin) {
+        // Determine user type based on subclass
+        if (user instanceof Admin admin) {
             user.setUserType("admin");
+            if (admin.getSuperAdmin() != null) {
+                // Optional validation for super admin existence can be added
+            }
         } else if (user instanceof Customer) {
             user.setUserType("customer");
-        } else if (user instanceof Driver) {
+            // No need to store order history in user model
+        } else if (user instanceof Driver driver) {
             user.setUserType("driver");
-        } else if (user instanceof RestaurantOwner) {
+            // assignedOrders handled on Order Service side
+        } else if (user instanceof RestaurantOwner owner) {
             user.setUserType("restaurantOwner");
+            if (owner.getRestaurantDocuments() != null) {
+                owner.getRestaurantDocuments().forEach(doc -> {
+                    if (doc.getName() == null || doc.getUrl() == null) {
+                        throw new IllegalArgumentException("Document name and URL are required.");
+                    }
+                });
+            }
         } else {
             throw new IllegalArgumentException("Invalid user type");
         }
 
         return userRepository.save(user);
     }
-
-    private String hashPassword(String password) {
-        return BCrypt.hashpw(password, BCrypt.gensalt()); // Use BCrypt for hashing
-    }
-
 
     public Optional<User> getUserById(String id) {
         return userRepository.findById(id);
@@ -58,8 +66,20 @@ public class UserService {
     }
 
     public User updateUser(String id, User updatedUser) {
-        if (userRepository.existsById(id)) {
+        Optional<User> existingUserOpt = userRepository.findById(id);
+        if (existingUserOpt.isPresent()) {
+            User existingUser = existingUserOpt.get();
+
+            // Retain the original password if not updated
+            if (updatedUser.getPassword() == null || updatedUser.getPassword().isBlank()) {
+                updatedUser.setPassword(existingUser.getPassword());
+            } else {
+                updatedUser.setPassword(hashPassword(updatedUser.getPassword()));
+            }
+
             updatedUser.setId(id);
+            updatedUser.setUserType(existingUser.getUserType()); // Preserve user type
+
             return userRepository.save(updatedUser);
         }
         return null;
@@ -73,5 +93,7 @@ public class UserService {
         return false;
     }
 
-
+    private String hashPassword(String password) {
+        return BCrypt.hashpw(password, BCrypt.gensalt());
+    }
 }

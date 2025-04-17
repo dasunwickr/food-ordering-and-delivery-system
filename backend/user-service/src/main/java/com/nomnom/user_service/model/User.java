@@ -10,8 +10,6 @@ import org.springframework.data.mongodb.core.mapping.Document;
 
 @Document(collection = "users")
 @Data
-@Getter
-@Setter
 @AllArgsConstructor
 @NoArgsConstructor
 @JsonTypeInfo(
@@ -47,18 +45,11 @@ public abstract class User {
     @JsonProperty("contactNumber")
     private String contactNumber;
 
-    @JsonProperty("username")
-    private String username;
-
-    @JsonProperty("password") // Allow write-only access
+    @JsonProperty("password")
     private String password;
 
 
-    @JsonProperty("userType") // Explicitly store userType in MongoDB
-    private String userType;
-}
-
-    @JsonProperty("userType") // Explicitly store userType in MongoDB
+    @JsonProperty("userType")
     private String userType;
 }
 

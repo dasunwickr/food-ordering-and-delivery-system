@@ -16,7 +16,7 @@ public class UserController {
     @Autowired
     private UserService userService;
 
-    @PostMapping("/create")
+    @PostMapping("/")
     public User createUser(@RequestBody User user) {
         return userService.saveUser(user);
     }
@@ -31,12 +31,12 @@ public class UserController {
         return userService.getAllUsers();
     }
 
-    @PutMapping("/update/{id}")
+    @PutMapping("/{id}")
     public User updateUser(@PathVariable String id, @RequestBody User user) {
         return userService.updateUser(id, user);
     }
 
-    @DeleteMapping("/delete/{id}")
+    @DeleteMapping("/{id}")
     public String deleteUser(@PathVariable String id) {
         return userService.deleteUser(id) ? "User deleted successfully" : "User not found";
     }
