@@ -1,16 +1,20 @@
 package com.nomnom.user_service.model;
 
+import com.nomnom.user_service.enums.AdminLevel;
+import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.mapping.Field;
 
 @Document(collection = "users")
 @Data
 @NoArgsConstructor
-@Getter
-@Setter
 @AllArgsConstructor
 @EqualsAndHashCode(callSuper = true)
 public class Admin extends User {
-    private String roleType;
+
+    @NotNull
+    @Field("admin_level")
+    private AdminLevel adminLevel;
 }
 
