@@ -16,7 +16,6 @@ public class UserService {
 
 
     public User saveUser(User user) {
-        // Validate unique email and username
         if (userRepository.findByEmail(user.getEmail()).isPresent()) {
             throw new IllegalArgumentException("Email or username already exists");
         }

@@ -1,7 +1,36 @@
-import app from './src/app';
+import express from 'express';
+import cors from 'cors';
+import morgan from 'morgan';
+import dotenv from 'dotenv';
+import { connectDB } from './src/config/db';
+import authRoutes from './src/routes/auth.route';
 
-const PORT = process.env.PORT || 5000;
+dotenv.config();
 
-app.listen(PORT, () => {
-    console.log(`Auth service running on port ${PORT}`);
+const app = express();
+
+app.use(cors());
+app.use(morgan('dev')); 
+app.use(express.json()); 
+app.use('/auth', authRoutes);
+
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error(err.stack);
+  res.status(500).json({ error: err.message || 'Internal Server Error' });
 });
+
+
+const startServer = async () => {
+  try {
+    await connectDB();
+    const PORT = process.env.PORT || 5000;
+    app.listen(PORT, () => {
+      console.log(`Auth service running on port ${PORT}`);
+    });
+  } catch (err) {
+    console.error('Failed to connect to DB', err);
+    process.exit(1); 
+  }
+};
+
+startServer();
