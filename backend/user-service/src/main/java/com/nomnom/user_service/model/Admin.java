@@ -11,6 +11,6 @@ import org.springframework.data.mongodb.core.mapping.Document;
 @AllArgsConstructor
 @EqualsAndHashCode(callSuper = true)
 public class Admin extends User {
-    private String superAdminId;
+    private String roleType;
 }
 
