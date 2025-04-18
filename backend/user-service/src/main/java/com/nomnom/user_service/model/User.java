@@ -47,12 +47,6 @@ public abstract class User {
     @JsonProperty("contactNumber")
     private String contactNumber;
 
-    @JsonProperty("username")
-    private String username;
-
-    @JsonProperty("password") // Allow write-only access
-    private String password;
-
-    @JsonProperty("userType") // Explicitly store userType in MongoDB
+    @JsonProperty("userType")
     private String userType;
 }

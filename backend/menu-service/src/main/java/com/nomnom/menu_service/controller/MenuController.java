@@ -22,15 +22,19 @@ public class MenuController {
     @PostMapping(value = "/add", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<MenuItems> addMenu(
             @RequestParam("itemName") String itemName,
-            @RequestParam("price") Double price,
+            @RequestParam("restaurantId")Long restaurantId,
             @RequestParam("category") String category,
             @RequestParam("availabilityStatus") String availabilityStatus,
             @RequestParam("description") String description,
+            @RequestParam("smallPortionPrice") Double smallPortionPrice,
+            @RequestParam("mediumPortionPrice") Double mediumPortionPrice,
+            @RequestParam("largePortionPrice") Double largePortionPrice,
+            @RequestParam("offer") Double offer,
             @RequestParam("image") MultipartFile file) throws IOException {
 
         Boolean isAvailable = Boolean.parseBoolean(availabilityStatus);
 
-        MenuItems menuItem = menuService.saveItem(itemName, price, category, isAvailable, description, file);
+        MenuItems menuItem = menuService.saveItem(itemName,restaurantId,smallPortionPrice,mediumPortionPrice,largePortionPrice,offer, category, isAvailable, description, file);
         return ResponseEntity.ok(menuItem);
     }
 
@@ -64,14 +68,17 @@ public class MenuController {
     public ResponseEntity<MenuItems> updateMenuItem(
             @PathVariable Long id,
             @RequestParam("itemName") String itemName,
-            @RequestParam("price") Double price,
             @RequestParam("category") String category,
             @RequestParam("availabilityStatus") String availabilityStatus,
             @RequestParam("description") String description,
+            @RequestParam("smallPortionPrice") Double smallPortionPrice,
+            @RequestParam("mediumPortionPrice") Double mediumPortionPrice,
+            @RequestParam("largePortionPrice") Double largePortionPrice,
+            @RequestParam("offer") Double offer,
             @RequestParam(value = "image", required = false) MultipartFile file) throws IOException {
 
         Boolean isAvailable = Boolean.parseBoolean(availabilityStatus);
-        MenuItems updatedItem = menuService.updateMenuItem(id, itemName, price, category, isAvailable, description, file);
+        MenuItems updatedItem = menuService.updateMenuItem(id, itemName,smallPortionPrice,mediumPortionPrice,largePortionPrice,offer, category, isAvailable, description, file);
 
         if (updatedItem == null) {
             return ResponseEntity.notFound().build();
@@ -87,5 +94,16 @@ public class MenuController {
         } else {
             return ResponseEntity.status(404).body("Menu item not found.");
         }
+    }
+
+    @GetMapping("/restaurant/{restaurantId}")
+    public ResponseEntity<List<MenuItems>> getMenuItemsByRestaurantId(@PathVariable Long restaurantId) {
+        List<MenuItems> menuItems = menuService.getMenuItemsByRestaurantId(restaurantId);
+
+        if (menuItems.isEmpty()) {
+            return ResponseEntity.noContent().build(); // Return 204 No Content if no items found
+        }
+
+        return ResponseEntity.ok(menuItems); // Return 200 OK with the list of menu items
     }
 }

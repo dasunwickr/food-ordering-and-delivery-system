@@ -8,7 +8,7 @@ import java.util.List;
 
 public interface MenuItemServiceInterface {
 
-    MenuItems saveItem(String itemName, Double price, String category, Boolean availabilityStatus,
+    MenuItems saveItem(String itemName,Long restaurantId,Double smallPortionPrice,Double mediumPortionPrice,Double largePortionPrice,Double offer, String category, Boolean availabilityStatus,
                        String description, MultipartFile file) throws IOException;
 
     List<MenuItems> getAllMenuItems();
@@ -17,8 +17,16 @@ public interface MenuItemServiceInterface {
 
     MenuItems getMenuItemById(Long id);
 
-    MenuItems updateMenuItem(Long id, String itemName, Double price, String category,
+    MenuItems updateMenuItem(Long id, String itemName,Double smallPortionPrice,Double mediumPortionPrice,Double largePortionPrice,Double offer, String category,
                              Boolean availabilityStatus, String description, MultipartFile file) throws IOException;
 
+
+    List<MenuItems> getMenuItemsByRestaurantId(Long restaurantId);
+
+
+
+
     boolean deleteMenuItem(Long id);
+
+
 }
