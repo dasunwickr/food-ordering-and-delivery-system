@@ -13,7 +13,7 @@ import org.springframework.data.mongodb.core.mapping.Field;
 @EqualsAndHashCode(callSuper = true)
 public class Admin extends User {
 
-    @NotNull
+    @NotNull(message = "Admin level is required")
     @Field("admin_level")
     private AdminLevel adminLevel;
 }

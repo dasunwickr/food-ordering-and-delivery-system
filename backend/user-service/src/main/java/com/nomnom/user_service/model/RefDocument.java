@@ -9,9 +9,12 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class RefDocument {
-    @NotBlank
+
+    @NotBlank(message = "Document name is required")
     private String name;
+
     private String description;
-    @NotBlank
+
+    @NotBlank(message = "Document URL is required")
     private String url;
 }
