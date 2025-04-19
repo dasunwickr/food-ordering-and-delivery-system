@@ -14,15 +14,15 @@ export const register = async (req: Request, res: Response) => {
 
     const result = await registerUser(email, password, userData);
 
-    return res.status(201).json(result);
+     res.status(201).json(result);
   } catch (error: any) {
     console.error("Register controller error:", error.message);
 
     if (error.name === 'ZodError') {
-      return res.status(400).json({ error: error.errors });
+       res.status(400).json({ error: error.errors });
     }
 
-    return res.status(500).json({ error: error.message });
+     res.status(500).json({ error: error.message });
   }
 };
 
@@ -36,14 +36,14 @@ export const login = async (req: Request, res: Response) => {
 
     const result = await loginUser(email, password);
 
-    return res.status(200).json(result);
+     res.status(200).json(result);
   } catch (error: any) {
     console.error("Login controller error:", error.message);
 
     if (error.name === 'ZodError') {
-      return res.status(400).json({ error: error.errors });
+       res.status(400).json({ error: error.errors });
     }
 
-    return res.status(401).json({ error: error.message });
+     res.status(401).json({ error: error.message });
   }
 };
