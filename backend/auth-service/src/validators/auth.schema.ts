@@ -7,19 +7,19 @@ export const RegisterSchema = z.object({
   longitude: z.number(),
   latitude: z.number(),
   email: z.string().email(),
-  password: z.string().min(6), // ✅ required for registration
+  password: z.string().min(6), 
   contactNumber: z.string().min(10),
   userType: z.enum(['admin', 'customer', 'driver', 'restaurantOwner']),
-  roleType: z.optional(z.string().min(3)),  // Only for Admin
-  orderHistory: z.optional(z.array(z.string())), // Only for Customer
-  vehicleType: z.optional(z.string()),  // Only for Driver
-  vehicleNumber: z.optional(z.string()),  // Only for Driver
-  availabilityStatus: z.optional(z.boolean()),  // Only for Driver
-  assignedOrders: z.optional(z.array(z.string())),  // Only for Driver
-  restaurantName: z.optional(z.string()), // Only for RestaurantOwner
-  restaurantAddress: z.optional(z.string()), // Only for RestaurantOwner
-  restaurantLicenseNumber: z.optional(z.string()), // Only for RestaurantOwner
-  restaurantDocuments: z.optional(z.string()) // Only for RestaurantOwner
+  roleType: z.optional(z.string().min(3)), 
+  orderHistory: z.optional(z.array(z.string())), 
+  vehicleType: z.optional(z.string()),  
+  vehicleNumber: z.optional(z.string()),  
+  availabilityStatus: z.optional(z.boolean()),  
+  assignedOrders: z.optional(z.array(z.string())),  
+  restaurantName: z.optional(z.string()), 
+  restaurantAddress: z.optional(z.string()),
+  restaurantLicenseNumber: z.optional(z.string()),
+  restaurantDocuments: z.optional(z.string()) 
 });
 
 export const LoginSchema = z.object({
