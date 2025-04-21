@@ -1,0 +1,15 @@
+services:
+  session-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: session-service
+    ports:
+      - "5007:5007"
+    env_file:
+      - .env
+    environment:
+      - MONGO_URI=${MONGO_URI}
+      - REDIS_URL=${REDIS_URI}
+    # No local service dependencies as Redis and MongoDB are cloud-based
+

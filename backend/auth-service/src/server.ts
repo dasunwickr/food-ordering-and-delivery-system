@@ -2,8 +2,8 @@ import express from 'express';
 import cors from 'cors';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
-import { connectDB } from './src/config/db';
-import authRoutes from './src/routes/auth.route';
+import { connectDB } from './config/db';
+import authRoutes from "./routes/auth.route"
 
 dotenv.config();
 
