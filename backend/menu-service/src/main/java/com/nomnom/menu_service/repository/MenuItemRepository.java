@@ -13,4 +13,8 @@ public interface MenuItemRepository extends JpaRepository<MenuItems, Long> {
 
     @Query("SELECT m FROM MenuItems m LEFT JOIN FETCH m.portions WHERE m.id = :id")
     Optional<MenuItems> findByIdWithPortions(@Param("id") Long id);
+
+    @Query("SELECT m FROM MenuItems m LEFT JOIN FETCH m.portions WHERE m.restaurantId = :restaurantId")
+    List<MenuItems> findByRestaurantIdWithPortions(@Param("restaurantId") Long restaurantId);
+
 }

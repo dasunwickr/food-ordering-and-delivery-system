@@ -9,6 +9,7 @@ import com.nomnom.menu_service.repository.MenuItemRepository;
 import com.nomnom.menu_service.repository.MenuItemServiceInterface;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -75,51 +76,60 @@ public class MenuItemService implements MenuItemServiceInterface {
 
     @Override
     public MenuItems getMenuItemById(Long id) {
-        return null;
+        return ItemRepository.findByIdWithPortions(id)
+                .orElseThrow(() -> new RuntimeException("Menu item not found with id: " + id));
     }
 
+
     @Override
-        public MenuItems updateMenuItem(Long id, String itemName, Double offer, String category,
-                                        Boolean availabilityStatus, String description, MultipartFile file, List<MenuItemPortion> portions) throws IOException {
-            Optional<MenuItems> optionalItem = ItemRepository.findById(id);
+    @Transactional
+    public MenuItems updateMenuItem(Long id, String itemName, Double offer, String category,
+                                    Boolean availabilityStatus, String description, MultipartFile file, List<MenuItemPortion> portions) throws IOException {
+        // Step 1: Find the menu item by ID
+        Optional<MenuItems> optionalItem = ItemRepository.findById(id);
 
-            if (optionalItem.isPresent()) {
-                MenuItems item = optionalItem.get();
-                item.setItemName(itemName);
-                item.setCategory(category);
-                item.setOffer(offer);
-                item.setAvailabilityStatus(availabilityStatus);
-                item.setDescription(description);
-
-                // Upload new image to Cloudinary if provided
-                if (file != null && !file.isEmpty()) {
-                    Map<?, ?> uploadResult = cloudinary.uploader().upload(file.getBytes(), ObjectUtils.emptyMap());
-                    String imageUrl = (String) uploadResult.get("secure_url");
-                    String imagePublicId = (String) uploadResult.get("public_id");
-
-                    // Delete the old image from Cloudinary if it exists
-                    if (item.getImagePublicId() != null) {
-                        cloudinary.uploader().destroy(item.getImagePublicId(), ObjectUtils.emptyMap());
-                    }
-
-                    item.setImageUrl(imageUrl);
-                    item.setImagePublicId(imagePublicId);
-                }
-
-                // Update portions if provided
-                if (portions != null) {
-                    portionRepository.deleteAllByMenuItemId(item.getId());
-                    portions.forEach(portion -> {
-                        portion.setMenuItem(item);
-                        portionRepository.save(portion);
-                    });
-                }
-
-                return ItemRepository.save(item);
-            }
-            return null; // Item not found
+        if (optionalItem.isEmpty()) {
+            throw new RuntimeException("Menu item not found with id: " + id);
         }
 
+        // Step 2: Update the menu item fields
+        MenuItems item = optionalItem.get();
+        item.setItemName(itemName);
+        item.setCategory(category);
+        item.setOffer(offer);
+        item.setAvailabilityStatus(availabilityStatus);
+        item.setDescription(description);
+
+        // Step 3: Handle image upload to Cloudinary
+        if (file != null && !file.isEmpty()) {
+            Map<?, ?> uploadResult = cloudinary.uploader().upload(file.getBytes(), ObjectUtils.emptyMap());
+            String imageUrl = (String) uploadResult.get("secure_url");
+            String imagePublicId = (String) uploadResult.get("public_id");
+
+            if (item.getImagePublicId() != null) {
+                try {
+                    cloudinary.uploader().destroy(item.getImagePublicId(), ObjectUtils.emptyMap());
+                } catch (Exception e) {
+                    System.err.println("Failed to delete old image from Cloudinary: " + e.getMessage());
+                }
+            }
+
+            item.setImageUrl(imageUrl);
+            item.setImagePublicId(imagePublicId);
+        }
+
+        // Step 4: Update portions if provided
+        if (portions != null) {
+            portionRepository.deleteAllByMenuItemId(item.getId()); // Requires a transactional context
+            portions.forEach(portion -> {
+                portion.setMenuItem(item);
+                portionRepository.save(portion);
+            });
+        }
+
+        // Step 5: Save the updated menu item
+        return ItemRepository.save(item);
+    }
     @Override
     public List<MenuItemPortion> getPortionsForMenuItem(Long menuItemId) {
         return List.of();
@@ -127,7 +137,13 @@ public class MenuItemService implements MenuItemServiceInterface {
 
     @Override
     public List<MenuItems> getMenuItemsByRestaurantId(Long restaurantId) {
-        return List.of();
+        List<MenuItems> menuItems = ItemRepository.findByRestaurantIdWithPortions(restaurantId);
+
+        if (menuItems.isEmpty()) {
+            throw new RuntimeException("No menu items found for restaurant ID: " + restaurantId);
+        }
+
+        return menuItems;
     }
 
     @Override

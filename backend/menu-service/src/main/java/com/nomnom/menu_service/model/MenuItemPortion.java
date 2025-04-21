@@ -1,5 +1,7 @@
 package com.nomnom.menu_service.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 
 @Entity
@@ -15,6 +17,7 @@ public class MenuItemPortion {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "menu_item_id", nullable = false)
+    @JsonIgnore
     private MenuItems menuItem;
 
     public MenuItemPortion() {}

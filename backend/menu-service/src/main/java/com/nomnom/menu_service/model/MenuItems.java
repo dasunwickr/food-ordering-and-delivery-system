@@ -1,5 +1,6 @@
 package com.nomnom.menu_service.model;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import java.util.List;
 
@@ -31,6 +32,7 @@ public class MenuItems {
     private String imagePublicId; // Stores the Cloudinary public ID for future reference
 
     @OneToMany(mappedBy = "menuItem", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference
     private List<MenuItemPortion> portions;
 
     // Default constructor

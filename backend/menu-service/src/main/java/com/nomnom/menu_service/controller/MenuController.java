@@ -76,16 +76,13 @@ public class MenuController {
      */
     @GetMapping("/{id}")
     public ResponseEntity<MenuItems> getMenuItemById(@PathVariable Long id) {
-        MenuItems menuItem = menuService.getMenuItemById(id);
-        if (menuItem == null) {
+        try {
+            MenuItems menuItem = menuService.getMenuItemById(id);
+            return ResponseEntity.ok(menuItem);
+        } catch (RuntimeException e) {
+            // Handle the case where the menu item is not found
             return ResponseEntity.notFound().build();
         }
-
-        // Fetch portions for the menu item
-        List<MenuItemPortion> portions = menuService.getPortionsForMenuItem(id);
-        menuItem.setPortions(portions); // Set portions in the response
-
-        return ResponseEntity.ok(menuItem);
     }
 
     /**
@@ -109,15 +106,11 @@ public class MenuController {
                 objectMapper.getTypeFactory().constructCollectionType(List.class, MenuItemPortion.class)
         );
 
-        // Update the menu item
+        // Call the service layer to update the menu item
         MenuItems updatedItem = menuService.updateMenuItem(id, itemName, offer, category, availabilityStatus, description, file, portions);
 
-        if (updatedItem == null) {
-            return ResponseEntity.notFound().build();
-        }
         return ResponseEntity.ok(updatedItem);
     }
-
     /**
      * Delete a menu item by ID.
      */
@@ -136,12 +129,16 @@ public class MenuController {
      */
     @GetMapping("/restaurant/{restaurantId}")
     public ResponseEntity<List<MenuItems>> getMenuItemsByRestaurantId(@PathVariable Long restaurantId) {
-        List<MenuItems> menuItems = menuService.getMenuItemsByRestaurantId(restaurantId);
+        try {
+            List<MenuItems> menuItems = menuService.getMenuItemsByRestaurantId(restaurantId);
 
-        if (menuItems.isEmpty()) {
-            return ResponseEntity.noContent().build(); // Return 204 No Content if no items found
+            if (menuItems.isEmpty()) {
+                return ResponseEntity.noContent().build(); // Return 204 No Content if no items found
+            }
+
+            return ResponseEntity.ok(menuItems); // Return 200 OK with the list of menu items
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(404).body(null); // Return 404 Not Found if no menu items exist for the restaurant
         }
-
-        return ResponseEntity.ok(menuItems); // Return 200 OK with the list of menu items
     }
 }
