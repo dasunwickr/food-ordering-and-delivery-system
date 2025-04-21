@@ -1,6 +1,7 @@
 package com.nomnom.user_service.model;
 
 import lombok.*;
+import org.springframework.data.geo.Point;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.util.List;
@@ -13,5 +14,5 @@ import java.util.List;
 @AllArgsConstructor
 @EqualsAndHashCode(callSuper = true)
 public class Customer extends User {
-    private List<String> orderHistory;
+    Point location;
 }

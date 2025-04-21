@@ -1,5 +1,6 @@
 package com.nomnom.user_service.model;
 
+import com.nomnom.user_service.enums.AdminType;
 import lombok.*;
 import org.springframework.data.mongodb.core.mapping.Document;
 
@@ -11,6 +12,6 @@ import org.springframework.data.mongodb.core.mapping.Document;
 @AllArgsConstructor
 @EqualsAndHashCode(callSuper = true)
 public class Admin extends User {
-    private String roleType;
+    private AdminType adminType;
 }
 
