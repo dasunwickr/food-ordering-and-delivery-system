@@ -1,37 +1,19 @@
 import { Request, Response } from 'express';
-import { OrderModel } from '../models/orderModel';
 import { websocketUtils } from '../utils/websocketUtils';
 import { sendSMS, sendEmail, sendOrderStatusNotification } from '../services/notificationService';
+import { Notification } from '../models/notificationModel'; // Import NotificationModel
 
 // Add a new order
 export const addOrder = async (req: Request, res: Response): Promise<void> => {
   const { userId, orderId, phoneNumber, restuarantMail, email } = req.body;
 
+  // Validate required fields
   if (!userId || !orderId || !phoneNumber || !email) {
     res.status(400).json({ error: 'Missing required fields: userId, orderId, phoneNumber, email' });
     return;
   }
 
   try {
-    // Check if an order with the given orderId already exists
-    const existingOrder = await OrderModel.findOne({ orderId });
-
-    if (existingOrder) {
-      res.status(400).json({ error: 'An order with this orderId already exists' });
-      return;
-    }
-
-    // Create a new order in the database with default status "confirmed"
-    const newOrder = new OrderModel({
-      orderId,
-      userId,
-      phoneNumber, // Include phoneNumber here
-      email,
-      restuarantMail: restuarantMail || null, // Optional field
-      status: 'confirmed',
-    });
-    await newOrder.save();
-
     // Notify the user via WebSocket
     const userSocket = websocketUtils.clients.get(userId);
     if (userSocket) {
@@ -39,33 +21,50 @@ export const addOrder = async (req: Request, res: Response): Promise<void> => {
     }
 
     // Send order confirmation notification (SMS and Email) to the user
-    // await sendOrderStatusNotification('confirmed', phoneNumber, email, orderId);
+    const smsMessage = `📦 Order Placed: Your order (#${orderId}) has been confirmed.`;
+    const emailSubject = `✅ Your Order (#${orderId}) Has Been Placed`;
+    const emailText = `
+      Thank you for placing your order!
+      Order ID: ${orderId}
+      Status: confirmed
 
-    // Send email notification to the restaurant if restuarantMail is provided
-    if (restuarantMail) {
-      const restaurantEmailSubject = `New Order Received (#${orderId})`;
-      const restaurantEmailText = `
-        A new order has been placed:
-        Order ID: ${orderId}
-        User ID: ${userId}
-        Status: confirmed
-      `;
-      const restaurantEmailHtml = `
-        <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto;">
-          <h1 style="color: #28a745; text-align: center;">📝 New Order Received</h1>
-          <p><strong>Order ID:</strong> ${orderId}</p>
-          <p><strong>User ID:</strong> ${userId}</p>
-          <p><strong>Status:</strong> confirmed</p>
-          <p><strong>Customer Phone Number:</strong> ${phoneNumber}</p>
-          <p><strong>Customer Email:</strong> ${email}</p>
-          <p style="text-align: center; margin-top: 20px; font-size: 14px; color: #666;">
-            Please prepare the order and update the status accordingly. ❤️
-          </p>
-        </div>
-      `;
+      We are processing your order and will keep you updated on its status.
+    `;
+    const emailHtml = `
+      <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto;">
+        <h1 style="color: #28a745; text-align: center;">✅ Your Order Has Been Placed!</h1>
+        <p style="font-size: 18px; text-align: center;">Thank you for placing your order with us.</p>
+        <p style="text-align: center; font-size: 16px;"><strong>Order ID:</strong> ${orderId}</p>
+        <p style="text-align: center; font-size: 16px;"><strong>Status:</strong> confirmed</p>
+        <p style="text-align: center; margin-top: 20px; font-size: 14px; color: #666;">
+          We are processing your order and will keep you updated on its status. ❤️
+        </p>
+      </div>
+    `;
 
-      await sendEmail(restuarantMail, restaurantEmailSubject, restaurantEmailText, restaurantEmailHtml);
-    }
+    // Send SMS notification
+    // await sendSMS(phoneNumber, smsMessage);
+
+    // Send email notification
+    await sendEmail(email, emailSubject, emailText, emailHtml);
+
+    // Store SMS notification in the database
+    const smsNotification = new Notification({
+      title: 'Order Confirmation (SMS)',
+      message: `Order confirmed for order ID: ${orderId}`,
+      phoneNumber,
+      status: 'send',
+    });
+    await smsNotification.save();
+
+    // Store email notification in the database
+    const emailNotification = new Notification({
+      title: 'Order Confirmation (Email)',
+      message: `Order confirmed for order ID: ${orderId}`,
+      email,
+      status: 'send',
+    });
+    await emailNotification.save();
 
     res.status(201).json({ success: true, message: 'Order placed successfully' });
   } catch (error) {
@@ -75,25 +74,18 @@ export const addOrder = async (req: Request, res: Response): Promise<void> => {
 };
 
 // Update the status of an existing order
-// Update the status of an existing order
 export const updateOrderStatus = async (req: Request, res: Response): Promise<void> => {
-  const { orderId } = req.params; // Extract orderId from URL parameters
-  const { status } = req.body;
+  const { orderId, userId, status, phoneNumber, email, restaurantMail } = req.body;
 
-  if (!orderId || !status) {
-    res.status(400).json({ error: 'Missing required fields: orderId, status' });
+  // Validate required fields
+  if (!orderId || !userId || !status || !phoneNumber || !email) {
+    res.status(400).json({
+      error: 'Missing required fields: orderId, userId, status, phoneNumber, email',
+    });
     return;
   }
 
   try {
-    // Find the order by orderId
-    const order = await OrderModel.findOne({ orderId });
-
-    if (!order) {
-      res.status(404).json({ error: 'Order not found' });
-      return;
-    }
-
     // Validate the status transition
     const validStatuses = ['confirmed', 'preperation completed', 'out-for-delivery', 'delivered', 'cancelled'];
     if (!validStatuses.includes(status)) {
@@ -101,24 +93,59 @@ export const updateOrderStatus = async (req: Request, res: Response): Promise<vo
       return;
     }
 
-    // Update the status of the existing order
-    order.status = status;
-    order.updatedAt = new Date();
-    await order.save();
-
-    
-
     // Notify the user via WebSocket
-    const userSocket = websocketUtils.clients.get(order.userId);
+    const userSocket = websocketUtils.clients.get(userId);
     if (userSocket) {
       userSocket.send(JSON.stringify({ type: 'orderUpdated', orderId, status }));
     }
 
+    // Send order status notification (SMS and Email) to the user
+    const smsMessage = `📦 Order Update: Your order (#${orderId}) status is now ${status}.`;
+    const emailSubject = `🚚 Order Status Update - Your Order (#${orderId}) is ${status}`;
+    const emailText = `Your order (#${orderId}) status has been updated to: ${status}.
+We are processing your order and will keep you updated on its status.`;
+    const emailHtml = `
+      <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto;">
+        <h1 style="color: #28a745; text-align: center;">🚚 Order Status Update</h1>
+        <p style="font-size: 18px; text-align: center;">Your order (#<strong>${orderId}</strong>) status has been updated to:</p>
+        <p style="font-size: 24px; font-weight: bold; text-align: center; color: #007bff;">${status}</p>
+        <div style="background-color: #f9f9f9; padding: 20px; border-radius: 8px; margin-top: 20px;">
+          <p style="font-size: 16px;">We are processing your order and will keep you updated on its status.</p>
+        </div>
+        <p style="text-align: center; margin-top: 20px; font-size: 14px; color: #666;">
+          Thank you for choosing us! ❤️
+        </p>
+      </div>
+    `;
+
+    // Send SMS notification
+    // await sendSMS(phoneNumber, smsMessage);
+
+    // Send email notification
+    await sendEmail(email, emailSubject, emailText, emailHtml);
+
+    // Store SMS notification in the database
+    const smsNotification = new Notification({
+      title: 'Order Status Update (SMS)',
+      message: `Order status updated to ${status} for order ID: ${orderId}`,
+      phoneNumber,
+      status: 'send',
+    });
+    await smsNotification.save();
+
+    // Store email notification in the database
+    const emailNotification = new Notification({
+      title: 'Order Status Update (Email)',
+      message: `Order status updated to ${status} for order ID: ${orderId}`,
+      email,
+      status: 'send',
+    });
+    await emailNotification.save();
+
     // Notify the restaurant if the status is "delivered" or "cancelled"
     if (['delivered', 'cancelled'].includes(status)) {
-      if (order.restuarantMail) {
-        console.log(`Notifying restaurant at email: ${order.restuarantMail}`);
-        await notifyRestaurant(order, status, order.restuarantMail);
+      if (restaurantMail) {
+        await notifyRestaurant({ orderId }, status, restaurantMail);
       } else {
         console.warn('Restaurant email is missing. Skipping email notification.');
       }
@@ -133,9 +160,9 @@ export const updateOrderStatus = async (req: Request, res: Response): Promise<vo
 
 // Notify the restaurant when the order status is "delivered" or "cancelled"
 const notifyRestaurant = async (
-  order: any,
+  order: { orderId: string },
   status: string,
-  restuarantMail: string
+  restaurantMail: string
 ): Promise<void> => {
   // Validate the status before proceeding
   if (!['delivered', 'cancelled'].includes(status)) {
@@ -179,26 +206,22 @@ const notifyRestaurant = async (
       `;
 
   try {
-    // Send SMS notification to the restaurant (if enabled)
-    // Uncomment the following line if SMS notifications are required
-    // await sendSMS(order.phoneNumber, smsMessage);
-
-    // Log the email details for debugging
-    // console.log('Attempting to send email to restaurant:', {
-    //   to: restuarantMail,
-    //   subject: emailSubject,
-    //   text: emailText,
-    //   html: emailHtml,
-    // });
-
     // Send email notification to the restaurant
-    const emailResponse = await sendEmail(restuarantMail, emailSubject, emailText, emailHtml);
-    // console.log('Email sent successfully:', emailResponse);
+    await sendEmail(restaurantMail, emailSubject, emailText, emailHtml);
+
+    // Store email notification in the database
+    const emailNotification = new Notification({
+      title: `Restaurant Notification - Order ${status}`,
+      message: `Order #${order.orderId} status updated to ${status}`,
+      email: restaurantMail,
+      status: 'send',
+    });
+    await emailNotification.save();
 
     // Log a success message
-    // console.log(`Notification sent to restaurant (${restuarantMail}) for order #${order.orderId}: ${status}`);
+    console.log(`Notification sent to restaurant (${restaurantMail}) for order #${order.orderId}: ${status}`);
   } catch (error) {
     // Log any errors during the notification process
-    console.error(`Failed to notify restaurant (${restuarantMail}) for order #${order.orderId}:`, error);
+    console.error(`Failed to notify restaurant (${restaurantMail}) for order #${order.orderId}:`, error);
   }
 };

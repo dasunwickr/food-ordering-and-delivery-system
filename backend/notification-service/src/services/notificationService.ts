@@ -189,20 +189,20 @@ export const sendPaymentNotification = async (
   orderId: string
 ): Promise<void> => {
   try {
-
+    // Read the payment templates
     const rawData = fs.readFileSync(paymentTemplatesPath, 'utf-8');
     const templates = JSON.parse(rawData);
 
-    // Check if the requested payment status template exists
-    const template = templates[paymentStatus];
-    if (!template) {
-      throw new Error(`No template found for payment status: ${paymentStatus}`);
-    }
+    // Use the requested payment status template if it exists, otherwise use a default message
+    const template = templates[paymentStatus] || {
+      text: `Your payment status has been updated to ${paymentStatus}.`,
+    };
 
     // Customize the template with the order ID
     const smsMessage = `💳 Payment Update for Order (#${orderId}): ${template.text}`;
     const emailSubject = `💰 Payment Status - Your Payment for Order (#${orderId}) is ${paymentStatus}`;
-    const emailText = `Your payment for order (#${orderId}) is  ${paymentStatus}.\n\n${template.text}`;
+    const emailText = `Your payment for order (#${orderId}) is ${paymentStatus}.
+${template.text}`;
     const emailHtml = `
       <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto;">
         <h1 style="color: #28a745; text-align: center;">💰 Payment Status Update</h1>
@@ -229,7 +229,6 @@ export const sendPaymentNotification = async (
     throw error;
   }
 };
-
 // Send driver payment deposit notification (SMS and Email)
 export const sendDriverPaymentDepositedNotification = async (
   phoneNumber: string,

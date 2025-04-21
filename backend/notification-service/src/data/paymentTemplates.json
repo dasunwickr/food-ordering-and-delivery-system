@@ -1,12 +1,11 @@
 {
-    "paymentSuccessful": {
-      "subject": "🎉 Payment Successful!",
-      "text": "Dear Customer, your payment has been successfully processed. Thank you for your purchase.",
-      "html": "<h1 style='color: #28a745;'>🎉 Payment Successful!</h1><p>Dear Customer, your payment has been successfully processed. Thank you for your purchase.</p>"
-    },
-    "paymentFailed": {
-      "subject": "⚠️ Payment Failed",
-      "text": "Dear Customer, we encountered an issue processing your payment. Please try again or contact support.",
-      "html": "<h1 style='color: #dc3545;'>⚠️ Payment Failed</h1><p>Dear Customer, we encountered an issue processing your payment. Please try again or contact support.</p>"
-    }
+  "confirmed": {
+    "text": "Your payment has been confirmed and processed successfully."
+  },
+  "pending": {
+    "text": "Your payment is currently pending and will be processed shortly."
+  },
+  "failed": {
+    "text": "Your payment has failed. Please try again or contact support."
   }
+}
