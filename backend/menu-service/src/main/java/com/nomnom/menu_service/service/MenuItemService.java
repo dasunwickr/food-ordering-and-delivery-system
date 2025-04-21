@@ -19,6 +19,7 @@ import java.util.Optional;
 @Service
 public class MenuItemService implements MenuItemServiceInterface {
 
+
     @Autowired
     private MenuItemRepository ItemRepository;
 
@@ -68,13 +69,9 @@ public class MenuItemService implements MenuItemServiceInterface {
 
     @Override
     public List<MenuItems> getAllMenuItems() {
-        return List.of();
+        return ItemRepository.findAll();
     }
 
-    @Override
-    public byte[] getUserImage(Long id) {
-        return new byte[0];
-    }
 
     @Override
     public MenuItems getMenuItemById(Long id) {
@@ -154,11 +151,6 @@ public class MenuItemService implements MenuItemServiceInterface {
             return false;
         }
 }
-
-//    @Override
-//    public List<MenuItems> getAllMenuItems() {
-//        return ItemRepository.findAll();
-//    }
 
 
 

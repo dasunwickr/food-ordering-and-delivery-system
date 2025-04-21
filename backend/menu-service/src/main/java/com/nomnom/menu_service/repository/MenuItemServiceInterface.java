@@ -14,7 +14,6 @@ public interface MenuItemServiceInterface {
 
     List<MenuItems> getAllMenuItems();
 
-    byte[] getUserImage(Long id);
 
     MenuItems getMenuItemById(Long id);
 
