@@ -18,10 +18,9 @@ public class Restaurant extends User {
     private String restaurantName;
     private String restaurantAddress;
     private String restaurantLicenseNumber;
-    private TypeInfo restaurantType;
+    private String restaurantTypeId;
     private List<DocumentInfo> restaurantDocuments;
     private List<OpeningTime> openingTimes;
     private String restaurantStatus;
     private Point location;
-
 }

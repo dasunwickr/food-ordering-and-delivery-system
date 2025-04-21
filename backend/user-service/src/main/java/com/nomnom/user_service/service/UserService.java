@@ -2,7 +2,9 @@ package com.nomnom.user_service.service;
 
 import com.nomnom.user_service.enums.UserType;
 import com.nomnom.user_service.model.*;
+import com.nomnom.user_service.repository.RestaurantTypeRepository;
 import com.nomnom.user_service.repository.UserRepository;
+import com.nomnom.user_service.repository.VehicleTypeRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -15,6 +17,8 @@ import java.util.stream.Collectors;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final RestaurantTypeRepository restaurantTypeRepository;
+    private final VehicleTypeRepository vehicleTypeRepository;
 
     public User saveUser(User user) {
         if (userRepository.findByEmail(user.getEmail()).isPresent()) {
@@ -86,5 +90,30 @@ public class UserService {
             return userRepository.save(restaurant);
         }
         throw new IllegalArgumentException("Restaurant not found or invalid ID");
+    }
+
+
+    public Restaurant updateRestaurantType(String userId, String restaurantTypeId) {
+        Optional<User> optional = userRepository.findById(userId);
+        if (optional.isPresent() && optional.get() instanceof Restaurant restaurant) {
+            if (!restaurantTypeRepository.existsById(restaurantTypeId)) {
+                throw new IllegalArgumentException("Invalid Restaurant Type ID");
+            }
+            restaurant.setRestaurantTypeId(restaurantTypeId);
+            return userRepository.save(restaurant);
+        }
+        throw new IllegalArgumentException("Restaurant not found or invalid ID");
+    }
+
+    public Driver updateVehicleType(String userId, String vehicleTypeId) {
+        Optional<User> optional = userRepository.findById(userId);
+        if (optional.isPresent() && optional.get() instanceof Driver driver) {
+            if (!vehicleTypeRepository.existsById(vehicleTypeId)) {
+                throw new IllegalArgumentException("Invalid Vehicle Type ID");
+            }
+            driver.setVehicleTypeId(vehicleTypeId);
+            return userRepository.save(driver);
+        }
+        throw new IllegalArgumentException("Driver not found or invalid ID");
     }
 }

@@ -1,6 +1,8 @@
 package com.nomnom.user_service.controller;
 
 import com.nomnom.user_service.enums.UserType;
+import com.nomnom.user_service.model.Driver;
+import com.nomnom.user_service.model.Restaurant;
 import com.nomnom.user_service.model.User;
 import com.nomnom.user_service.service.UserService;
 import lombok.RequiredArgsConstructor;
@@ -8,7 +10,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/users")
@@ -67,4 +68,22 @@ public class UserController {
     public ResponseEntity<User> updateRestaurantStatus(@PathVariable String id, @RequestParam String status) {
         return ResponseEntity.ok(userService.updateRestaurantStatus(id, status));
     }
+    @PatchMapping("/{id}/restaurant-type")
+    public ResponseEntity<Restaurant> updateRestaurantType(
+            @PathVariable String id,
+            @RequestParam String restaurantTypeId) {
+        Restaurant updated = userService.updateRestaurantType(id, restaurantTypeId);
+        return ResponseEntity.ok(updated);
+    }
+
+    @PatchMapping("/{id}/vehicle-type")
+    public ResponseEntity<Driver> updateVehicleType(
+            @PathVariable String id,
+            @RequestParam String vehicleTypeId) {
+
+        Driver updated = userService.updateVehicleType(id, vehicleTypeId);
+        return ResponseEntity.ok(updated);
+    }
+
+
 }

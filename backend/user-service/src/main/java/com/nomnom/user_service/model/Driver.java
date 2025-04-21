@@ -14,7 +14,7 @@ import java.util.List;
 @AllArgsConstructor
 @EqualsAndHashCode(callSuper = true)
 public class Driver extends User {
-    private TypeInfo vehicleType;
+    private String vehicleTypeId;
     private String vehicleNumber;
     private int deliveryStatus;
     private List<DocumentInfo> vehicleDocuments;
