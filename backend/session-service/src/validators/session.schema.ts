@@ -9,3 +9,7 @@ export const CreateSessionSchema = z.object({
 export const UpdateSessionSchema = z.object({
   sessionId: z.string().min(1, "Session ID is required"),
 });
+
+export const InvalidateUserSessionsSchema = z.object({
+  userId: z.string().min(1, "User ID is required"),
+});
