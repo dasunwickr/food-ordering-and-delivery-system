@@ -15,7 +15,7 @@ const LoginPage = () => {
         <Link href="/forgot-password" className="text-primary hover:underline">
           Forgot password?
         </Link>
-        <Link href="/sign-up" className="text-primary hover:underline">
+        <Link href="/signup" className="text-primary hover:underline">
           Don&apos;t have an account? Sign up
         </Link>
       </div>

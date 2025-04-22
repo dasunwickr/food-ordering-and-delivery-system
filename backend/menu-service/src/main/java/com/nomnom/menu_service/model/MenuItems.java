@@ -1,7 +1,8 @@
 package com.nomnom.menu_service.model;
 
-
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
+import java.util.List;
 
 @Entity
 @Table(name = "menu_items")
@@ -10,68 +11,53 @@ public class MenuItems {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
     private Long restaurantId;
+
     private String itemName;
+
     private String description;
+
     private String category;
+
     private Boolean availabilityStatus;
-    private double smallPortionPrice;
-    private double mediumPortionPrice;
-    private double largePortionPrice;
 
     @Column(nullable = true)
     private double offer;
 
-    @Lob  // Large Object - used to store binary data
-    @Column(columnDefinition = "LONGBLOB") // Specify BLOB type for MySQL
-    private byte[] image;
+    @Column(nullable = true)
+    private String imageUrl; // Stores the Cloudinary public URL
 
+    @Column(nullable = true)
+    private String imagePublicId; // Stores the Cloudinary public ID for future reference
+
+    @OneToMany(mappedBy = "menuItem", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference
+    private List<MenuItemPortion> portions;
+
+    // Default constructor
     public MenuItems() {}
 
-    public MenuItems(String itemName,double smallPortionPrice,double mediumPortionPrice,double largePortionPrice,double offer,String category,Boolean availabilityStatus, String description, byte[] image) {
+    // Parameterized constructor
+    public MenuItems(String itemName, double offer, String category, Boolean availabilityStatus,
+                     String description, String imageUrl, String imagePublicId) {
         this.itemName = itemName;
+        this.offer = offer;
         this.category = category;
         this.availabilityStatus = availabilityStatus;
         this.description = description;
-        this.image = image;
-        this.smallPortionPrice = smallPortionPrice;
-        this.mediumPortionPrice = mediumPortionPrice;
-        this.largePortionPrice = largePortionPrice;
-        this.offer = offer;
+        this.imageUrl = imageUrl;
+        this.imagePublicId = imagePublicId;
     }
 
+    // Getters and Setters
 
-
-    public double getSmallPortionPrice() {
-        return smallPortionPrice;
+    public Long getId() {
+        return id;
     }
 
-    public void setSmallPortionPrice(double smallPortionPrice) {
-        this.smallPortionPrice = smallPortionPrice;
-    }
-
-    public double getMediumPortionPrice() {
-        return mediumPortionPrice;
-    }
-
-    public void setMediumPortionPrice(double mediumPortionPrice) {
-        this.mediumPortionPrice = mediumPortionPrice;
-    }
-
-    public double getLargePortionPrice() {
-        return largePortionPrice;
-    }
-
-    public void setLargePortionPrice(double largePortionPrice) {
-        this.largePortionPrice = largePortionPrice;
-    }
-
-    public double getOffer() {
-        return offer;
-    }
-
-    public void setOffer(double offer) {
-        this.offer = offer;
+    public void setId(Long id) {
+        this.id = id;
     }
 
     public Long getRestaurantId() {
@@ -80,30 +66,6 @@ public class MenuItems {
 
     public void setRestaurantId(Long restaurantId) {
         this.restaurantId = restaurantId;
-    }
-
-    public String getCategory() {
-        return category;
-    }
-
-    public void setCategory(String category) {
-        this.category = category;
-    }
-
-    public Boolean getAvailabilityStatus() {
-        return availabilityStatus;
-    }
-
-    public void setAvailabilityStatus(Boolean availabilityStatus) {
-        this.availabilityStatus = availabilityStatus;
-    }
-
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
     }
 
     public String getItemName() {
@@ -122,11 +84,51 @@ public class MenuItems {
         this.description = description;
     }
 
-    public byte[] getImage() {
-        return image;
+    public String getCategory() {
+        return category;
     }
 
-    public void setImage(byte[] image) {
-        this.image = image;
+    public void setCategory(String category) {
+        this.category = category;
+    }
+
+    public Boolean getAvailabilityStatus() {
+        return availabilityStatus;
+    }
+
+    public void setAvailabilityStatus(Boolean availabilityStatus) {
+        this.availabilityStatus = availabilityStatus;
+    }
+
+    public double getOffer() {
+        return offer;
+    }
+
+    public void setOffer(double offer) {
+        this.offer = offer;
+    }
+
+    public String getImageUrl() {
+        return imageUrl;
+    }
+
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
+    }
+
+    public String getImagePublicId() {
+        return imagePublicId;
+    }
+
+    public void setImagePublicId(String imagePublicId) {
+        this.imagePublicId = imagePublicId;
+    }
+
+    public List<MenuItemPortion> getPortions() {
+        return portions;
+    }
+
+    public void setPortions(List<MenuItemPortion> portions) {
+        this.portions = portions;
     }
 }

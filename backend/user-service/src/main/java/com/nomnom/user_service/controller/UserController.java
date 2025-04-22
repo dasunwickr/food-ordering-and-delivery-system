@@ -1,55 +1,89 @@
 package com.nomnom.user_service.controller;
 
+import com.nomnom.user_service.enums.UserType;
+import com.nomnom.user_service.model.Driver;
+import com.nomnom.user_service.model.Restaurant;
 import com.nomnom.user_service.model.User;
 import com.nomnom.user_service.service.UserService;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Optional;
 
 @RestController
-@RequestMapping("/users")
+@RequestMapping("/api/users")
+@RequiredArgsConstructor
 public class UserController {
 
-    @Autowired
-    private UserService userService;
+    private final UserService userService;
 
-    // Create a new user
     @PostMapping
     public ResponseEntity<User> createUser(@RequestBody User user) {
-        User savedUser = userService.saveUser(user);
-        return ResponseEntity.status(201).body(savedUser);
+        return ResponseEntity.status(201).body(userService.saveUser(user));
     }
 
-    // Get a user by ID
     @GetMapping("/{id}")
     public ResponseEntity<User> getUserById(@PathVariable String id) {
-        Optional<User> user = userService.getUserById(id);
-        return user.map(ResponseEntity::ok)
+        return userService.getUserById(id)
+                .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
-    // Get all users
+    @GetMapping("/email/{email}")
+    public ResponseEntity<User> getUserByEmail(@PathVariable String email) {
+        return userService.getUserByEmail(email)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
     @GetMapping
     public ResponseEntity<List<User>> getAllUsers() {
-        List<User> users = userService.getAllUsers();
-        return ResponseEntity.ok(users);
+        return ResponseEntity.ok(userService.getAllUsers());
     }
 
-    // Update an existing user
+    @GetMapping("/type/{userType}")
+    public ResponseEntity<List<User>> getUsersByType(@PathVariable UserType userType) {
+        return ResponseEntity.ok(userService.getUsersByType(userType.name()));
+    }
+
     @PutMapping("/{id}")
     public ResponseEntity<User> updateUser(@PathVariable String id, @RequestBody User user) {
-        User updatedUser = userService.updateUser(id, user);
-        return ResponseEntity.ok(updatedUser);
+        return ResponseEntity.ok(userService.updateUser(id, user));
     }
 
-    // Delete a user
     @DeleteMapping("/{id}")
     public ResponseEntity<String> deleteUser(@PathVariable String id) {
         return userService.deleteUser(id) ?
                 ResponseEntity.ok("User deleted successfully") :
                 ResponseEntity.status(404).body("User not found");
     }
+
+    @PatchMapping("/driver/{id}/status")
+    public ResponseEntity<User> updateDriverStatus(@PathVariable String id, @RequestParam String status) {
+        return ResponseEntity.ok(userService.updateDriverStatus(id, status));
+    }
+
+    @PatchMapping("/restaurant/{id}/status")
+    public ResponseEntity<User> updateRestaurantStatus(@PathVariable String id, @RequestParam String status) {
+        return ResponseEntity.ok(userService.updateRestaurantStatus(id, status));
+    }
+    @PatchMapping("/{id}/restaurant-type")
+    public ResponseEntity<Restaurant> updateRestaurantType(
+            @PathVariable String id,
+            @RequestParam String restaurantTypeId) {
+        Restaurant updated = userService.updateRestaurantType(id, restaurantTypeId);
+        return ResponseEntity.ok(updated);
+    }
+
+    @PatchMapping("/{id}/vehicle-type")
+    public ResponseEntity<Driver> updateVehicleType(
+            @PathVariable String id,
+            @RequestParam String vehicleTypeId) {
+
+        Driver updated = userService.updateVehicleType(id, vehicleTypeId);
+        return ResponseEntity.ok(updated);
+    }
+
+
 }
