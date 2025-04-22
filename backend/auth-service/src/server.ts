@@ -12,7 +12,7 @@ const app = express();
 app.use(cors());
 app.use(morgan('dev')); 
 app.use(express.json()); 
-app.use('/auth', authRoutes);
+app.use('/api/auth', authRoutes);
 
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
   console.error(err.stack);
