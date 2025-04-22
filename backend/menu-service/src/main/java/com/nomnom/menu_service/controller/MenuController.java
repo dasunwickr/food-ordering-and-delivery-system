@@ -1,5 +1,7 @@
 package com.nomnom.menu_service.controller;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.nomnom.menu_service.model.MenuItemPortion;
 import com.nomnom.menu_service.model.MenuItems;
 import com.nomnom.menu_service.repository.MenuItemServiceInterface;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,73 +21,99 @@ public class MenuController {
     @Autowired
     private MenuItemServiceInterface menuService; // Use the interface here
 
+    /**
+     * Add a new menu item.
+     */
     @PostMapping(value = "/add", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<MenuItems> addMenu(
             @RequestParam("itemName") String itemName,
-            @RequestParam("restaurantId")Long restaurantId,
+            @RequestParam("restaurantId") Long restaurantId,
             @RequestParam("category") String category,
-            @RequestParam("availabilityStatus") String availabilityStatus,
+            @RequestParam("availabilityStatus") Boolean availabilityStatus,
             @RequestParam("description") String description,
-            @RequestParam("smallPortionPrice") Double smallPortionPrice,
-            @RequestParam("mediumPortionPrice") Double mediumPortionPrice,
-            @RequestParam("largePortionPrice") Double largePortionPrice,
             @RequestParam("offer") Double offer,
-            @RequestParam("image") MultipartFile file) throws IOException {
+            @RequestParam("image") MultipartFile file,
+            @RequestParam("portions") String portionsJson) throws IOException {
 
-        Boolean isAvailable = Boolean.parseBoolean(availabilityStatus);
+        // Convert JSON string to List<MenuItemPortion>
+        ObjectMapper objectMapper = new ObjectMapper();
+        List<MenuItemPortion> portions = objectMapper.readValue(
+                portionsJson,
+                objectMapper.getTypeFactory().constructCollectionType(List.class, MenuItemPortion.class)
+        );
 
-        MenuItems menuItem = menuService.saveItem(itemName,restaurantId,smallPortionPrice,mediumPortionPrice,largePortionPrice,offer, category, isAvailable, description, file);
+        // Save the menu item with the uploaded image
+        MenuItems menuItem = menuService.saveItem(itemName, restaurantId, offer, category, availabilityStatus, description, file, portions);
         return ResponseEntity.ok(menuItem);
     }
 
-    @GetMapping("/all")
-    public List<MenuItems> getMenuItems() {
-        return menuService.getAllMenuItems();
-    }
-
-    @GetMapping("/image/{id}")
-    public ResponseEntity<byte[]> getUserImage(@PathVariable Long id) {
-        byte[] imageData = menuService.getUserImage(id);
-        if (imageData == null) {
-            return ResponseEntity.notFound().build();
+    /**
+     * Get all portions for a specific menu item.
+     */
+    @GetMapping("/portions/{menuItemId}")
+    public ResponseEntity<List<MenuItemPortion>> getPortionsForMenuItem(@PathVariable Long menuItemId) {
+        List<MenuItemPortion> portions = menuService.getPortionsForMenuItem(menuItemId);
+        if (portions.isEmpty()) {
+            return ResponseEntity.noContent().build();
         }
-        return ResponseEntity.ok()
-                .contentType(MediaType.IMAGE_JPEG) // Adjust based on stored image format
-                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"user-image.jpg\"")
-                .body(imageData);
+        return ResponseEntity.ok(portions);
     }
 
+    /**
+     * Get all menu items.
+     */
+    @GetMapping("/all")
+    public ResponseEntity<List<MenuItems>> getMenuItems() {
+        List<MenuItems> menuItems = menuService.getAllMenuItems();
+        if (menuItems.isEmpty()) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.ok(menuItems);
+    }
+
+    /**
+     * Get a menu item by ID.
+     */
     @GetMapping("/{id}")
     public ResponseEntity<MenuItems> getMenuItemById(@PathVariable Long id) {
-        MenuItems menuItem = menuService.getMenuItemById(id);
-        if (menuItem == null) {
+        try {
+            MenuItems menuItem = menuService.getMenuItemById(id);
+            return ResponseEntity.ok(menuItem);
+        } catch (RuntimeException e) {
+            // Handle the case where the menu item is not found
             return ResponseEntity.notFound().build();
         }
-        return ResponseEntity.ok(menuItem);
     }
 
+    /**
+     * Update a menu item.
+     */
     @PutMapping(value = "/update/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<MenuItems> updateMenuItem(
             @PathVariable Long id,
             @RequestParam("itemName") String itemName,
             @RequestParam("category") String category,
-            @RequestParam("availabilityStatus") String availabilityStatus,
+            @RequestParam("availabilityStatus") Boolean availabilityStatus,
             @RequestParam("description") String description,
-            @RequestParam("smallPortionPrice") Double smallPortionPrice,
-            @RequestParam("mediumPortionPrice") Double mediumPortionPrice,
-            @RequestParam("largePortionPrice") Double largePortionPrice,
             @RequestParam("offer") Double offer,
-            @RequestParam(value = "image", required = false) MultipartFile file) throws IOException {
+            @RequestParam(value = "image", required = false) MultipartFile file,
+            @RequestParam("portions") String portionsJson) throws IOException {
 
-        Boolean isAvailable = Boolean.parseBoolean(availabilityStatus);
-        MenuItems updatedItem = menuService.updateMenuItem(id, itemName,smallPortionPrice,mediumPortionPrice,largePortionPrice,offer, category, isAvailable, description, file);
+        // Convert JSON string to List<MenuItemPortion>
+        ObjectMapper objectMapper = new ObjectMapper();
+        List<MenuItemPortion> portions = objectMapper.readValue(
+                portionsJson,
+                objectMapper.getTypeFactory().constructCollectionType(List.class, MenuItemPortion.class)
+        );
 
-        if (updatedItem == null) {
-            return ResponseEntity.notFound().build();
-        }
+        // Call the service layer to update the menu item
+        MenuItems updatedItem = menuService.updateMenuItem(id, itemName, offer, category, availabilityStatus, description, file, portions);
+
         return ResponseEntity.ok(updatedItem);
     }
-
+    /**
+     * Delete a menu item by ID.
+     */
     @DeleteMapping("/delete/{id}")
     public ResponseEntity<String> deleteMenuItem(@PathVariable Long id) {
         boolean deleted = menuService.deleteMenuItem(id);
@@ -96,14 +124,21 @@ public class MenuController {
         }
     }
 
+    /**
+     * Get all menu items for a specific restaurant.
+     */
     @GetMapping("/restaurant/{restaurantId}")
     public ResponseEntity<List<MenuItems>> getMenuItemsByRestaurantId(@PathVariable Long restaurantId) {
-        List<MenuItems> menuItems = menuService.getMenuItemsByRestaurantId(restaurantId);
+        try {
+            List<MenuItems> menuItems = menuService.getMenuItemsByRestaurantId(restaurantId);
 
-        if (menuItems.isEmpty()) {
-            return ResponseEntity.noContent().build(); // Return 204 No Content if no items found
+            if (menuItems.isEmpty()) {
+                return ResponseEntity.noContent().build(); // Return 204 No Content if no items found
+            }
+
+            return ResponseEntity.ok(menuItems); // Return 200 OK with the list of menu items
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(404).body(null); // Return 404 Not Found if no menu items exist for the restaurant
         }
-
-        return ResponseEntity.ok(menuItems); // Return 200 OK with the list of menu items
     }
 }
