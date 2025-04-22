@@ -7,10 +7,7 @@ const UserServiceURL = process.env.USER_SERVICE_URL || 'http://localhost:8085';
 
 // Register User
 export const registerUser = async (email: string, password: string, userData: User) => {
-  console.log("Using USER_SERVICE_URL:", UserServiceURL);
-  console.log("Incoming registration for:", email);
-  console.log("User data:", userData);
-
+  
   if (!password) {
     throw new Error('Password is required for registration');
   }

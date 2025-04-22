@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
+@RequestMapping("/vehicle-types")
 @RequiredArgsConstructor
 public class VehicleTypeController {
     private final VehicleTypeService vehicleTypeService;
@@ -28,5 +29,17 @@ public class VehicleTypeController {
         return vehicleTypeService.getVehicleTypeById(id)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<VehicleType> updateVehicleType(@PathVariable String id, @RequestBody VehicleType type) {
+        return ResponseEntity.ok(vehicleTypeService.updateVehicleType(id, type));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<String> deleteVehicleType(@PathVariable String id) {
+        return vehicleTypeService.deleteVehicleType(id) ?
+                ResponseEntity.ok("Vehicle type deleted successfully") :
+                ResponseEntity.status(404).body("Vehicle type not found");
     }
 }

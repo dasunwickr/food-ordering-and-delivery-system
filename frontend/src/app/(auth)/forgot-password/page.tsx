@@ -28,10 +28,6 @@ export default function ForgotPasswordPage() {
     setIsLoading(true)
 
     try {
-      // Here you would implement your actual password reset logic
-      // For example: await resetPassword(email);
-
-      // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 1500))
 
       setIsSubmitted(true)

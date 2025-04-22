@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
+@RequestMapping("/restaurant-types")
 @RequiredArgsConstructor
 public class RestaurantTypeController {
     private final RestaurantTypeService restaurantTypeService;
@@ -28,5 +29,17 @@ public class RestaurantTypeController {
         return restaurantTypeService.getRestaurantTypeById(id)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<RestaurantType> updateRestaurantType(@PathVariable String id, @RequestBody RestaurantType type) {
+        return ResponseEntity.ok(restaurantTypeService.updateRestaurantType(id, type));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<String> deleteRestaurantType(@PathVariable String id) {
+        return restaurantTypeService.deleteRestaurantType(id) ?
+                ResponseEntity.ok("Restaurant type deleted successfully") :
+                ResponseEntity.status(404).body("Restaurant type not found");
     }
 }

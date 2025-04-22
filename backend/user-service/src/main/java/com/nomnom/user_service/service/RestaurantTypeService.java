@@ -7,7 +7,6 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Optional;
-
 @Service
 @RequiredArgsConstructor
 public class RestaurantTypeService {
@@ -23,5 +22,21 @@ public class RestaurantTypeService {
 
     public Optional<RestaurantType> getRestaurantTypeById(String id) {
         return restaurantTypeRepository.findById(id);
+    }
+
+    public RestaurantType updateRestaurantType(String id, RestaurantType updatedType) {
+        if (restaurantTypeRepository.existsById(id)) {
+            updatedType.setId(id);
+            return restaurantTypeRepository.save(updatedType);
+        }
+        throw new IllegalArgumentException("RestaurantType not found");
+    }
+
+    public boolean deleteRestaurantType(String id) {
+        if (restaurantTypeRepository.existsById(id)) {
+            restaurantTypeRepository.deleteById(id);
+            return true;
+        }
+        return false;
     }
 }
