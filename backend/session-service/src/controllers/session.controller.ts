@@ -1,23 +1,20 @@
 import { Request, Response } from 'express';
-import jwt from 'jsonwebtoken';
+import { v4 as uuidv4 } from 'uuid';
 import { SessionModel } from '../model/session.model';
 import { CreateSessionSchema, UpdateSessionSchema } from '../validators/session.schema';
 
-const SECRET_KEY = process.env.JWT_SECRET_KEY || 'your-secret-key';
+import redis from '../config/redis';
+import { createToken } from '../utils/jwt.utils';
 
-// Create Session
+const ONE_DAY_MS = 1000 * 60 * 60 * 24;
+
 export const createSession = async (req: Request, res: Response) => {
   try {
-    // Validate the request body using Zod
-    const parsed = CreateSessionSchema.parse(req.body);
-    const { userId, device, macAddress } = parsed;
+    const { userId, device, macAddress } = CreateSessionSchema.parse(req.body);
+    const sessionId = uuidv4();
+    const expiresAt = new Date(Date.now() + ONE_DAY_MS);
 
-    // Generate a sessionId and JWT token
-    const sessionId = jwt.sign({ userId, device, macAddress }, SECRET_KEY, { expiresIn: '1h' });
-    const expiresAt = new Date(Date.now() + 3600000); // 1 hour expiration
-
-    // Create and save the session in the DB
-    const newSession = new SessionModel({
+    const session = await SessionModel.create({
       userId,
       sessionId,
       device,
@@ -25,34 +22,27 @@ export const createSession = async (req: Request, res: Response) => {
       expiresAt,
     });
 
-    await newSession.save();
+    await redis.set(sessionId, userId, 'EX', ONE_DAY_MS / 1000); // 1 day in seconds
+    const token = createToken(userId, sessionId);
 
-    // Send the response
-    res.status(201).json({
-      sessionId,
-      token: sessionId,
-    });
+    res.status(201).json({ sessionId, token });
   } catch (error: any) {
     console.error("Create Session Error:", error.message);
     res.status(400).json({ error: error.message });
   }
 };
 
-// Update Session (Refresh Expiry)
 export const updateSession = async (req: Request, res: Response) => {
   try {
-    const parsed = UpdateSessionSchema.parse(req.body);
-    const { sessionId } = parsed;
-
-    // Find session and update expiry
+    const { sessionId } = UpdateSessionSchema.parse(req.body);
     const session = await SessionModel.findOne({ sessionId });
 
-    if (!session) {
-      throw new Error('Session not found');
-    }
+    if (!session) throw new Error('Session not found');
 
-    session.expiresAt = new Date(Date.now() + 3600000); // Extend expiry for 1 hour
+    session.expiresAt = new Date(Date.now() + ONE_DAY_MS);
     await session.save();
+
+    await redis.expire(sessionId, ONE_DAY_MS / 1000);
 
     res.status(200).json({ message: 'Session updated' });
   } catch (error: any) {
@@ -61,18 +51,14 @@ export const updateSession = async (req: Request, res: Response) => {
   }
 };
 
-// Invalidate Session (Delete)
 export const invalidateSession = async (req: Request, res: Response) => {
   try {
-    const parsed = UpdateSessionSchema.parse(req.body);
-    const { sessionId } = parsed;
+    const { sessionId } = UpdateSessionSchema.parse(req.body);
 
-    // Find and delete the session
     const session = await SessionModel.findOneAndDelete({ sessionId });
+    if (!session) throw new Error('Session not found');
 
-    if (!session) {
-      throw new Error('Session not found');
-    }
+    await redis.del(sessionId);
 
     res.status(200).json({ message: 'Session invalidated' });
   } catch (error: any) {

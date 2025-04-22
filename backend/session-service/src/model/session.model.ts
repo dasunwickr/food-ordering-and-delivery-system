@@ -1,6 +1,6 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
-interface ISession {
+export interface ISession extends Document {
   userId: string;
   sessionId: string;
   device: string;
@@ -18,6 +18,4 @@ const sessionSchema = new Schema<ISession>({
   expiresAt: { type: Date, required: true },
 });
 
-const SessionModel = mongoose.model<ISession>('Session', sessionSchema);
-
-export { SessionModel, ISession };
+export const SessionModel = mongoose.model<ISession>('Session', sessionSchema);

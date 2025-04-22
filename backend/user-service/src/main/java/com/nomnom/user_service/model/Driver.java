@@ -1,6 +1,7 @@
 package com.nomnom.user_service.model;
 
 import lombok.*;
+import org.springframework.data.annotation.TypeAlias;
 import org.springframework.data.geo.Point;
 import org.springframework.data.mongodb.core.mapping.Document;
 
@@ -13,6 +14,7 @@ import java.util.List;
 @Setter
 @AllArgsConstructor
 @EqualsAndHashCode(callSuper = true)
+@TypeAlias("DRIVER")
 public class Driver extends User {
     private String vehicleTypeId;
     private String vehicleNumber;

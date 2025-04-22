@@ -2,6 +2,7 @@ package com.nomnom.user_service.service;
 
 import com.nomnom.user_service.enums.UserType;
 import com.nomnom.user_service.model.*;
+import com.nomnom.user_service.repository.CuisineTypeRepository;
 import com.nomnom.user_service.repository.RestaurantTypeRepository;
 import com.nomnom.user_service.repository.UserRepository;
 import com.nomnom.user_service.repository.VehicleTypeRepository;
@@ -19,6 +20,7 @@ public class UserService {
     private final UserRepository userRepository;
     private final RestaurantTypeRepository restaurantTypeRepository;
     private final VehicleTypeRepository vehicleTypeRepository;
+    private final CuisineTypeRepository cuisineTypeRepository;
 
     public User saveUser(User user) {
         if (userRepository.findByEmail(user.getEmail()).isPresent()) {
@@ -27,12 +29,27 @@ public class UserService {
 
         if (user instanceof Admin) {
             user.setUserType(UserType.ADMIN.name());
+
         } else if (user instanceof Customer) {
             user.setUserType(UserType.CUSTOMER.name());
-        } else if (user instanceof Driver) {
+
+        } else if (user instanceof Driver driver) {
             user.setUserType(UserType.DRIVER.name());
-        } else if (user instanceof Restaurant) {
+            if (!vehicleTypeRepository.existsById(driver.getVehicleTypeId())) {
+                throw new IllegalArgumentException("Invalid Vehicle Type ID");
+            }
+
+        } else if (user instanceof Restaurant restaurant) {
             user.setUserType(UserType.RESTAURANT.name());
+            if (!restaurantTypeRepository.existsById(restaurant.getRestaurantTypeId())) {
+                throw new IllegalArgumentException("Invalid Restaurant Type ID");
+            }
+            for (String cuisineTypeId : restaurant.getCuisineTypeIds()) {
+                if (!cuisineTypeRepository.existsById(cuisineTypeId)) {
+                    throw new IllegalArgumentException("Invalid Cuisine Type ID: " + cuisineTypeId);
+                }
+            }
+
         } else {
             throw new IllegalArgumentException("Invalid user type");
         }
@@ -91,7 +108,6 @@ public class UserService {
         }
         throw new IllegalArgumentException("Restaurant not found or invalid ID");
     }
-
 
     public Restaurant updateRestaurantType(String userId, String restaurantTypeId) {
         Optional<User> optional = userRepository.findById(userId);

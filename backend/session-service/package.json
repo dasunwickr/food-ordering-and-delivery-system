@@ -9,7 +9,7 @@
   "scripts": {
     "build": "npx tsc",
     "start": "node dist/server.js",
-    "dev": "nodemon --watch 'src/**/*.ts' --exec \"tsx server.ts\""
+    "dev": "nodemon --watch 'src/**/*.ts' --exec \"tsx src/server.ts\""
   },
   "dependencies": {
     "@types/express-session": "^1.18.1",

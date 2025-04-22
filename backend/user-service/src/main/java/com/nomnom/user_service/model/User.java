@@ -21,10 +21,10 @@ import org.springframework.data.mongodb.core.mapping.Document;
         property = "userType"
 )
 @JsonSubTypes({
-        @JsonSubTypes.Type(value = Admin.class, name = "admin"),
-        @JsonSubTypes.Type(value = Customer.class, name = "customer"),
-        @JsonSubTypes.Type(value = Driver.class, name = "driver"),
-        @JsonSubTypes.Type(value = Restaurant.class, name = "restaurantOwner")
+        @JsonSubTypes.Type(value = Admin.class, name = "ADMIN"),
+        @JsonSubTypes.Type(value = Customer.class, name = "CUSTOMER"),
+        @JsonSubTypes.Type(value = Driver.class, name = "DRIVER"),
+        @JsonSubTypes.Type(value = Restaurant.class, name = "RESTAURANT")
 })
 
 public abstract class User {
@@ -34,8 +34,6 @@ public abstract class User {
     private String firstName;
 
     private String lastName;
-
-    private String address;
 
     @JsonProperty("email")
     private String email;

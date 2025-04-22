@@ -1,0 +1,43 @@
+services:
+  # Auth Service
+  auth-service:
+    build:
+      context: ./auth-service
+      dockerfile: Dockerfile
+    ports:
+      - "5001:5001"
+    env_file:
+      - ./auth-service/.env
+    restart: unless-stopped
+    networks:
+      - nomnom-network
+
+  # Session Service
+  session-service:
+    build:
+      context: ./session-service
+      dockerfile: Dockerfile
+    ports:
+      - "5007:5007"
+    env_file:
+      - ./session-service/.env
+    restart: unless-stopped
+    networks:
+      - nomnom-network
+
+  # User Service
+  user-service:
+    build:
+      context: ./user-service
+      dockerfile: Dockerfile
+    ports:
+      - "8085:8085"
+    env_file:
+      - ./user-service/.env
+    restart: unless-stopped
+    networks:
+      - nomnom-network
+
+networks:
+  nomnom-network:
+    driver: bridge
