@@ -20,7 +20,7 @@ mongoose.connect(process.env.MONGO_URI!)
   .catch(err => logger.error('MongoDB connection error:', err));
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 5005;
 
 // Middleware to parse JSON
 app.use(express.json());
@@ -60,10 +60,10 @@ wss.on('connection', (ws) => {
 app.post('/orders',addOrder)
 app.post('/process-payment', processPayment);
 app.post('/notify-driver-payment-deposited', notifyDriverAboutPaymentDeposit)
-app.put('/orders/:orderId/status', updateOrderStatus);
+app.post('/orders/status', updateOrderStatus);
 app.post('/notify-restaurant-payment-deposited', notifyRestaurantAboutPaymentDeposit);
 app.post('/apply-restaurant', applyToBecomeRestaurant);
-app.put('/update-restaurant-status/:email', updateRestaurantApplicationStatus);
+app.post('/update-restaurant-status', updateRestaurantApplicationStatus);
 // Route to broadcast emails
 app.post('/broadcast-emails', broadcastEmailsWithTemplateController); // Use the new controller
 
@@ -74,7 +74,7 @@ app.post('/drivers/allocate', allocateDelivery);
 app.post('/drivers/apply', applyToBecomeDriver);
 
 // Route to update application status (Admin action)
-app.put('/drivers/application/:userId/status', updateApplicationStatus);
+app.post('/drivers/application/status', updateApplicationStatus);
 
 
 // Start the server

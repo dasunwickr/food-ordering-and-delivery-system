@@ -1,32 +1,18 @@
 import { Request, Response } from 'express';
-import { DriverModel } from '../models/driverModel';
 import { sendSMS, sendEmail } from '../services/notificationService';
+import { Notification } from '../models/notificationModel'; // Import the Notification model
 
 // Allocate a delivery to a driver
 export const allocateDelivery = async (req: Request, res: Response): Promise<void> => {
   const { driverId, name, phoneNumber, email, orderId } = req.body;
 
+  // Validate required fields
   if (!driverId || !name || !phoneNumber || !email || !orderId) {
     res.status(400).json({ error: 'Missing required fields: driverId, name, phoneNumber, email, orderId' });
     return;
   }
 
   try {
-    // Check if the driver already exists in the database
-    let driver = await DriverModel.findOne({ driverId });
-
-    if (driver) {
-      // Update the driver's allocation details
-      driver.orderId = orderId;
-      driver.status = 'allocated';
-      driver.updatedAt = new Date();
-      await driver.save();
-    } else {
-      // Create a new driver record
-      driver = new DriverModel({ driverId, name, phoneNumber, email, orderId, status: 'allocated' });
-      await driver.save();
-    }
-
     // Prepare the notification message
     const smsMessage = `📦 Delivery Allocated: You have been assigned order #${orderId}. Please proceed with the delivery.`;
     const emailSubject = `🚚 Delivery Allocated - Order #${orderId}`;
@@ -43,10 +29,28 @@ export const allocateDelivery = async (req: Request, res: Response): Promise<voi
     `;
 
     // Send SMS notification
-    await sendSMS(phoneNumber, smsMessage);
+    // await sendSMS(phoneNumber, smsMessage);
 
     // Send email notification
     await sendEmail(email, emailSubject, emailText, emailHtml);
+
+    // Store the SMS notification in the database
+    const smsNotification = new Notification({
+      title: 'Delivery Allocation (SMS)',
+      message: `📦 Delivery Allocated: You have been assigned order #${orderId}.`,
+      phoneNumber,
+      status: 'send',
+    });
+    await smsNotification.save();
+
+    // Store the email notification in the database
+    const emailNotification = new Notification({
+      title: 'Delivery Allocation (Email)',
+      message: `You have been assigned order #${orderId}.`,
+      email,
+      status: 'send',
+    });
+    await emailNotification.save();
 
     res.status(200).json({ success: true, message: 'Delivery allocated successfully' });
   } catch (error) {
