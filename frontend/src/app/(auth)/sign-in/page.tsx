@@ -1,92 +1,99 @@
-"use client"
+"use client";
 
-import type React from "react"
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+import { motion } from "framer-motion";
+import { Mail, Lock, ArrowRight } from "lucide-react";
 
-import { useState } from "react"
-import Link from "next/link"
-import { motion } from "framer-motion"
-import { ArrowRight, Mail, Lock, Eye, EyeOff } from "lucide-react"
-
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useAuthStore } from "@/store/auth-store";
 
 export default function SignIn() {
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [showPassword, setShowPassword] = useState(false)
-  const [errors, setErrors] = useState<{ email?: string; password?: string }>({})
+  const router = useRouter();
+  const {
+    email,
+    password,
+    rememberMe,
+    isLoading,
+    error,
+    status,
+    setSignInField,
+    handleSignIn,
+    resetSignInForm
+  } = useAuthStore();
 
-  const validateForm = () => {
-    const newErrors: { email?: string; password?: string } = {}
-
-    if (!email) {
-      newErrors.email = "Email is required"
-    } else if (!/\S+@\S+\.\S+/.test(email)) {
-      newErrors.email = "Email is invalid"
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (status === "authenticated") {
+      router.push("/dashboard");
     }
+  }, [status, router]);
 
-    if (!password) {
-      newErrors.password = "Password is required"
-    }
+  // Reset form on unmount
+  useEffect(() => {
+    return () => {
+      resetSignInForm();
+    };
+  }, [resetSignInForm]);
 
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
-  }
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (validateForm()) {
-      // Handle sign in logic
-      console.log("Sign in with:", email, password)
-    }
-  }
+  const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    await handleSignIn();
+  };
 
   const containerVariants = {
-    hidden: { opacity: 0 },
+    hidden: { opacity: 0, y: 20 },
     visible: {
       opacity: 1,
+      y: 0,
       transition: {
-        staggerChildren: 0.1,
+        duration: 0.4,
+        ease: "easeOut",
       },
     },
-  }
+  };
 
   const itemVariants = {
-    hidden: { y: 20, opacity: 0 },
-    visible: {
-      y: 0,
+    hidden: { opacity: 0, y: 20 },
+    visible: (i: number) => ({
       opacity: 1,
+      y: 0,
       transition: {
-        type: "spring",
-        stiffness: 300,
-        damping: 24,
+        delay: i * 0.1,
+        duration: 0.3,
+        ease: "easeOut",
       },
-    },
-  }
+    }),
+  };
 
   return (
     <div className="w-full max-w-md mx-auto p-6 space-y-8">
       <motion.div
         className="space-y-2 text-center"
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-      >
-        <h1 className="text-3xl font-bold">Welcome back</h1>
-        <p className="text-muted-foreground">Sign in to your account to continue</p>
-      </motion.div>
-
-      <motion.form
-        onSubmit={handleSubmit}
-        className="space-y-6"
         variants={containerVariants}
         initial="hidden"
         animate="visible"
       >
-        <motion.div className="space-y-2" variants={itemVariants}>
+        <h1 className="text-2xl font-bold">Welcome Back</h1>
+        <p className="text-muted-foreground">
+          Enter your credentials to access your account
+        </p>
+      </motion.div>
+
+      <motion.form
+        className="space-y-6"
+        onSubmit={onSubmit}
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+      >
+        <motion.div className="space-y-2" custom={1} variants={itemVariants}>
           <Label htmlFor="email" className="text-sm font-medium">
-            Email
+            Email Address
           </Label>
           <div className="relative">
             <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -94,78 +101,115 @@ export default function SignIn() {
               id="email"
               type="email"
               placeholder="name@example.com"
-              className={`pl-10 ${errors.email ? "border-red-500" : ""}`}
+              className="pl-10"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => setSignInField("email", e.target.value)}
+              disabled={isLoading}
             />
           </div>
-          {errors.email && (
-            <motion.p className="text-sm text-red-500" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-              {errors.email}
-            </motion.p>
-          )}
         </motion.div>
 
-        <motion.div className="space-y-2" variants={itemVariants}>
-          <div className="flex justify-between">
+        <motion.div className="space-y-2" custom={2} variants={itemVariants}>
+          <div className="flex items-center justify-between">
             <Label htmlFor="password" className="text-sm font-medium">
               Password
             </Label>
-            <Link href="/forgot-password" className="text-sm text-primary hover:underline">
-              Forgot Password?
+            <Link
+              href="/forgot-password"
+              className="text-sm font-medium text-primary hover:underline"
+            >
+              Forgot password?
             </Link>
           </div>
           <div className="relative">
             <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               id="password"
-              type={showPassword ? "text" : "password"}
+              type="password"
               placeholder="••••••••"
-              className={`pl-10 ${errors.password ? "border-red-500" : ""}`}
+              className="pl-10"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => setSignInField("password", e.target.value)}
+              disabled={isLoading}
             />
-            <button
-              type="button"
-              className="absolute right-3 top-1/2 -translate-y-1/2"
-              onClick={() => setShowPassword(!showPassword)}
-            >
-              {showPassword ? (
-                <EyeOff className="h-4 w-4 text-muted-foreground" />
-              ) : (
-                <Eye className="h-4 w-4 text-muted-foreground" />
-              )}
-            </button>
           </div>
-          {errors.password && (
-            <motion.p className="text-sm text-red-500" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-              {errors.password}
-            </motion.p>
-          )}
         </motion.div>
 
-        <motion.div variants={itemVariants}>
-          <Button type="submit" className="w-full">
-            Sign In
-            <ArrowRight className="ml-2 h-4 w-4" />
+        <motion.div
+          className="flex items-center space-x-2"
+          custom={3}
+          variants={itemVariants}
+        >
+          <Checkbox
+            id="remember"
+            checked={rememberMe}
+            onCheckedChange={(checked) =>
+              setSignInField("rememberMe", Boolean(checked))
+            }
+            disabled={isLoading}
+          />
+          <Label
+            htmlFor="remember"
+            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+          >
+            Remember me
+          </Label>
+        </motion.div>
+
+        {error && (
+          <motion.div
+            className="p-3 rounded-md bg-red-50 text-red-600 text-sm"
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+          >
+            {error}
+          </motion.div>
+        )}
+
+        <motion.div custom={4} variants={itemVariants}>
+          <Button
+            type="submit"
+            className="w-full"
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <div className="flex items-center">
+                <div className="animate-spin mr-2 h-4 w-4 border-2 border-white border-opacity-50 border-t-transparent rounded-full" />
+                Signing in...
+              </div>
+            ) : (
+              <div className="flex items-center">
+                Sign In
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </div>
+            )}
           </Button>
         </motion.div>
 
-        <motion.div className="relative my-6" variants={itemVariants}>
+        <motion.div
+          className="relative my-6"
+          custom={5}
+          variants={itemVariants}
+        >
           <div className="absolute inset-0 flex items-center">
             <div className="w-full border-t border-gray-200"></div>
           </div>
           <div className="relative flex justify-center text-sm">
-            <span className="px-2 bg-white text-muted-foreground">Or continue with</span>
+            <span className="px-2 bg-white text-muted-foreground">
+              Or continue with
+            </span>
           </div>
         </motion.div>
 
-        <motion.div variants={itemVariants}>
+        <motion.div custom={6} variants={itemVariants}>
           <Button
             type="button"
             variant="outline"
-            className="w-full flex items-center justify-center"
-            onClick={() => console.log("Google sign in")}
+            className="w-full"
+            disabled={isLoading}
+            onClick={() => {
+              // Handle Google sign in
+            }}
           >
             <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
               <path
@@ -190,13 +234,20 @@ export default function SignIn() {
           </Button>
         </motion.div>
 
-        <motion.div className="text-center text-sm" variants={itemVariants}>
+        <motion.p
+          className="text-center text-sm"
+          custom={7}
+          variants={itemVariants}
+        >
           Don&apos;t have an account?{" "}
-          <Link href="/sign-up" className="text-primary font-medium hover:underline">
-            Sign Up
+          <Link
+            href="/sign-up"
+            className="font-medium text-primary hover:underline"
+          >
+            Sign up
           </Link>
-        </motion.div>
+        </motion.p>
       </motion.form>
     </div>
-  )
+  );
 }

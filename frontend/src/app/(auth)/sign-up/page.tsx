@@ -1,7 +1,5 @@
 "use client"
 
-import type React from "react"
-
 import { useState } from "react"
 import Link from "next/link"
 import { motion, AnimatePresence } from "framer-motion"
@@ -10,99 +8,41 @@ import { ArrowLeft, ArrowRight, Mail, Lock, User, Phone, Upload, Check } from "l
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { CustomerSignUp } from "@/components/auth/customer-signup"
-import { DriverSignUp } from "@/components/auth/driver-signup"
-import { RestaurantSignUp } from "@/components/auth/restaurant-signup"
-import { UserTypeSelector } from "@/components/auth/user-type-selector"
-
-type UserType = "customer" | "driver" | "restaurant" | null
+import { CustomerSignUp } from "@/components/auth/sign-up/customer-form"
+import { useSignUpStore } from "@/store/auth-store"
+import { DriverSignUp } from "@/components/auth/sign-up/driver-form"
+import { RestaurantSignUp } from "@/components/auth/sign-up/restaurant-form"
+import { UserTypeSelector } from "@/components/auth/sign-up/user-type-selector"
 
 export default function SignUp() {
-  const [step, setStep] = useState(1)
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [confirmPassword, setConfirmPassword] = useState("")
-  const [firstName, setFirstName] = useState("")
-  const [lastName, setLastName] = useState("")
-  const [phone, setPhone] = useState("")
-  const [profileImage, setProfileImage] = useState<File | null>(null)
-  const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null)
-  const [userType, setUserType] = useState<UserType>(null)
-  const [showUserTypeModal, setShowUserTypeModal] = useState(false)
-  const [errors, setErrors] = useState<{ [key: string]: string }>({})
-
-  const validateStep1 = () => {
-    const newErrors: { [key: string]: string } = {}
-
-    if (!email) {
-      newErrors.email = "Email is required"
-    } else if (!/\S+@\S+\.\S+/.test(email)) {
-      newErrors.email = "Email is invalid"
-    }
-
-    if (!password) {
-      newErrors.password = "Password is required"
-    } else if (password.length < 8) {
-      newErrors.password = "Password must be at least 8 characters"
-    }
-
-    if (password !== confirmPassword) {
-      newErrors.confirmPassword = "Passwords do not match"
-    }
-
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
-  }
-
-  const validateStep2 = () => {
-    const newErrors: { [key: string]: string } = {}
-
-    if (!firstName) {
-      newErrors.firstName = "First name is required"
-    }
-
-    if (!lastName) {
-      newErrors.lastName = "Last name is required"
-    }
-
-    if (!phone) {
-      newErrors.phone = "Phone number is required"
-    } else if (!/^\d{10}$/.test(phone.replace(/\D/g, ""))) {
-      newErrors.phone = "Please enter a valid 10-digit phone number"
-    }
-
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
-  }
+  // Get state and actions from our Zustand store
+  const {
+    email, password, confirmPassword,
+    firstName, lastName, phone,
+    profileImageUrl, userType,
+    step, errors, showUserTypeModal,
+    setField,
+    nextStep, prevStep,
+    validateStep1, validateStep2,
+    setShowUserTypeModal, setUserType,
+    handleProfileImageChange
+  } = useSignUpStore();
 
   const handleStep1Submit = (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
     if (validateStep1()) {
-      setStep(2)
+      nextStep();
     }
-  }
+  };
 
   const handleStep2Submit = (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
     if (validateStep2()) {
-      setShowUserTypeModal(true)
+      setShowUserTypeModal(true);
     }
-  }
+  };
 
-  const handleUserTypeSelect = (type: UserType) => {
-    setUserType(type)
-    setShowUserTypeModal(false)
-    setStep(3)
-  }
-
-  const handleProfileImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0]
-      setProfileImage(file)
-      setProfileImageUrl(URL.createObjectURL(file))
-    }
-  }
-
+  // Animation variants
   const containerVariants = {
     hidden: { opacity: 0, x: 100 },
     visible: {
@@ -122,7 +62,7 @@ export default function SignUp() {
         duration: 0.2,
       },
     },
-  }
+  };
 
   const itemVariants = {
     hidden: { y: 20, opacity: 0 },
@@ -135,7 +75,7 @@ export default function SignUp() {
         damping: 24,
       },
     },
-  }
+  };
 
   const renderStepIndicator = () => {
     return (
@@ -164,8 +104,8 @@ export default function SignUp() {
           </motion.div>
         ))}
       </div>
-    )
-  }
+    );
+  };
 
   return (
     <div className="w-full max-w-md mx-auto p-6 space-y-6">
@@ -178,7 +118,7 @@ export default function SignUp() {
         {step > 1 ? (
           <button
             type="button"
-            onClick={() => setStep(step - 1)}
+            onClick={prevStep}
             className="flex items-center text-sm font-medium text-muted-foreground hover:text-foreground"
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
@@ -234,7 +174,7 @@ export default function SignUp() {
                   placeholder="name@example.com"
                   className={`pl-10 ${errors.email ? "border-red-500" : ""}`}
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => setField("email", e.target.value)}
                 />
               </div>
               {errors.email && (
@@ -256,7 +196,7 @@ export default function SignUp() {
                   placeholder="••••••••"
                   className={`pl-10 ${errors.password ? "border-red-500" : ""}`}
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => setField("password", e.target.value)}
                 />
               </div>
               {errors.password && (
@@ -278,7 +218,7 @@ export default function SignUp() {
                   placeholder="••••••••"
                   className={`pl-10 ${errors.confirmPassword ? "border-red-500" : ""}`}
                   value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  onChange={(e) => setField("confirmPassword", e.target.value)}
                 />
               </div>
               {errors.confirmPassword && (
@@ -306,25 +246,25 @@ export default function SignUp() {
 
             <motion.div variants={itemVariants}>
               <Button type="button" variant="outline" className="w-full">
-              <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
-              <path
-                d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                fill="#4285F4"
-              />
-              <path
-                d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                fill="#34A853"
-              />
-              <path
-                d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                fill="#FBBC05"
-              />
-              <path
-                d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                fill="#EA4335"
-              />
-              <path d="M1 1h22v22H1z" fill="none" />
-            </svg>
+                <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
+                  <path
+                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                    fill="#4285F4"
+                  />
+                  <path
+                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                    fill="#34A853"
+                  />
+                  <path
+                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                    fill="#FBBC05"
+                  />
+                  <path
+                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                    fill="#EA4335"
+                  />
+                  <path d="M1 1h22v22H1z" fill="none" />
+                </svg>
                 Sign up with Google
               </Button>
             </motion.div>
@@ -353,7 +293,7 @@ export default function SignUp() {
                     placeholder="John"
                     className={`pl-10 ${errors.firstName ? "border-red-500" : ""}`}
                     value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
+                    onChange={(e) => setField("firstName", e.target.value)}
                   />
                 </div>
                 {errors.firstName && (
@@ -373,7 +313,7 @@ export default function SignUp() {
                     placeholder="Doe"
                     className={`pl-10 ${errors.lastName ? "border-red-500" : ""}`}
                     value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
+                    onChange={(e) => setField("lastName", e.target.value)}
                   />
                 </div>
                 {errors.lastName && (
@@ -396,7 +336,7 @@ export default function SignUp() {
                   placeholder="(123) 456-7890"
                   className={`pl-10 ${errors.phone ? "border-red-500" : ""}`}
                   value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
+                  onChange={(e) => setField("phone", e.target.value)}
                 />
               </div>
               {errors.phone && (
@@ -435,7 +375,11 @@ export default function SignUp() {
                     type="file"
                     accept="image/*"
                     className="sr-only"
-                    onChange={handleProfileImageChange}
+                    onChange={(e) => {
+                      if (e.target.files && e.target.files[0]) {
+                        handleProfileImageChange(e.target.files[0]);
+                      }
+                    }}
                   />
                   <p className="mt-1 text-xs text-muted-foreground">JPG, PNG or GIF. Max 2MB.</p>
                 </div>
@@ -460,41 +404,9 @@ export default function SignUp() {
             animate="visible"
             exit="exit"
           >
-            {userType === "customer" && (
-              <CustomerSignUp
-                userData={{
-                  email,
-                  firstName,
-                  lastName,
-                  phone,
-                  profileImage: profileImageUrl,
-                }}
-              />
-            )}
-
-            {userType === "driver" && (
-              <DriverSignUp
-                userData={{
-                  email,
-                  firstName,
-                  lastName,
-                  phone,
-                  profileImage: profileImageUrl,
-                }}
-              />
-            )}
-
-            {userType === "restaurant" && (
-              <RestaurantSignUp
-                userData={{
-                  email,
-                  firstName,
-                  lastName,
-                  phone,
-                  profileImage: profileImageUrl,
-                }}
-              />
-            )}
+            {userType === "customer" && <CustomerSignUp />}
+            {userType === "driver" && <DriverSignUp />}
+            {userType === "restaurant" && <RestaurantSignUp />}
           </motion.div>
         )}
       </AnimatePresence>
@@ -502,8 +414,8 @@ export default function SignUp() {
       <UserTypeSelector
         isOpen={showUserTypeModal}
         onClose={() => setShowUserTypeModal(false)}
-        onSelect={handleUserTypeSelect}
+        onSelect={setUserType}
       />
     </div>
-  )
+  );
 }
