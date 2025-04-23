@@ -3,8 +3,7 @@ package com.nomnom.user_service.model;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.nomnom.user_service.enums.UserStatus;
-import com.nomnom.user_service.enums.UserType;
+
 import lombok.*;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;

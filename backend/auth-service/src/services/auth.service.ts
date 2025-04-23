@@ -1,82 +1,99 @@
 import axios from 'axios';
-import bcryptjs from 'bcryptjs';
-import { AuthModel } from '../models/auth.model';
-import { User } from '../models/user.model';
+import { hashPassword, comparePassword } from '../utils/auth';
+import {
+  createSession,
+  invalidateAllSessions,
+  invalidateAllExceptCurrent
+} from '../utils/sessionClient';
+import { UserModel } from '../models/User';
 
-const UserServiceURL = process.env.USER_SERVICE_URL || 'http://localhost:8085';
+const USER_SERVICE_URL = process.env.USER_SERVICE_URL || 'http://localhost:8085/api/users';
 
-// Register User
-export const registerUser = async (email: string, password: string, userData: User) => {
-  
-  if (!password) {
-    throw new Error('Password is required for registration');
-  }
+export const registerUser = async (
+  email: string,
+  password: string,
+  userType: string,
+  profile: Record<string, any>,
+  device: string,
+  ip: string
+) => {
+  const existing = await UserModel.findOne({ email });
+  if (existing) throw new Error('Email already exists');
+
+  const hashedPassword = await hashPassword(password);
+
+  // Create local user for auth purposes
+  const localUser = new UserModel({
+    email,
+    password: hashedPassword,
+    userType
+  });
+  await localUser.save();
+
+  // Create user in the User Service with all profile details
+  const fullUserData = {
+    ...profile,
+    email,
+    userType
+  };
 
   try {
-    const userDataWithEmail = { ...userData, email };
+    // Save in User Service
+    const { data: createdUser } = await axios.post(USER_SERVICE_URL, fullUserData);
 
-    console.log("Sending user creation request to:", `${UserServiceURL}/users`);
-    const userResponse = await axios.post(`${UserServiceURL}/users`, userDataWithEmail);
-    console.log("User service response:", userResponse.data);
+    console.log('User created in User Service:', createdUser);
+    // Create session with the session service
+    const session = await createSession(createdUser.id || localUser._id.toString(), ip, device);
 
-    if (!userResponse.data.id) {
-      throw new Error('User creation failed: No ID returned');
-    }
-
-    const hashedPassword = await bcryptjs.hash(password, 10);
-    console.log("Password hashed");
-
-    const authUser = new AuthModel({
-      email,
-      password: hashedPassword,
-      userId: userResponse.data.id,
-    });
-
-    console.log("Saving user to Auth DB:", authUser);
-    await authUser.save();
-    console.log("User saved to Auth DB");
-
-    return {
-      message: 'User registered successfully',
-      userId: userResponse.data.id,
+    return { 
+      userId: createdUser.id || localUser._id.toString(), 
+      token: session.token 
     };
   } catch (error: any) {
-    console.error("Error during registration:", error.message);
-    if (error.response) {
-      console.error("Response data:", error.response.data);
-      console.error("Response status:", error.response.status);
-    }
-    throw new Error(`Registration failed: ${error.message}`);
+    // Rollback local user creation if user service registration fails
+    await UserModel.deleteOne({ _id: localUser._id });
+    throw new Error(`User registration failed: ${error.message}`);
   }
 };
 
-// Login User
-export const loginUser = async (email: string, password: string) => {
-  console.log("Attempting login for:", email);
+export const loginUser = async (
+  email: string,
+  password: string,
+  device: string,
+  ip: string
+) => {
+  const user = await UserModel.findOne({ email });
+  if (!user) throw new Error('User not found');
 
-  try {
-    const authUser = await AuthModel.findOne({ email });
+  const valid = await comparePassword(password, user.password);
+  if (!valid) throw new Error('Invalid credentials');
 
-    if (!authUser) {
-      console.warn("No user found with email:", email);
-      throw new Error('User not found');
-    }
+  // Create session with the session service
+  const session = await createSession(user._id.toString(), ip, device);
 
-    console.log("User found, verifying password...");
-    const isPasswordCorrect = await bcryptjs.compare(password, authUser.password);
+  return { 
+    userId: user._id.toString(), 
+    token: session.token 
+  };
+};
 
-    if (!isPasswordCorrect) {
-      console.warn("Password mismatch for email:", email);
-      throw new Error('Invalid credentials');
-    }
+export const forgotPassword = async (email: string) => {
+  const user = await UserModel.findOne({ email });
+  if (!user) throw new Error('User not found');
 
-    console.log("Login successful for user:", authUser.userId);
-    return {
-      message: 'Login successful',
-      userId: authUser.userId,
-    };
-  } catch (error: any) {
-    console.error("Error during login:", error.message);
-    throw new Error(`Login failed: ${error.message}`);
-  }
+  const result = await invalidateAllSessions(user._id.toString());
+  return result;
+};
+
+export const resetPassword = async (email: string, newPassword: string, ip: string) => {
+  const user = await UserModel.findOne({ email });
+  if (!user) throw new Error('User not found');
+
+  const hashedPassword = await hashPassword(newPassword);
+  user.password = hashedPassword;
+  await user.save();
+
+  // Invalidate all sessions except the current one
+  const result = await invalidateAllExceptCurrent(user._id.toString(), ip);
+  return result;
 };
