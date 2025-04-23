@@ -62,17 +62,6 @@ services:
 
 
   # Cart Service
-   user-service:
-    build:
-      context: ./cart-service
-      dockerfile: Dockerfile
-    ports:
-      - "8085:8085"
-    env_file:
-      - ./user-service/.env
-    restart: unless-stopped
-    networks:
-      - nomnom-network
 
 networks:
   nomnom-network:
