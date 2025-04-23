@@ -1,14 +1,14 @@
 import { SessionModel } from '../model/session.model';
-import redis from '../config/redis';
 import logger from '../utils/logger';
 
 /**
- * Service to clean up expired sessions from both MongoDB and Redis
+ * Service to clean up expired sessions from MongoDB
  */
 export const cleanupExpiredSessions = async (): Promise<void> => {
   try {
-    
     const currentDate = new Date();
+    
+    // Find expired sessions for logging purposes
     const expiredSessions = await SessionModel.find({
       expiresAt: { $lt: currentDate }
     });
@@ -18,25 +18,13 @@ export const cleanupExpiredSessions = async (): Promise<void> => {
       return;
     }
 
-    
-    const sessionIds = expiredSessions.map(session => session.sessionId);
-    
-   
+    // Delete expired sessions
     const deleteResult = await SessionModel.deleteMany({
       expiresAt: { $lt: currentDate }
     });
-    
-    
-    if (sessionIds.length > 0) {
-      const pipeline = redis.pipeline();
-      sessionIds.forEach(id => {
-        pipeline.del(id);
-      });
-      await pipeline.exec();
-    }
 
     logger.info(`Cleaned up ${deleteResult.deletedCount} expired sessions`);
-  } catch (error) {
+  } catch (error: any) {
     logger.error('Error cleaning up expired sessions:', error);
   }
 };
