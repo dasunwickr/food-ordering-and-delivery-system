@@ -14,7 +14,7 @@ services:
       # - payment-service
       # - order-service
       # - menu-service
-      # - cart-service
+      - cart-service
       # - delivery-service
       # - notification-service
     restart: unless-stopped
@@ -51,6 +51,20 @@ services:
   user-service:
     build:
       context: ./user-service
+      dockerfile: Dockerfile
+    ports:
+      - "8085:8085"
+    env_file:
+      - ./user-service/.env
+    restart: unless-stopped
+    networks:
+      - nomnom-network
+
+
+  # Cart Service
+   user-service:
+    build:
+      context: ./cart-service
       dockerfile: Dockerfile
     ports:
       - "8085:8085"
