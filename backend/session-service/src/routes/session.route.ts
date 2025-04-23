@@ -1,18 +1,31 @@
 import { Router } from 'express';
- import { createSession, updateSession, invalidateSession, invalidateUserSessions } from '../controllers/session.controller';
+import { 
+  createSession, 
+  invalidateSessionById, 
+  invalidateUserSessions,
+  invalidateOtherSessions,
+  getActiveUserSession,
+  verifyToken
+} from '../controllers/session.controller';
 
 const router = Router();
 
-// POST /api/sessions/create - Create session
+// Create or extend a session
 router.post('/create', createSession);
 
-// POST /api/sessions/update - Update session
-router.post('/update', updateSession);
+// Verify token
+router.post('/verify', verifyToken);
 
-// POST /api/sessions/invalidate - Invalidate session
-router.post('/invalidate', invalidateSession);
+// Get active session by userId and IP
+router.post('/active', getActiveUserSession);
 
-// POST /api/sessions/invalidate/user - Invalidate all sessions for a user
+// Invalidate a specific session
+router.post('/invalidate/session', invalidateSessionById);
+
+// Invalidate all sessions for a user
 router.post('/invalidate/user', invalidateUserSessions);
+
+// Invalidate all sessions except current
+router.post('/invalidate/other', invalidateOtherSessions);
 
 export default router;

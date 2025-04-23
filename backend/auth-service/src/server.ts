@@ -1,36 +1,29 @@
 import express from 'express';
-import cors from 'cors';
-import morgan from 'morgan';
 import dotenv from 'dotenv';
 import { connectDB } from './config/db';
-import authRoutes from "./routes/auth.route"
+import authRoutes from './routes/auth.routes';
+import { errorHandler } from './middleware/errorHandler';
+import cors from 'cors';
+import axios from 'axios';
 
 dotenv.config();
-
 const app = express();
 
+// Middleware
+app.use(express.json());
 app.use(cors());
-app.use(morgan('dev')); 
-app.use(express.json()); 
+
+// Routes
 app.use('/api/auth', authRoutes);
 
-app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error(err.stack);
-  res.status(500).json({ error: err.message || 'Internal Server Error' });
+// Error handling middleware
+app.use(errorHandler);
+
+const PORT = process.env.PORT || 5000;
+
+connectDB().then(() => {
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+    console.log(`Session Service URL: ${process.env.SESSION_SERVICE_URL}`);
+  });
 });
-
-
-const startServer = async () => {
-  try {
-    await connectDB();
-    const PORT = process.env.PORT || 5000;
-    app.listen(PORT, () => {
-      console.log(`Auth service running on port ${PORT}`);
-    });
-  } catch (err) {
-    console.error('Failed to connect to DB', err);
-    process.exit(1); 
-  }
-};
-
-startServer();

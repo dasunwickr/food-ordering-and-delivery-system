@@ -9,17 +9,18 @@ import {broadcastEmailsWithTemplateController  } from './controllers/emailBroadc
 import { addOrder,updateOrderStatus } from './controllers/orderController';
 import { allocateDelivery } from './controllers/driverController';
 import { applyToBecomeDriver, updateApplicationStatus } from './controllers/driverApplicationController';
-
+import { processPayment,notifyDriverAboutPaymentDeposit,notifyRestaurantAboutPaymentDeposit } from './controllers/paymentController';
+import { applyToBecomeRestaurant, updateRestaurantApplicationStatus } from './controllers/restaurantController';
 // Load environment variables
 dotenv.config();
 
 // Connect to MongoDB
-mongoose.connect(process.env.MONGO_URI || 'mongodb+srv://Dhanuka:20020502@finacetracker.z0ps6.mongodb.net/?retryWrites=true&w=majority&appName=FinaceTracker')
+mongoose.connect(process.env.MONGO_URI!)
   .then(() => logger.info('Connected to MongoDB'))
   .catch(err => logger.error('MongoDB connection error:', err));
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 5005;
 
 // Middleware to parse JSON
 app.use(express.json());
@@ -57,11 +58,12 @@ wss.on('connection', (ws) => {
 
 
 app.post('/orders',addOrder)
-
-
-app.put('/orders/:orderId/status', updateOrderStatus);
-
-
+app.post('/process-payment', processPayment);
+app.post('/notify-driver-payment-deposited', notifyDriverAboutPaymentDeposit)
+app.post('/orders/status', updateOrderStatus);
+app.post('/notify-restaurant-payment-deposited', notifyRestaurantAboutPaymentDeposit);
+app.post('/apply-restaurant', applyToBecomeRestaurant);
+app.post('/update-restaurant-status', updateRestaurantApplicationStatus);
 // Route to broadcast emails
 app.post('/broadcast-emails', broadcastEmailsWithTemplateController); // Use the new controller
 
@@ -72,7 +74,7 @@ app.post('/drivers/allocate', allocateDelivery);
 app.post('/drivers/apply', applyToBecomeDriver);
 
 // Route to update application status (Admin action)
-app.put('/drivers/application/:userId/status', updateApplicationStatus);
+app.post('/drivers/application/status', updateApplicationStatus);
 
 
 // Start the server
