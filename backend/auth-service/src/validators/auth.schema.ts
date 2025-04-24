@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 export const SignUpSchema = z.object({
+  // Common fields
   email: z.string().email(),
   password: z.string().min(6),
   userType: z.string(),
@@ -8,35 +9,69 @@ export const SignUpSchema = z.object({
     firstName: z.string(),
     lastName: z.string(),
     contactNumber: z.string(),
-    profilePicture: z.string().optional(),
-    // Additional fields based on user type
+    profilePictureUrl: z.string().optional(),
+
+    // Customer, Restaurant, Driver specific fields
+    location: z.object({
+      lat: z.number().optional(),
+      lng: z.number().optional()
+    }).optional(),
+
+    // Restaurant and Driver specific fields
+    isActive: z.boolean().optional(),
+
+    // Restaurant specific fields
     restaurantName: z.string().optional(),
-    description: z.string().optional(),
-    address: z.string().optional(),
-    cuisineTypeIds: z.array(z.string()).optional(),
+    restaurantLicenseNumber: z.string().optional(),
     restaurantTypeId: z.string().optional(),
-    vehicleNumber: z.string().optional(),
+    cuisineTypeIds: z.array(z.string()).optional(),
+    restaurantDocuments: z.object({
+      id: z.string().optional(),
+      name: z.string().optional(),
+      url: z.string().optional()
+    }),
+    restaurantAddress: z.string().optional(),
+    openingTime:z.array( z.object({
+      day: z.string().optional(),
+      openingTime: z.string().optional(),
+      closingTime: z.string().optional(),
+      isOpen: z.boolean().optional()
+    })),
+    restaurantStatus: z.string().optional(),
+
+    // Driver specific fields
     vehicleTypeId: z.string().optional(),
-    licenseNumber: z.string().optional(),
-    // isActive is set by the system, not provided by the user
+    vehicleNumber: z.string().optional(),
+    vehicleDocuments: z.array(z.object({
+      id: z.string().optional(),
+      name: z.string().optional(),
+      url: z.string().optional()
+    })),
+    driverStatus: z.string().optional(),
+
+  
+
   }).superRefine((data, ctx) => {
-    const userType = (ctx as any).parent.userType; // Explicitly cast or pass userType to avoid error
+    const userType = (ctx as any).parent.userType; 
 
     if (userType === 'RESTAURANT') {
       if (!data.restaurantName) {
         ctx.addIssue({ code: 'custom', message: 'Restaurant name is required' });
       }
-      if (!data.description) {
-        ctx.addIssue({ code: 'custom', message: 'Description is required' });
+      if (!data.restaurantAddress) {
+        ctx.addIssue({ code: 'custom', message: 'Restaurant address is required' });
       }
-      if (!data.address) {
-        ctx.addIssue({ code: 'custom', message: 'Address is required' });
+      if (!data.restaurantLicenseNumber) {
+        ctx.addIssue({ code: 'custom', message: 'Restaurant license number is required' });
       }
-      if (!Array.isArray(data.cuisineTypeIds)) {
+      if (!Array.isArray(data.cuisineTypeIds) || data.cuisineTypeIds.length === 0) {
         ctx.addIssue({ code: 'custom', message: 'Cuisine types are required' });
       }
       if (!data.restaurantTypeId) {
         ctx.addIssue({ code: 'custom', message: 'Restaurant type is required' });
+      }
+      if (!Array.isArray(data.openingTime) || data.openingTime.length === 0) {
+        ctx.addIssue({ code: 'custom', message: 'Opening hours are required' });
       }
     }
 
@@ -47,40 +82,8 @@ export const SignUpSchema = z.object({
       if (!data.vehicleTypeId) {
         ctx.addIssue({ code: 'custom', message: 'Vehicle type is required' });
       }
-      if (!data.licenseNumber) {
-        ctx.addIssue({ code: 'custom', message: 'License number is required' });
-      }
-    }
-  }).superRefine((data, ctx) => {
-    const userType = (ctx as any).userType; // Explicitly cast or pass userType to avoid error
-    
-    if (userType === 'RESTAURANT') {
-      if (!data.restaurantName) {
-        ctx.addIssue({ code: 'custom', message: 'Restaurant name is required' });
-      }
-      if (!data.description) {
-        ctx.addIssue({ code: 'custom', message: 'Description is required' });
-      }
-      if (!data.address) {
-        ctx.addIssue({ code: 'custom', message: 'Address is required' });
-      }
-      if (!Array.isArray(data.cuisineTypeIds)) {
-        ctx.addIssue({ code: 'custom', message: 'Cuisine types are required' });
-      }
-      if (!data.restaurantTypeId) {
-        ctx.addIssue({ code: 'custom', message: 'Restaurant type is required' });
-      }
-    }
-    
-    if (userType === 'DRIVER') {
-      if (!data.vehicleNumber) {
-        ctx.addIssue({ code: 'custom', message: 'Vehicle number is required' });
-      }
-      if (!data.vehicleTypeId) {
-        ctx.addIssue({ code: 'custom', message: 'Vehicle type is required' });
-      }
-      if (!data.licenseNumber) {
-        ctx.addIssue({ code: 'custom', message: 'License number is required' });
+      if (!Array.isArray(data.vehicleDocuments) || data.vehicleDocuments.length === 0) {
+        ctx.addIssue({ code: 'custom', message: 'Vehicle documents are required' });
       }
     }
   }),

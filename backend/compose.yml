@@ -14,7 +14,7 @@ services:
       # - payment-service
       # - order-service
       # - menu-service
-      - cart-service
+      # - cart-service
       # - delivery-service
       # - notification-service
     restart: unless-stopped

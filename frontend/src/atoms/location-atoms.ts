@@ -9,7 +9,7 @@ export interface LocationData {
 
 // Default initial state
 const defaultLocation: LocationData = {
-  lat: 6.9271, // Default to Colombo, Sri Lanka
+  lat: 6.9271, 
   lng: 79.8612,
   address: '',
 };
