@@ -132,4 +132,32 @@ public class UserService {
         }
         throw new IllegalArgumentException("Driver not found or invalid ID");
     }
+
+    public User updateDriverActiveStatus(String id, boolean isActive) {
+        Optional<User> optional = userRepository.findById(id);
+        if (optional.isPresent() && optional.get() instanceof Driver driver) {
+            driver.setActive(isActive);
+            return userRepository.save(driver);
+        }
+        throw new IllegalArgumentException("Driver not found or invalid ID");
+    }
+
+    public User updateRestaurantActiveStatus(String id, boolean isActive) {
+        Optional<User> optional = userRepository.findById(id);
+        if (optional.isPresent() && optional.get() instanceof Restaurant restaurant) {
+            restaurant.setActive(isActive);
+            return userRepository.save(restaurant);
+        }
+        throw new IllegalArgumentException("Restaurant not found or invalid ID");
+    }
+
+    public User updateProfilePicture(String id, String profilePictureUrl) {
+        Optional<User> optional = userRepository.findById(id);
+        if (optional.isPresent()) {
+            User user = optional.get();
+            user.setProfilePicture(profilePictureUrl);
+            return userRepository.save(user);
+        }
+        throw new IllegalArgumentException("User not found or invalid ID");
+    }
 }
