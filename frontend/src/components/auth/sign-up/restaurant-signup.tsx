@@ -2,6 +2,7 @@
 
 import type React from "react"
 
+import { useState } from "react"
 import { motion } from "framer-motion"
 import { Building, FileText, MapPin, Clock, UtensilsCrossed, Plus, Minus, Check, X } from "lucide-react"
 
@@ -10,8 +11,21 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Modal } from "@/components/auth/modal"
-import { useRestaurantStore } from "@/stores/restaurant-store"
 import { MapSelector } from "@/components/ui/map-selector"
+
+type Day = "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday" | "sunday"
+
+interface OperatingHours {
+  day: Day
+  isOpen: boolean
+  openTime: string
+  closeTime: string
+}
+
+interface Document {
+  name: string
+  file: File | null
+}
 
 interface RestaurantSignUpProps {
   userData: {
@@ -34,49 +48,47 @@ interface MapSelectorProps {
 }
 
 export function RestaurantSignUp({ userData }: RestaurantSignUpProps) {
-  // Get state and actions from the store
-  const {
-    // Basic info
-    restaurantName,
-    address,
-    licenseNumber,
-    restaurantType,
-    cuisineTypes,
-    
-    // Operating hours
-    operatingHours,
-    
-    // Documents
-    documents,
-    
-    // Location
-    location,
-    locationConfirmed,
-    
-    // UI state
-    step,
-    showRestaurantTypeModal,
-    showCuisineTypesModal,
-    showMap,
-    showSuccessModal,
-    errors,
-    
-    // Actions
-    setRestaurantName,
-    setAddress,
-    setLicenseNumber,
-    setRestaurantType,
-    toggleCuisineType,
-    updateOperatingHours,
-    updateDocument,
-    addDocument,
-    setLocation,
-    confirmLocation,
-    setStep,
-    toggleModal,
-    validateStep,
-    clearErrors,
-  } = useRestaurantStore()
+  // Basic info state
+  const [restaurantName, setRestaurantName] = useState("")
+  const [address, setAddress] = useState("")
+  const [licenseNumber, setLicenseNumber] = useState("")
+  const [restaurantType, setRestaurantType] = useState("")
+  const [cuisineTypes, setCuisineTypes] = useState<string[]>([])
+  
+  // Initial operating hours
+  const defaultOperatingHours: OperatingHours[] = [
+    { day: "monday", isOpen: true, openTime: "09:00", closeTime: "22:00" },
+    { day: "tuesday", isOpen: true, openTime: "09:00", closeTime: "22:00" },
+    { day: "wednesday", isOpen: true, openTime: "09:00", closeTime: "22:00" },
+    { day: "thursday", isOpen: true, openTime: "09:00", closeTime: "22:00" },
+    { day: "friday", isOpen: true, openTime: "09:00", closeTime: "23:00" },
+    { day: "saturday", isOpen: true, openTime: "10:00", closeTime: "23:00" },
+    { day: "sunday", isOpen: true, openTime: "10:00", closeTime: "22:00" },
+  ]
+  
+  // Initial default documents
+  const defaultDocuments: Document[] = [
+    { name: "Business License", file: null },
+    { name: "Food Safety Certificate", file: null },
+  ]
+  
+  // Operating hours state
+  const [operatingHours, setOperatingHours] = useState<OperatingHours[]>(defaultOperatingHours)
+  
+  // Documents state
+  const [documents, setDocuments] = useState<Document[]>(defaultDocuments)
+  
+  // Location state
+  const [location, setLocation] = useState("")
+  const [locationConfirmed, setLocationConfirmed] = useState(false)
+  
+  // UI state
+  const [step, setStep] = useState(1)
+  const [showRestaurantTypeModal, setShowRestaurantTypeModal] = useState(false)
+  const [showCuisineTypesModal, setShowCuisineTypesModal] = useState(false)
+  const [showMap, setShowMap] = useState(false)
+  const [showSuccessModal, setShowSuccessModal] = useState(false)
+  const [errors, setErrors] = useState<{ [key: string]: string }>({})
 
   const handleStep1Submit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -107,14 +119,145 @@ export function RestaurantSignUp({ userData }: RestaurantSignUpProps) {
         documents,
         location,
       })
-      toggleModal('success', true)
+      setShowSuccessModal(true)
     }
+  }
+
+  // Action functions
+  const handleRestaurantTypeSelect = (type: string) => {
+    setRestaurantType(type)
+    setShowRestaurantTypeModal(false)
+  }
+  
+  const toggleCuisineType = (type: string) => {
+    if (cuisineTypes.includes(type)) {
+      setCuisineTypes(cuisineTypes.filter(t => t !== type))
+    } else {
+      setCuisineTypes([...cuisineTypes, type])
+    }
+  }
+  
+  const updateOperatingHours = (index: number, field: keyof OperatingHours, value: any) => {
+    const updatedHours = [...operatingHours]
+    updatedHours[index] = { ...updatedHours[index], [field]: value }
+    setOperatingHours(updatedHours)
+  }
+  
+  const updateDocument = (index: number, file: File | null) => {
+    const updatedDocuments = [...documents]
+    updatedDocuments[index].file = file
+    setDocuments(updatedDocuments)
+  }
+  
+  const addDocument = () => {
+    setDocuments([...documents, { name: "", file: null }])
+  }
+  
+  const confirmLocationSelection = () => {
+    setLocationConfirmed(true)
+    setShowMap(false)
+  }
+  
+  const toggleModal = (modal: 'restaurantType' | 'cuisineTypes' | 'map' | 'success', isOpen: boolean) => {
+    switch (modal) {
+      case 'restaurantType':
+        setShowRestaurantTypeModal(isOpen)
+        break
+      case 'cuisineTypes':
+        setShowCuisineTypesModal(isOpen)
+        break
+      case 'map':
+        setShowMap(isOpen)
+        break
+      case 'success':
+        setShowSuccessModal(isOpen)
+        break
+    }
+  }
+  
+  const validateStep = (step: number) => {
+    const newErrors: { [key: string]: string } = {}
+    let isValid = true
+    
+    if (step === 1) {
+      if (!restaurantName) {
+        newErrors.restaurantName = "Restaurant name is required"
+        isValid = false
+      }
+      
+      if (!address) {
+        newErrors.address = "Address is required"
+        isValid = false
+      }
+      
+      if (!licenseNumber) {
+        newErrors.licenseNumber = "License number is required"
+        isValid = false
+      }
+      
+      if (!restaurantType) {
+        newErrors.restaurantType = "Restaurant type is required"
+        isValid = false
+      }
+      
+      if (cuisineTypes.length === 0) {
+        newErrors.cuisineTypes = "At least one cuisine type is required"
+        isValid = false
+      }
+    } 
+    else if (step === 2) {
+      // Operating hours validation if needed
+      isValid = true
+    }
+    else if (step === 3) {
+      const missingDocuments = documents.some((doc) => !doc.file)
+      if (missingDocuments) {
+        newErrors.documents = "All documents are required"
+        isValid = false
+      }
+      
+      if (!location) {
+        newErrors.location = "Location is required"
+        isValid = false
+      }
+      
+      if (!locationConfirmed) {
+        newErrors.locationConfirmed = "Please confirm your location on the map"
+        isValid = false
+      }
+    }
+    
+    setErrors(newErrors)
+    return isValid
+  }
+  
+  const clearErrors = () => {
+    setErrors({})
+  }
+  
+  const resetStore = () => {
+    // Reset all state values to default
+    setRestaurantName("")
+    setAddress("")
+    setLicenseNumber("")
+    setRestaurantType("")
+    setCuisineTypes([])
+    setOperatingHours(defaultOperatingHours)
+    setDocuments(defaultDocuments)
+    setLocation("")
+    setLocationConfirmed(false)
+    setStep(1)
+    setShowRestaurantTypeModal(false)
+    setShowCuisineTypesModal(false)
+    setShowMap(false)
+    setShowSuccessModal(false)
+    setErrors({})
   }
 
   const containerVariants = {
     hidden: { opacity: 0, x: 100 },
     visible: {
-      opacity: 1,
+      opacity: 1, 
       x: 0,
       transition: {
         type: "spring",
@@ -478,7 +621,7 @@ export function RestaurantSignUp({ userData }: RestaurantSignUpProps) {
             <motion.button
               key={type}
               className="w-full p-3 border rounded-lg flex items-center hover:border-primary hover:bg-primary/5 transition-colors"
-              onClick={() => setRestaurantType(type)}
+              onClick={() => handleRestaurantTypeSelect(type)}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               initial={{ opacity: 0, y: 10 }}
@@ -536,9 +679,8 @@ export function RestaurantSignUp({ userData }: RestaurantSignUpProps) {
             height="350px" 
             onConfirmLocation={(selectedLocation: SelectedLocation): void => {
               const formattedLocation = `Lat: ${selectedLocation.lat}, Lng: ${selectedLocation.lng}`;
-              setLocation(formattedLocation); // now receives a string
-              confirmLocation();
-              toggleModal('map', false);
+              setLocation(formattedLocation);
+              confirmLocationSelection();
             }} 
           />
         </div>
