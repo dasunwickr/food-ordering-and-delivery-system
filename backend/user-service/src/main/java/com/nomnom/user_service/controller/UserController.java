@@ -59,16 +59,16 @@ public class UserController {
                 ResponseEntity.status(404).body("User not found");
     }
 
-    @PatchMapping("/driver/{id}/status")
+    @PutMapping("/driver/{id}/status")
     public ResponseEntity<User> updateDriverStatus(@PathVariable String id, @RequestParam String status) {
         return ResponseEntity.ok(userService.updateDriverStatus(id, status));
     }
 
-    @PatchMapping("/restaurant/{id}/status")
+    @PutMapping("/restaurant/{id}/status")
     public ResponseEntity<User> updateRestaurantStatus(@PathVariable String id, @RequestParam String status) {
         return ResponseEntity.ok(userService.updateRestaurantStatus(id, status));
     }
-    @PatchMapping("/{id}/restaurant-type")
+    @PutMapping("/{id}/restaurant-type")
     public ResponseEntity<Restaurant> updateRestaurantType(
             @PathVariable String id,
             @RequestParam String restaurantTypeId) {
@@ -76,7 +76,7 @@ public class UserController {
         return ResponseEntity.ok(updated);
     }
 
-    @PatchMapping("/{id}/vehicle-type")
+    @PutMapping("/{id}/vehicle-type")
     public ResponseEntity<Driver> updateVehicleType(
             @PathVariable String id,
             @RequestParam String vehicleTypeId) {
@@ -85,5 +85,19 @@ public class UserController {
         return ResponseEntity.ok(updated);
     }
 
+    @PutMapping("/driver/{id}/active")
+    public ResponseEntity<User> updateDriverActiveStatus(@PathVariable String id, @RequestParam boolean isActive) {
+        return ResponseEntity.ok(userService.updateDriverActiveStatus(id, isActive));
+    }
+
+    @PutMapping("/restaurant/{id}/active")
+    public ResponseEntity<User> updateRestaurantActiveStatus(@PathVariable String id, @RequestParam boolean isActive) {
+        return ResponseEntity.ok(userService.updateRestaurantActiveStatus(id, isActive));
+    }
+
+    @PutMapping("/{id}/profile-picture")
+    public ResponseEntity<User> updateProfilePicture(@PathVariable String id, @RequestParam String profilePictureUrl) {
+        return ResponseEntity.ok(userService.updateProfilePicture(id, profilePictureUrl));
+    }
 
 }

@@ -1,52 +1,65 @@
 "use client";
 
-import { useEffect, useState, useRef } from 'react';
-import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
-import L from 'leaflet';
+import { useState, useEffect, useRef } from 'react';
+import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
-import { geocodeByLatLng, geocodeByAddress, getSearchSuggestions, SearchSuggestion } from '../../lib/geocode';
-import { Input } from '../ui/input';
-import { Button } from '../ui/button';
-import { Search } from 'lucide-react';
+import { Search, Loader2 } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { LocationData } from './map-selector';
 
-// Define interfaces
-interface Location {
-  lat: number;
-  lng: number;
-  address: string;
-}
+// Fix Leaflet default icon issue
+import L from 'leaflet';
 
 interface MapComponentProps {
-  location: Location;
-  onLocationChange: (location: Location) => void;
+  location: LocationData;
+  onLocationChange: (location: LocationData) => void;
   height: string;
 }
 
+// Add interface for search suggestions
+interface SearchSuggestion {
+  place_id: number;
+  display_name: string;
+  lat: string;
+  lon: string;
+}
+
+// Component to handle map click events and update marker
 function LocationMarker({ location, onLocationChange }: { 
-  location: Location; 
-  onLocationChange: (location: Location) => void;
+  location: LocationData; 
+  onLocationChange: (location: LocationData) => void;
 }) {
   const map = useMapEvents({
-    async click(e) {
+    click(e) {
       const { lat, lng } = e.latlng;
-      const address = await geocodeByLatLng(lat, lng);
-      onLocationChange({ lat, lng, address });
-    }
+      // Get address using reverse geocoding
+      reverseGeocode(lat, lng).then(address => {
+        onLocationChange({ lat, lng, address });
+      });
+    },
   });
 
-  return location.lat !== 0 && location.lng !== 0 ? (
+  useEffect(() => {
+    if (location && location.lat && location.lng) {
+      map.setView([location.lat, location.lng], map.getZoom());
+    }
+  }, [location, map]);
+
+  return location && location.lat && location.lng ? (
     <Marker 
       position={[location.lat, location.lng]}
       draggable={true}
       eventHandlers={{
-        async dragend(e) {
+        dragend(e) {
           const marker = e.target;
           const position = marker.getLatLng();
-          const address = await geocodeByLatLng(position.lat, position.lng);
-          onLocationChange({ 
-            lat: position.lat, 
-            lng: position.lng, 
-            address 
+          reverseGeocode(position.lat, position.lng).then(address => {
+            onLocationChange({ 
+              lat: position.lat, 
+              lng: position.lng, 
+              address 
+            });
           });
         }
       }}
@@ -54,163 +67,240 @@ function LocationMarker({ location, onLocationChange }: {
   ) : null;
 }
 
-function MapUpdater({ center }: { center: [number, number] }) {
-  const map = useMap();
-  useEffect(() => {
-    map.setView(center, 13);
-  }, [center, map]);
-  return null;
+// Geocoding functions
+async function geocode(address: string): Promise<[number, number] | null> {
+  try {
+    const response = await fetch(
+      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1`
+    );
+    const data = await response.json();
+    
+    if (data && data.length > 0) {
+      return [parseFloat(data[0].lat), parseFloat(data[0].lon)];
+    }
+    return null;
+  } catch (error) {
+    console.error('Geocoding error:', error);
+    return null;
+  }
+}
+
+// Function to get search suggestions
+async function getSuggestions(query: string): Promise<SearchSuggestion[]> {
+  if (!query || query.length < 3) return [];
+  
+  try {
+    console.log("Fetching suggestions for:", query);
+    const response = await fetch(
+      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5`
+    );
+    const data = await response.json();
+    console.log("Received suggestions:", data);
+    return data;
+  } catch (error) {
+    console.error('Suggestions error:', error);
+    return [];
+  }
+}
+
+async function reverseGeocode(lat: number, lng: number): Promise<string> {
+  try {
+    const response = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`
+    );
+    const data = await response.json();
+    
+    if (data && data.display_name) {
+      return data.display_name;
+    }
+    return '';
+  } catch (error) {
+    console.error('Reverse geocoding error:', error);
+    return '';
+  }
 }
 
 export function MapComponent({ location, onLocationChange, height }: MapComponentProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
-  const [searchError, setSearchError] = useState('');
   const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const suggestionsRef = useRef<HTMLDivElement>(null);
   
-  const mapCenter = location.lat !== 0 && location.lng !== 0 
-    ? [location.lat, location.lng] as [number, number]
-    : [6.9271, 79.8612] as [number, number]; // Default to Colombo, Sri Lanka
-
-  // Fix the Leaflet icon issues
+  // Fix for default marker icon in Leaflet with Next.js
   useEffect(() => {
-    L.Icon.Default.prototype.options.iconRetinaUrl = 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png';
-    L.Icon.Default.prototype.options.iconUrl = 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png';
-    L.Icon.Default.prototype.options.shadowUrl = 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png';
+    // Only run this code on the client side
+    delete (L.Icon.Default.prototype as any)._getIconUrl;
+    L.Icon.Default.mergeOptions({
+      iconRetinaUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png',
+      iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
+      shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
+    });
   }, []);
+  
+  // Close suggestions when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (suggestionsRef.current && !suggestionsRef.current.contains(event.target as Node)) {
+        setShowSuggestions(false);
+      }
+    }
 
-  // Handle search input with debounce for autocomplete
-  const handleSearchInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setSearchQuery(value);
-    setShowSuggestions(true);
-
-    // Clear previous timeout
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+  
+  // Handle search query change with debounce
+  useEffect(() => {
+    // Clear any existing timeout
     if (searchTimeoutRef.current) {
       clearTimeout(searchTimeoutRef.current);
     }
-
-    // Set new timeout for debounce
-    if (value.length > 2) {
-      searchTimeoutRef.current = setTimeout(async () => {
-        try {
-          const results = await getSearchSuggestions(value);
-          setSuggestions(results);
-        } catch (error) {
-          console.error("Error fetching suggestions:", error);
-          setSuggestions([]);
-        }
-      }, 300);
-    } else {
-      setSuggestions([]);
-    }
-  };
-
-  // Handle suggestion selection
-  const handleSelectSuggestion = async (suggestion: SearchSuggestion) => {
-    setSearchQuery(suggestion.display_name);
-    setShowSuggestions(false);
     
-    const lat = parseFloat(suggestion.lat);
-    const lng = parseFloat(suggestion.lon);
-    onLocationChange({
-      lat,
-      lng,
-      address: suggestion.display_name
-    });
-  };
-
+    // Don't search for very short queries
+    if (searchQuery.length < 3) {
+      setSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+    
+    console.log("Setting up search timeout for:", searchQuery);
+    
+    // Set a new timeout
+    searchTimeoutRef.current = setTimeout(async () => {
+      console.log("Executing search for:", searchQuery);
+      try {
+        const results = await getSuggestions(searchQuery);
+        console.log("Setting suggestions:", results);
+        setSuggestions(results);
+        setShowSuggestions(results.length > 0);
+      } catch (err) {
+        console.error("Error fetching suggestions:", err);
+      }
+    }, 500); // Slightly longer debounce time for better UX
+    
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, [searchQuery]);
+  
+  const initialLocation = location && location.lat && location.lng 
+    ? [location.lat, location.lng] 
+    : [6.9271, 79.8612]; // Default to Colombo, Sri Lanka
+  
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!searchQuery.trim()) return;
     
     setIsSearching(true);
-    setSearchError('');
-    
+    setShowSuggestions(false);
     try {
-      const coordinates = await geocodeByAddress(searchQuery);
+      const coordinates = await geocode(searchQuery);
+      
       if (coordinates) {
         const [lat, lng] = coordinates;
-        const address = await geocodeByLatLng(lat, lng);
+        const address = await reverseGeocode(lat, lng);
         onLocationChange({ lat, lng, address });
-      } else {
-        setSearchError('Location not found. Please try a different search term.');
       }
     } catch (error) {
       console.error('Search error:', error);
-      setSearchError('Error searching for location');
     } finally {
       setIsSearching(false);
     }
   };
-
-  // Handle click outside to close suggestions
-  useEffect(() => {
-    const handleClickOutside = () => {
-      setShowSuggestions(false);
-    };
-
-    document.addEventListener('click', handleClickOutside);
-    return () => {
-      document.removeEventListener('click', handleClickOutside);
-    };
-  }, []);
+  
+  const handleSuggestionClick = async (suggestion: SearchSuggestion) => {
+    setSearchQuery(suggestion.display_name);
+    setShowSuggestions(false);
+    
+    const lat = parseFloat(suggestion.lat);
+    const lng = parseFloat(suggestion.lon);
+    onLocationChange({ 
+      lat, 
+      lng, 
+      address: suggestion.display_name 
+    });
+  };
 
   return (
     <div className="space-y-2">
-      <div className="relative z-20"> {/* Add z-index: 20 to ensure dropdown appears above map */}
-        <form onSubmit={handleSearch} className="flex gap-2">
-          <div className="relative flex-1" onClick={(e) => e.stopPropagation()}>
+      <div className="relative" style={{ zIndex: 1000 }} ref={suggestionsRef}>
+        <div className="flex gap-2">
+          <div className="relative flex-grow">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               type="text"
               placeholder="Search for a location..."
+              className="pl-9"
               value={searchQuery}
-              onChange={handleSearchInput}
-              className="pr-10"
-              disabled={isSearching}
-              onFocus={() => setShowSuggestions(true)}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onFocus={() => {
+                if (suggestions.length > 0 && searchQuery.length >= 3) {
+                  setShowSuggestions(true);
+                }
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleSearch(e);
+                }
+              }}
             />
-            {isSearching && (
-              <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                <div className="animate-spin h-4 w-4 border-2 border-primary border-opacity-50 border-t-primary rounded-full" />
-              </div>
-            )}
             
+            {/* Updated suggestions dropdown with higher z-index */}
             {showSuggestions && suggestions.length > 0 && (
-              <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto">
-                <ul>
-                  {suggestions.map((suggestion) => (
-                    <li 
-                      key={suggestion.place_id}
-                      className="px-4 py-2 hover:bg-gray-100 cursor-pointer text-sm"
-                      onClick={() => handleSelectSuggestion(suggestion)}
-                    >
-                      {suggestion.display_name}
-                    </li>
-                  ))}
-                </ul>
+              <div 
+                className="absolute top-full left-0 right-0 mt-1 max-h-60 overflow-y-auto bg-white rounded-md border shadow-lg"
+                style={{ 
+                  zIndex: 1100, /* Higher than the map container */
+                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+                }}
+              >
+                {suggestions.map((suggestion) => (
+                  <button
+                    key={suggestion.place_id}
+                    type="button"
+                    className="w-full text-left px-3 py-2 hover:bg-slate-100 focus:bg-slate-100 focus:outline-none text-sm"
+                    onClick={() => handleSuggestionClick(suggestion)}
+                  >
+                    {suggestion.display_name}
+                  </button>
+                ))}
               </div>
             )}
           </div>
-          <Button type="submit" disabled={isSearching} className="flex items-center gap-2">
-            <Search className="h-4 w-4" />
-            Search
+          <Button 
+            type="button" 
+            onClick={handleSearch}
+            size="sm"
+            disabled={isSearching}
+          >
+            {isSearching ? (
+              <>
+                <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                Searching...
+              </>
+            ) : (
+              'Search'
+            )}
           </Button>
-        </form>
-        
-        {searchError && (
-          <div className="text-sm text-red-500">
-            {searchError}
-          </div>
-        )}
+        </div>
       </div>
       
-      <div className="relative z-10" style={{ height, width: '100%' }}>
-        <MapContainer 
-          center={mapCenter} 
-          zoom={13} 
+      <div style={{ 
+        height, 
+        width: '100%', 
+        position: 'relative',
+        zIndex: 1 /* Lower than the search container */
+      }}>
+        <MapContainer
+          center={initialLocation as [number, number]}
+          zoom={13}
           style={{ height: '100%', width: '100%' }}
           scrollWheelZoom={true}
         >
@@ -219,9 +309,14 @@ export function MapComponent({ location, onLocationChange, height }: MapComponen
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
           <LocationMarker location={location} onLocationChange={onLocationChange} />
-          <MapUpdater center={mapCenter} />
         </MapContainer>
       </div>
+      
+      {location && location.address && (
+        <div className="bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-2 rounded text-xs">
+          <strong>Selected location:</strong> {location.address}
+        </div>
+      )}
     </div>
   );
 }

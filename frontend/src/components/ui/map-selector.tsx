@@ -1,49 +1,45 @@
 "use client";
 
-import { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
-import { geocodeByLatLng } from '../../lib/geocode';
+import { Loader2 } from 'lucide-react';
 
-// Define types for components that will be loaded dynamically
-interface Location {
+export interface LocationData {
   lat: number;
   lng: number;
   address: string;
 }
 
 interface MapSelectorProps {
-  location: Location;
-  onLocationChange: (location: Location) => void;
+  location: LocationData;
+  onLocationChange: (location: LocationData) => void;
   height?: string;
 }
 
-// Create a dynamic import for the map components to avoid SSR issues
-const MapWithNoSSR = dynamic(() => import('./map-component').then(mod => mod.MapComponent), {
-  ssr: false,
-  loading: () => (
-    <div style={{ height: '300px' }} className="bg-gray-100 rounded flex items-center justify-center">
-      Loading map...
-    </div>
-  )
-});
-
-export function MapSelector({ location, onLocationChange, height = '300px' }: MapSelectorProps) {
-  return (
-    <div className="w-full space-y-2 relative">
-      {/* The map component */}
-      <div className="relative" style={{ zIndex: 1 }}>
-        <MapWithNoSSR 
-          location={location} 
-          onLocationChange={onLocationChange} 
-          height={height} 
-        />
-      </div>
-      
-      {location.address && (
-        <div className="text-sm text-gray-600">
-          <p>Selected address: {location.address}</p>
+// Dynamically import the map component with SSR disabled
+const MapComponentWithNoSSR = dynamic(
+  () => import('./map-component').then((mod) => mod.MapComponent),
+  {
+    loading: () => (
+      <div className="flex items-center justify-center" 
+           style={{ height: "350px", width: "100%", background: "#f1f5f9" }}>
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2 text-primary/70" />
+          <p className="text-sm text-muted-foreground">Loading map...</p>
         </div>
-      )}
+      </div>
+    ),
+    ssr: false, // This is the key part - disable SSR for this component
+  }
+);
+
+export function MapSelector({ location, onLocationChange, height = "350px" }: MapSelectorProps) {
+  return (
+    <div className="w-full rounded-md overflow-hidden border">
+      <MapComponentWithNoSSR
+        location={location}
+        onLocationChange={onLocationChange}
+        height={height}
+      />
     </div>
   );
 }

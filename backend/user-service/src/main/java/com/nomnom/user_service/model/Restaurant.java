@@ -26,4 +26,5 @@ public class Restaurant extends User {
     private List<OpeningTime> openingTimes;
     private String restaurantStatus;
     private Point location;
+    private boolean isActive;
 }
