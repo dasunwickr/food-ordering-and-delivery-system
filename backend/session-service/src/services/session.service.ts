@@ -120,7 +120,7 @@ export const getActiveSession = async (userId: string, ipAddress: string) => {
     const session = await SessionModel.findOne({ 
       userId, 
       ipAddress,
-      expiresAt: { $gt: new Date() } // Only return non-expired sessions
+      expiresAt: { $gt: new Date() } 
     });
 
     if (!session) {

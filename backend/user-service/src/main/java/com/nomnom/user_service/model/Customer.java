@@ -5,8 +5,6 @@ import org.springframework.data.annotation.TypeAlias;
 import org.springframework.data.geo.Point;
 import org.springframework.data.mongodb.core.mapping.Document;
 
-import java.util.List;
-
 @Document(collection = "users")
 @Data
 @NoArgsConstructor

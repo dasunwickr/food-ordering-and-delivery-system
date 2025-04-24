@@ -14,7 +14,7 @@ services:
       # - payment-service
       # - order-service
       # - menu-service
-      # - cart-service
+      - cart-service
       # - delivery-service
       # - notification-service
     restart: unless-stopped
@@ -59,6 +59,9 @@ services:
     restart: unless-stopped
     networks:
       - nomnom-network
+
+
+  # Cart Service
 
 networks:
   nomnom-network:

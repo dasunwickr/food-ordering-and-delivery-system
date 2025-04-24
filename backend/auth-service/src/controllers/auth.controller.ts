@@ -1,49 +1,44 @@
 import { Request, Response } from 'express';
-import { registerUser, loginUser } from '../services/auth.service';
-import { LoginSchema, RegisterSchema } from '../validators/auth.schema';
+import { SignUpSchema, SignInSchema, ForgotPasswordSchema, ResetPasswordSchema } from '../validators/auth.schema';
+import * as AuthService from '../services/auth.service';
 
-
-export const register = async (req: Request, res: Response) => {
+export const signUp = async (req: Request, res: Response) => {
   try {
-    const parsed = RegisterSchema.parse(req.body);
-    const { email, password } = parsed;
+    const { email, password, userType, profile, device, ipAddress } = SignUpSchema.parse(req.body);
+    const result = await AuthService.registerUser(email, password, userType, profile, device, ipAddress);
+    res.status(201).json({ message: 'User registered', ...result });
+  } catch (err: any) {
+    res.status(400).json({ error: err.message });
+  }
+};
 
-    console.log("Registering user with email:", email);
-    
-    const userData = { ...parsed };
-
-    const result = await registerUser(email, password, userData);
-
-     res.status(201).json(result);
-  } catch (error: any) {
-    console.error("Register controller error:", error.message);
-
-    if (error.name === 'ZodError') {
-       res.status(400).json({ error: error.errors });
-    }
-
-     res.status(500).json({ error: error.message });
+export const signIn = async (req: Request, res: Response) => {
+  try {
+    const { email, password, device, ipAddress } = SignInSchema.parse(req.body);
+    const result = await AuthService.loginUser(email, password, device, ipAddress);
+    res.status(200).json({ message: 'Logged in', ...result });
+  } catch (err: any) {
+    res.status(400).json({ error: err.message });
   }
 };
 
 
-export const login = async (req: Request, res: Response) => {
+export const forgotPassword = async (req: Request, res: Response) => {
   try {
-    const parsed = LoginSchema.parse(req.body);
-    const { email, password } = parsed;
+    const { email } = ForgotPasswordSchema.parse(req.body);
+    const result = await AuthService.forgotPassword(email);
+    res.status(200).json({ message: 'All sessions invalidated', ...result });
+  } catch (err: any) {
+    res.status(400).json({ error: err.message });
+  }
+};
 
-    console.log("Attempting login for:", email);
-
-    const result = await loginUser(email, password);
-
-     res.status(200).json(result);
-  } catch (error: any) {
-    console.error("Login controller error:", error.message);
-
-    if (error.name === 'ZodError') {
-       res.status(400).json({ error: error.errors });
-    }
-
-     res.status(401).json({ error: error.message });
+export const resetPassword = async (req: Request, res: Response) => {
+  try {
+    const { email, newPassword, ipAddress } = ResetPasswordSchema.parse(req.body);
+    const result = await AuthService.resetPassword(email, newPassword, ipAddress);
+    res.status(200).json({ message: 'Password reset', ...result });
+  } catch (err: any) {
+    res.status(400).json({ error: err.message });
   }
 };
