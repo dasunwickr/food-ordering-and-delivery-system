@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Modal } from "@/components/auth/modal"
 import { useRestaurantStore } from "@/stores/restaurant-store"
+import { MapSelector } from "@/components/ui/map-selector"
 
 interface RestaurantSignUpProps {
   userData: {
@@ -420,7 +421,7 @@ export function RestaurantSignUp({ userData }: RestaurantSignUpProps) {
                   placeholder="Search for your restaurant location"
                   className={`pl-10 ${errors.location ? "border-red-500" : ""} ${locationConfirmed ? "pr-10 border-green-500" : ""}`}
                   value={location}
-                  onChange={(e) => setLocation(e.target.value)}
+                  readOnly
                 />
                 {locationConfirmed && (
                   <Check className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-green-500" />
@@ -436,9 +437,7 @@ export function RestaurantSignUp({ userData }: RestaurantSignUpProps) {
                   {errors.locationConfirmed}
                 </motion.p>
               )}
-            </motion.div>
-
-            <motion.div variants={itemVariants}>
+              
               <Button
                 type="button"
                 variant="outline"
@@ -446,7 +445,7 @@ export function RestaurantSignUp({ userData }: RestaurantSignUpProps) {
                 onClick={() => toggleModal('map', true)}
               >
                 <MapPin className="mr-2 h-4 w-4" />
-                Select on Map
+                {locationConfirmed ? "Change Location" : "Select on Map"}
               </Button>
             </motion.div>
 
@@ -523,26 +522,12 @@ export function RestaurantSignUp({ userData }: RestaurantSignUpProps) {
         title="Select Restaurant Location"
       >
         <div className="space-y-4">
-          <div className="relative">
-            <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search for your restaurant location"
-              className="pl-10"
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-            />
-          </div>
-
-          <div className="w-full h-64 bg-gray-100 rounded-lg flex items-center justify-center">
-            <div className="text-center p-4">
-              <MapPin className="h-8 w-8 text-primary mx-auto mb-2" />
-              <p className="text-sm text-muted-foreground">Map would be displayed here</p>
-            </div>
-          </div>
-
-          <Button onClick={confirmLocation} className="w-full" disabled={!location}>
-            Confirm Location
-          </Button>
+          <MapSelector 
+            height="350px" 
+            onConfirmLocation={() => {
+              toggleModal('map', false);
+            }} 
+          />
         </div>
       </Modal>
 

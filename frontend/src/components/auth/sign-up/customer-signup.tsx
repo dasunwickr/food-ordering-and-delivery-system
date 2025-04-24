@@ -2,14 +2,15 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
-import { MapPin, Search, Check } from "lucide-react"
+import { MapPin, Check } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Modal } from "@/components/auth/modal"
+import { MapSelector } from "@/components/ui/map-selector"
+import { useLocationStore } from "@/stores/location-store" 
 
 interface CustomerSignUpProps {
   userData: {
@@ -22,16 +23,23 @@ interface CustomerSignUpProps {
 }
 
 export function CustomerSignUp({ userData }: CustomerSignUpProps) {
-  const [location, setLocation] = useState("")
-  const [showMap, setShowMap] = useState(false)
+  // Use location store
+  const { location, locationSelected: storeLocationSelected, toggleMap, showMap } = useLocationStore()
+  
+  // Local state
   const [locationConfirmed, setLocationConfirmed] = useState(false)
   const [showSuccessModal, setShowSuccessModal] = useState(false)
   const [errors, setErrors] = useState<{ location?: string }>({})
 
+  // Sync location confirmed state with store
+  useEffect(() => {
+    setLocationConfirmed(storeLocationSelected)
+  }, [storeLocationSelected])
+
   const validateLocation = () => {
     const newErrors: { location?: string } = {}
 
-    if (!location) {
+    if (!location.address) {
       newErrors.location = "Location is required"
     }
 
@@ -49,13 +57,8 @@ export function CustomerSignUp({ userData }: CustomerSignUpProps) {
       })
       setShowSuccessModal(true)
     } else if (!locationConfirmed) {
-      setShowMap(true)
+      toggleMap(true)
     }
-  }
-
-  const handleConfirmLocation = () => {
-    setLocationConfirmed(true)
-    setShowMap(false)
   }
 
   const containerVariants = {
@@ -90,43 +93,37 @@ export function CustomerSignUp({ userData }: CustomerSignUpProps) {
         initial="hidden"
         animate="visible"
       >
-        <motion.div className="space-y-2" variants={itemVariants}>
-          <Label htmlFor="location" className="text-sm font-medium">
-            Your Location
-          </Label>
+        <motion.div variants={itemVariants}>
+          <label htmlFor="location" className="text-sm font-medium">
+            Your Delivery Address
+          </label>
           <div className="relative">
             <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               id="location"
-              placeholder="Enter your address"
-              className={`pl-10 ${errors.location ? "border-red-500" : ""} ${locationConfirmed ? "pr-10 border-green-500" : ""}`}
-              value={location}
-              onChange={(e) => {
-                setLocation(e.target.value)
-                setLocationConfirmed(false)
-              }}
+              placeholder="Select your delivery location"
+              className={`pl-10 ${
+                locationConfirmed ? "border-green-500" : errors.location ? "border-red-500" : ""
+              }`}
+              value={location.address}
+              readOnly
             />
             {locationConfirmed && (
-              <Check className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-green-500" />
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-green-500">
+                <Check className="h-4 w-4" />
+              </div>
             )}
           </div>
-          {errors.location && (
-            <motion.p className="text-sm text-red-500" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-              {errors.location}
-            </motion.p>
-          )}
-          <p className="text-xs text-muted-foreground">We need your location to show you restaurants nearby</p>
-        </motion.div>
-
-        <motion.div variants={itemVariants}>
+          {errors.location && <p className="text-sm text-red-500 mt-1">{errors.location}</p>}
+          
           <Button
             type="button"
             variant="outline"
-            className="w-full flex items-center justify-center"
-            onClick={() => setShowMap(true)}
+            className="w-full mt-2 flex items-center justify-center"
+            onClick={() => toggleMap(true)}
           >
             <MapPin className="mr-2 h-4 w-4" />
-            Select on Map
+            {locationConfirmed ? "Change Location" : "Select on Map"}
           </Button>
         </motion.div>
 
@@ -137,28 +134,19 @@ export function CustomerSignUp({ userData }: CustomerSignUpProps) {
         </motion.div>
       </motion.form>
 
-      <Modal isOpen={showMap} onClose={() => setShowMap(false)} title="Select Your Location">
+      <Modal 
+        isOpen={showMap} 
+        onClose={() => toggleMap(false)} 
+        title="Select Delivery Address"
+      >
         <div className="space-y-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search for your address"
-              className="pl-10"
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-            />
-          </div>
-
-          <div className="w-full h-64 bg-gray-100 rounded-lg flex items-center justify-center">
-            <div className="text-center p-4">
-              <MapPin className="h-8 w-8 text-primary mx-auto mb-2" />
-              <p className="text-sm text-muted-foreground">Map would be displayed here</p>
-            </div>
-          </div>
-
-          <Button onClick={handleConfirmLocation} className="w-full" disabled={!location}>
-            Confirm Location
-          </Button>
+          <MapSelector 
+            height="350px" 
+            onConfirmLocation={() => {
+              toggleMap(false);
+              setLocationConfirmed(true);
+            }} 
+          />
         </div>
       </Modal>
 

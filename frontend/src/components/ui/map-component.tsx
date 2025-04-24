@@ -1,15 +1,26 @@
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
-import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
-import 'leaflet/dist/leaflet.css';
-import { Search, Loader2 } from 'lucide-react';
+import { Loader2, MapPin } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { LocationData } from './map-selector';
-
-// Fix Leaflet default icon issue
+import dynamic from 'next/dynamic';
+import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
+
+// Dynamic import for Leaflet components
+const MapContainer = dynamic(() => import('react-leaflet').then(mod => mod.MapContainer), { ssr: false });
+const TileLayer = dynamic(() => import('react-leaflet').then(mod => mod.TileLayer), { ssr: false });
+const Marker = dynamic(() => import('react-leaflet').then(mod => mod.Marker), { ssr: false });
+const Popup = dynamic(() => import('react-leaflet').then(mod => mod.Popup), { ssr: false });
+import { useMap } from 'react-leaflet';
+
+// Define the LocationData interface
+interface LocationData {
+  lat: number;
+  lng: number;
+  address: string;
+}
 
 interface MapComponentProps {
   location: LocationData;
@@ -25,46 +36,87 @@ interface SearchSuggestion {
   lon: string;
 }
 
-// Component to handle map click events and update marker
-function LocationMarker({ location, onLocationChange }: { 
-  location: LocationData; 
+// Component to handle map events
+function MapEventHandler({ onLocationChange }: { onLocationChange: (location: LocationData) => void }) {
+  const map = useMap();
+  
+  useEffect(() => {
+    if (!map) return;
+    
+    const handleClick = async (e: any) => {
+      const { lat, lng } = e.latlng;
+      const address = await reverseGeocode(lat, lng);
+      onLocationChange({ lat, lng, address });
+    };
+    
+    map.on('click', handleClick);
+    
+    return () => {
+      map.off('click', handleClick);
+    };
+  }, [map, onLocationChange]);
+  
+  return null;
+}
+
+// Component to display marker
+function LocationMarkerComponent({ location, onLocationChange }: { 
+  location: LocationData;
   onLocationChange: (location: LocationData) => void;
 }) {
-  const map = useMapEvents({
-    click(e) {
-      const { lat, lng } = e.latlng;
-      // Get address using reverse geocoding
-      reverseGeocode(lat, lng).then(address => {
-        onLocationChange({ lat, lng, address });
-      });
-    },
-  });
-
+  const map = useMap();
+  
+  // Initialize Leaflet icons globally
   useEffect(() => {
-    if (location && location.lat && location.lng) {
-      map.setView([location.lat, location.lng], map.getZoom());
+    if (typeof window !== 'undefined') {
+      L.Icon.Default.mergeOptions({
+        iconUrl: '/marker-icon.png',
+        iconRetinaUrl: '/marker-icon-2x.png',
+        shadowUrl: '/marker-shadow.png',
+        iconSize: [25, 41],
+        iconAnchor: [12, 41],
+        popupAnchor: [1, -34],
+        shadowSize: [41, 41]
+      });
     }
-  }, [location, map]);
-
-  return location && location.lat && location.lng ? (
-    <Marker 
-      position={[location.lat, location.lng]}
-      draggable={true}
-      eventHandlers={{
-        dragend(e) {
-          const marker = e.target;
-          const position = marker.getLatLng();
-          reverseGeocode(position.lat, position.lng).then(address => {
-            onLocationChange({ 
-              lat: position.lat, 
-              lng: position.lng, 
-              address 
-            });
-          });
-        }
-      }}
-    />
-  ) : null;
+  }, []);
+  
+  useEffect(() => {
+    if (!map || !location?.lat || !location?.lng) return;
+    
+    // Create a marker using the default icon
+    const marker = L.marker([location.lat, location.lng], { 
+      // Use the default icon (which we've configured above)
+      draggable: true
+    }).addTo(map);
+    
+    // Add popup
+    if (location.address) {
+      marker.bindPopup(location.address).openPopup();
+    }
+    
+    // Handle drag events to update location
+    marker.on('dragend', async function(e) {
+      const position = marker.getLatLng();
+      const address = await reverseGeocode(position.lat, position.lng);
+      onLocationChange({
+        lat: position.lat,
+        lng: position.lng,
+        address
+      });
+    });
+    
+    // Center map on marker
+    map.setView([location.lat, location.lng], map.getZoom());
+    
+    // Return a cleanup function
+    return () => {
+      map.removeLayer(marker);
+    };
+  }, [map, location, onLocationChange]);
+  
+  // We don't use the react-leaflet Marker component
+  return null;
 }
 
 // Geocoding functions
@@ -128,15 +180,65 @@ export function MapComponent({ location, onLocationChange, height }: MapComponen
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
   
-  // Fix for default marker icon in Leaflet with Next.js
+  // Add CSS for the custom marker
   useEffect(() => {
-    // Only run this code on the client side
-    delete (L.Icon.Default.prototype as any)._getIconUrl;
-    L.Icon.Default.mergeOptions({
-      iconRetinaUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png',
-      iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
-      shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
-    });
+    // Create style element for custom marker
+    const style = document.createElement('style');
+    style.textContent = `
+      .custom-map-marker {
+        background: none !important;
+        border: none !important;
+        box-shadow: none !important;
+        outline: none !important;
+      }
+      
+      .custom-marker-container {
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      
+      .custom-marker-pin {
+        width: 30px;
+        height: 40px;
+        position: relative;
+        background-color: #3b82f6;
+        border-radius: 50% 50% 50% 0;
+        transform: rotate(-45deg);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        overflow: hidden;
+      }
+      
+      .custom-marker-pin::after {
+        content: '';
+        width: 22px;
+        height: 22px;
+        background: white;
+        border-radius: 50%;
+        position: absolute;
+      }
+      
+      .custom-marker-icon {
+        width: 20px;
+        height: 20px;
+        color: #3b82f6;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) rotate(45deg);
+        z-index: 10;
+      }
+    `;
+    document.head.appendChild(style);
+    
+    return () => {
+      document.head.removeChild(style);
+    };
   }, []);
   
   // Close suggestions when clicking outside
@@ -167,20 +269,16 @@ export function MapComponent({ location, onLocationChange, height }: MapComponen
       return;
     }
     
-    console.log("Setting up search timeout for:", searchQuery);
-    
     // Set a new timeout
     searchTimeoutRef.current = setTimeout(async () => {
-      console.log("Executing search for:", searchQuery);
       try {
         const results = await getSuggestions(searchQuery);
-        console.log("Setting suggestions:", results);
         setSuggestions(results);
         setShowSuggestions(results.length > 0);
       } catch (err) {
         console.error("Error fetching suggestions:", err);
       }
-    }, 500); // Slightly longer debounce time for better UX
+    }, 500);
     
     return () => {
       if (searchTimeoutRef.current) {
@@ -232,7 +330,7 @@ export function MapComponent({ location, onLocationChange, height }: MapComponen
       <div className="relative" style={{ zIndex: 1000 }} ref={suggestionsRef}>
         <div className="flex gap-2">
           <div className="relative flex-grow">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <MapPin className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               type="text"
               placeholder="Search for a location..."
@@ -252,14 +350,10 @@ export function MapComponent({ location, onLocationChange, height }: MapComponen
               }}
             />
             
-            {/* Updated suggestions dropdown with higher z-index */}
             {showSuggestions && suggestions.length > 0 && (
               <div 
                 className="absolute top-full left-0 right-0 mt-1 max-h-60 overflow-y-auto bg-white rounded-md border shadow-lg"
-                style={{ 
-                  zIndex: 1100, /* Higher than the map container */
-                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
-                }}
+                style={{ zIndex: 1100 }}
               >
                 {suggestions.map((suggestion) => (
                   <button
@@ -296,7 +390,7 @@ export function MapComponent({ location, onLocationChange, height }: MapComponen
         height, 
         width: '100%', 
         position: 'relative',
-        zIndex: 1 /* Lower than the search container */
+        zIndex: 1 
       }}>
         <MapContainer
           center={initialLocation as [number, number]}
@@ -308,7 +402,8 @@ export function MapComponent({ location, onLocationChange, height }: MapComponen
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
-          <LocationMarker location={location} onLocationChange={onLocationChange} />
+          <LocationMarkerComponent location={location} onLocationChange={onLocationChange} />
+          <MapEventHandler onLocationChange={onLocationChange} />
         </MapContainer>
       </div>
       
