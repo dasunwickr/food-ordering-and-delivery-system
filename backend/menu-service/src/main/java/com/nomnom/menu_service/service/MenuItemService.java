@@ -166,6 +166,29 @@ public class MenuItemService implements MenuItemServiceInterface {
             }
             return false;
         }
+
+
+    @Override
+    public List<MenuItems> getMenuItemsByCategory(String categoryName) {
+        List<MenuItems> menuItems = ItemRepository.findByCategory(categoryName);
+
+        if (menuItems.isEmpty()) {
+            throw new RuntimeException("No menu items found for category: " + categoryName);
+        }
+
+        return menuItems;
+    }
+
+    @Override
+    public List<String> getAllCategories() {
+        List<String> categories = ItemRepository.findDistinctCategories();
+
+        if (categories.isEmpty()) {
+            throw new RuntimeException("No categories found.");
+        }
+
+        return categories;
+    }
 }
 
 
@@ -190,4 +213,5 @@ public class MenuItemService implements MenuItemServiceInterface {
 //        List<MenuItemPortion> portions = portionRepository.findByMenuItemId(menuItemId);
 //        System.out.println("Portions found: " + portions.size());
 //        return portions;
+
 //    }
