@@ -14,6 +14,9 @@ public interface MenuItemServiceInterface {
 
     List<MenuItems> getAllMenuItems();
 
+    List<MenuItems> getMenuItemsByCategory(String categoryName);
+
+    List<String> getAllCategories();
 
     MenuItems getMenuItemById(Long id);
 
