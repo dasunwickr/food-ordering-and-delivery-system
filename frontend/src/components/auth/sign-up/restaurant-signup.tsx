@@ -23,6 +23,16 @@ interface RestaurantSignUpProps {
   }
 }
 
+interface SelectedLocation {
+  lat: number;
+  lng: number;
+}
+
+interface MapSelectorProps {
+  height?: string;
+  onConfirmLocation?: (selectedLocation: { lat: number; lng: number }) => void;
+}
+
 export function RestaurantSignUp({ userData }: RestaurantSignUpProps) {
   // Get state and actions from the store
   const {
@@ -524,7 +534,10 @@ export function RestaurantSignUp({ userData }: RestaurantSignUpProps) {
         <div className="space-y-4">
           <MapSelector 
             height="350px" 
-            onConfirmLocation={() => {
+            onConfirmLocation={(selectedLocation: SelectedLocation): void => {
+              const formattedLocation = `Lat: ${selectedLocation.lat}, Lng: ${selectedLocation.lng}`;
+              setLocation(formattedLocation); // now receives a string
+              confirmLocation();
               toggleModal('map', false);
             }} 
           />

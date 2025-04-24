@@ -23,9 +23,15 @@ interface LocationData {
   address: string;
 }
 
+interface SelectedLocation {
+  lat: number;
+  lng: number;
+  address: string;
+}
+
 interface MapSelectorProps {
   height?: string;
-  onConfirmLocation?: () => void;
+  onConfirmLocation?: (selectedLocation: SelectedLocation) => void;
 }
 
 export function MapSelector({ height = "400px", onConfirmLocation }: MapSelectorProps) {
@@ -38,7 +44,7 @@ export function MapSelector({ height = "400px", onConfirmLocation }: MapSelector
   const handleConfirm = () => {
     storeConfirmLocation();
     if (onConfirmLocation) {
-      onConfirmLocation();
+      onConfirmLocation(location);
     }
   };
   
