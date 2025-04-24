@@ -72,6 +72,7 @@ public class CartController {
                         item.getItemId(),
                         item.getItemName(),
                         item.getQuantity(),
+                        item.getPotionSize() != null ? CartDTO.CartItemDTO.PotionSize.valueOf(item.getPotionSize().name()) : null, // Map potion size
                         item.getPrice(),
                         item.getTotalPrice()
                 )).toList(),

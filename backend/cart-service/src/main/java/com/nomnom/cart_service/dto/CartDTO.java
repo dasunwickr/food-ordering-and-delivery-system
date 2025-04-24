@@ -1,5 +1,6 @@
 package com.nomnom.cart_service.dto;
 
+import com.nomnom.cart_service.model.CartItem;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -26,6 +27,10 @@ public class CartDTO {
         private String itemId;
         private String itemName;
         private int quantity;
+        public enum PotionSize{
+            Small,Medium,Large
+        };
+        private PotionSize potionSize;
         private double price;
         private double totalPrice;
     }
