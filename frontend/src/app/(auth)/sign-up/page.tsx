@@ -1,91 +1,141 @@
 "use client"
 
 import { useState } from "react"
+import { AnimatePresence } from "framer-motion"
+import { BackButton } from "@/components/auth/back-button"
+import { AuthHeader } from "@/components/auth/auth-header"
+import { StepIndicator } from "@/components/auth/step-indicator"
+import { AccountStep } from "@/components/auth/sign-up/account-step"
+import { PersonalDetailsStep } from "@/components/auth/sign-up/personal-details-step"
+import { CustomerSignUp } from "@/components/auth/sign-up/customer-signup"
+import { DriverSignUp } from "@/components/auth/sign-up/driver-signup"
+import { RestaurantSignUp } from "@/components/auth/sign-up/restaurant-signup"
+import { UserTypeSelector } from "@/components/auth/user-type"
 
-import { BasicInfoForm } from "@/components/auth/sign-up/basic-info-form"
-import { CustomerForm } from "@/components/auth/sign-up/customer-form"
-import { RestaurantForm } from "@/components/auth/sign-up/restaurant-form"
-import { DriverForm } from "@/components/auth/sign-up/driver-form"
-import { EmailPasswordForm } from "@/components/auth/sign-up/email-password-form"
-import { UserTypeForm } from "@/components/auth/sign-up/user-type-form"
 
-type UserType = "customer" | "restaurant" | "driver" | null
+
+type UserType = "customer" | "driver" | "restaurant" | null
 
 export default function SignUp() {
   const [step, setStep] = useState(1)
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [firstName, setFirstName] = useState("")
+  const [lastName, setLastName] = useState("")
+  const [phone, setPhone] = useState("")
+  const [profileImage, setProfileImage] = useState<File | null>(null)
+  const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null)
   const [userType, setUserType] = useState<UserType>(null)
-  const [formData, setFormData] = useState({
-    email: "",
-    password: "",
-    firstName: "",
-    lastName: "",
-    contactNumber: "",
-    userType: null as UserType,
-    // Customer specific
-    location: { lat: 0, lng: 0, address: "" },
-    // Restaurant specific
-    restaurantName: "",
-    restaurantAddress: "",
-    restaurantLicenseNumber: "",
-    restaurantType: "",
-    cuisineTypes: [] as string[],
-    documents: [] as { name: string; file: File }[],
-    openingHours: [] as { day: string; openTime: string; closeTime: string }[],
-    // Driver specific
-    vehicleNumber: "",
-    vehicleType: "",
-    vehicleDocuments: [] as { name: string; file: File }[],
-  })
+  const [showUserTypeModal, setShowUserTypeModal] = useState(false)
 
-  const updateFormData = (data: Partial<typeof formData>) => {
-    setFormData((prev) => ({ ...prev, ...data }))
+  const handleAccountSubmit = (email: string, password: string, confirmPassword: string) => {
+    setEmail(email)
+    setPassword(password)
+    setStep(2)
   }
 
-  const nextStep = () => setStep((prev) => prev + 1)
-  const prevStep = () => setStep((prev) => prev - 1)
+  const handlePersonalDetailsSubmit = (
+    firstName: string,
+    lastName: string,
+    phone: string,
+    profileImage: File | null,
+  ) => {
+    setFirstName(firstName)
+    setLastName(lastName)
+    setPhone(phone)
+    setProfileImage(profileImage)
+    if (profileImage) {
+      setProfileImageUrl(URL.createObjectURL(profileImage))
+    }
+    setShowUserTypeModal(true)
+  }
 
   const handleUserTypeSelect = (type: UserType) => {
     setUserType(type)
-    updateFormData({ userType: type })
-    nextStep()
+    setShowUserTypeModal(false)
+    setStep(3)
+  }
+
+  const getStepTitle = () => {
+    switch (step) {
+      case 1:
+        return "Set up your account credentials"
+      case 2:
+        return "Tell us about yourself"
+      case 3:
+        return `Complete your ${userType} profile`
+      default:
+        return ""
+    }
   }
 
   return (
-    <div className="space-y-6 w-full">
-      {step === 1 && <EmailPasswordForm formData={formData} updateFormData={updateFormData} onNext={nextStep} />}
+    <>
+      <BackButton
+        href={step === 1 ? "/sign-in" : undefined}
+        onClick={step > 1 ? () => setStep(step - 1) : undefined}
+        label={step === 1 ? "Back to Sign In" : "Back"}
+      />
 
-      {step === 2 && <UserTypeForm onSelect={handleUserTypeSelect} onBack={prevStep} />}
+      <AuthHeader title="Create an Account" subtitle={getStepTitle()} />
 
-      {step === 3 && (
-        <BasicInfoForm formData={formData} updateFormData={updateFormData} onNext={nextStep} onBack={prevStep} />
-      )}
+      <StepIndicator
+        steps={3}
+        currentStep={step}
+        onStepClick={(s) => {
+          if (s < step) setStep(s)
+        }}
+      />
 
-      {step === 4 && userType === "customer" && (
-        <CustomerForm
-          formData={formData}
-          updateFormData={updateFormData}
-          onSubmit={() => console.log("Submit customer form", formData)}
-          onBack={prevStep}
-        />
-      )}
+      <AnimatePresence mode="wait">
+        {step === 1 && <AccountStep onSubmit={handleAccountSubmit} />}
+        {step === 2 && <PersonalDetailsStep onSubmit={handlePersonalDetailsSubmit} />}
+        {step === 3 && (
+          <>
+            {userType === "customer" && (
+              <CustomerSignUp
+                userData={{
+                  email,
+                  firstName,
+                  lastName,
+                  phone,
+                  profileImage: profileImageUrl,
+                }}
+              />
+            )}
 
-      {step === 4 && userType === "restaurant" && (
-        <RestaurantForm
-          formData={formData}
-          updateFormData={updateFormData}
-          onSubmit={() => console.log("Submit restaurant form", formData)}
-          onBack={prevStep}
-        />
-      )}
+            {userType === "driver" && (
+              <DriverSignUp
+                userData={{
+                  email,
+                  firstName,
+                  lastName,
+                  phone,
+                  profileImage: profileImageUrl,
+                }}
+              />
+            )}
 
-      {step === 4 && userType === "driver" && (
-        <DriverForm
-          formData={formData}
-          updateFormData={updateFormData}
-          onSubmit={() => console.log("Submit driver form", formData)}
-          onBack={prevStep}
-        />
-      )}
-    </div>
+            {userType === "restaurant" && (
+              <RestaurantSignUp
+                userData={{
+                  email,
+                  firstName,
+                  lastName,
+                  phone,
+                  profileImage: profileImageUrl,
+                }}
+              />
+            )}
+          </>
+        )}
+      </AnimatePresence>
+
+      <UserTypeSelector
+        isOpen={showUserTypeModal}
+        onClose={() => setShowUserTypeModal(false)}
+        onSelect={handleUserTypeSelect}
+      />
+    </>
   )
 }

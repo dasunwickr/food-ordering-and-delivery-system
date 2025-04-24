@@ -1,49 +1,99 @@
 "use client"
 
 import { useState } from "react"
-import { EmailForm } from "@/components/auth/forgot-password/email-form"
-import { OtpForm } from "@/components/auth/forgot-password/otp-form"
-import { ResetPasswordForm } from "@/components/auth/forgot-password/reset-password"
+import { AnimatePresence } from "framer-motion"
+import { Check, AlertCircle } from "lucide-react"
+
+
+import { Button } from "@/components/ui/button"
+import { BackButton } from "@/components/auth/back-button"
+import { AuthHeader } from "@/components/auth/auth-header"
+import { StepIndicator } from "@/components/auth/step-indicator"
+import { OtpStep } from "@/components/auth/forgot-password/otp-step"
+import { ResetPasswordStep } from "@/components/auth/forgot-password/reset-password"
+import { Modal } from "@/components/auth/modal"
+import { EmailStep } from "@/components/auth/forgot-password/email-step"
 
 export default function ForgotPassword() {
   const [step, setStep] = useState(1)
-  const [formData, setFormData] = useState({
-    email: "",
-    otp: "",
-    password: "",
-    confirmPassword: "",
-  })
+  const [email, setEmail] = useState("")
+  const [otp, setOtp] = useState("")
+  const [showModal, setShowModal] = useState(false)
+  const [modalContent, setModalContent] = useState({ title: "", message: "", isError: false })
 
-  const updateFormData = (data: Partial<typeof formData>) => {
-    setFormData((prev) => ({ ...prev, ...data }))
+  const handleEmailSubmit = (email: string) => {
+    setEmail(email)
+    setStep(2)
   }
 
-  const nextStep = () => setStep((prev) => prev + 1)
+  const handleOtpSubmit = (otp: string) => {
+    setOtp(otp)
+    setStep(3)
+  }
+
+  const handleResendOtp = () => {
+    // Resend OTP logic would go here
+    console.log("Resending OTP to", email)
+  }
+
+  const handleResetPassword = (password: string, confirmPassword: string) => {
+    // Reset password logic would go here
+    console.log("Resetting password for", email)
+    setModalContent({
+      title: "Success!",
+      message: "Your password has been reset successfully.",
+      isError: false,
+    })
+    setShowModal(true)
+  }
+
+  const closeModal = () => {
+    setShowModal(false)
+    if (!modalContent.isError) {
+      // Redirect to sign in page
+      window.location.href = "/sign-in"
+    }
+  }
+
+  const getStepTitle = () => {
+    switch (step) {
+      case 1:
+        return "Enter your email to receive a verification code"
+      case 2:
+        return "Enter the 6-digit code sent to your email"
+      case 3:
+        return "Create a new password for your account"
+      default:
+        return ""
+    }
+  }
 
   return (
-    <div className="space-y-6 w-full">
-      {step === 1 && (
-        <EmailForm email={formData.email} updateEmail={(email) => updateFormData({ email })} onSubmit={nextStep} />
-      )}
+    <>
+      <BackButton href="/sign-in" label="Back to Sign In" />
 
-      {step === 2 && (
-        <OtpForm
-          email={formData.email}
-          otp={formData.otp}
-          updateOtp={(otp) => updateFormData({ otp })}
-          onSubmit={nextStep}
-        />
-      )}
+      <AuthHeader title="Reset Your Password" subtitle={getStepTitle()} />
 
-      {step === 3 && (
-        <ResetPasswordForm
-          password={formData.password}
-          confirmPassword={formData.confirmPassword}
-          updatePassword={(password) => updateFormData({ password })}
-          updateConfirmPassword={(confirmPassword) => updateFormData({ confirmPassword })}
-          onSubmit={() => console.log("Password reset", formData)}
-        />
-      )}
-    </div>
+      <StepIndicator steps={3} currentStep={step} onStepClick={setStep} />
+
+      <AnimatePresence mode="wait">
+        {step === 1 && <EmailStep onSubmit={handleEmailSubmit} />}
+        {step === 2 && <OtpStep onSubmit={handleOtpSubmit} onResendOtp={handleResendOtp} />}
+        {step === 3 && <ResetPasswordStep onSubmit={handleResetPassword} />}
+      </AnimatePresence>
+
+      <Modal
+        isOpen={showModal}
+        onClose={closeModal}
+        title={modalContent.title}
+        icon={modalContent.isError ? AlertCircle : Check}
+        iconClassName={modalContent.isError ? "text-red-500" : "text-green-500"}
+      >
+        <p className="text-center">{modalContent.message}</p>
+        <Button onClick={closeModal} className="mt-4 w-full">
+          {modalContent.isError ? "Try Again" : "Go to Sign In"}
+        </Button>
+      </Modal>
+    </>
   )
 }

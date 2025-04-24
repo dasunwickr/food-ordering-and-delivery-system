@@ -22,4 +22,5 @@ public class Driver extends User {
     private List<DocumentInfo> vehicleDocuments;
     private String driverStatus;
     private Point currentLocation;
+    private boolean isActive;
 }
