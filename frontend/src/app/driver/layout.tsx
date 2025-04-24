@@ -4,12 +4,12 @@ import type React from "react"
 
 import { useState, useEffect } from "react"
 import { usePathname } from "next/navigation"
-import { Sidebar } from "@/components/admin/sidebar"
-import { MobileNavbar } from "@/components/admin/mobile-navbar"
+import { DriverTopNavbar } from "@/components/driver/driver-top-navbar"
+import { DriverMobileNavbar } from "@/components/driver/driver-mobile-navbar"
 import { useMobile } from "@/hooks/use-mobile"
-import { TopNavbar } from "@/components/admin/top-navbar"
+import { DriverSidebar } from "@/components/driver/driver-sidebar"
 
-export default function AdminLayout({
+export default function DriverLayout({
   children,
 }: {
   children: React.ReactNode
@@ -28,7 +28,7 @@ export default function AdminLayout({
   return (
     <div className="flex h-screen overflow-hidden bg-background">
       {/* Sidebar - hidden on mobile when closed */}
-      <Sidebar
+      <DriverSidebar
         open={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
         className={cn(
@@ -47,12 +47,12 @@ export default function AdminLayout({
 
       {/* Main content */}
       <div className="flex flex-1 flex-col overflow-hidden">
-        <TopNavbar onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
+        <DriverTopNavbar onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
 
         <main className="flex-1 overflow-y-auto p-4 md:p-6">{children}</main>
 
         {/* Mobile bottom navigation */}
-        {isMobile && <MobileNavbar />}
+        {isMobile && <DriverMobileNavbar />}
       </div>
     </div>
   )

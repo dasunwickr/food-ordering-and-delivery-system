@@ -11,7 +11,8 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Sheet, SheetContent } from "@/components/ui/sheet"
 import { useTheme } from "next-themes"
 import { cn } from "@/lib/utils"
-import { useMobile } from "@/hooks/admin/use-mobile"
+import { useMobile } from "@/hooks/use-mobile"
+import Image from "next/image"
 
 interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> {
   open?: boolean
@@ -32,8 +33,7 @@ export function Sidebar({ className, open, onClose, ...props }: SidebarProps) {
     <div className={cn("flex h-full flex-col", className)} {...props}>
       <div className="flex h-16 items-center border-b px-4">
         <Link href="/admin" className="flex items-center gap-2 font-semibold">
-          <span className="h-6 w-6 rounded-full bg-primary" />
-          <span className="text-lg font-bold">FoodAdmin</span>
+          <Image src="/logo-dark.svg" alt="FoodAdmin logo" width={120} height={120} className="rounded-full" />
         </Link>
         {isMobile && (
           <Button variant="ghost" size="icon" className="ml-auto" onClick={onClose}>
