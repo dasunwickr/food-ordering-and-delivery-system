@@ -2,7 +2,6 @@
 
 import type React from "react"
 
-import { useState } from "react"
 import { motion } from "framer-motion"
 import { Building, FileText, MapPin, Clock, UtensilsCrossed, Plus, Minus, Check, X } from "lucide-react"
 
@@ -11,6 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Modal } from "@/components/auth/modal"
+import { useRestaurantStore } from "@/stores/restaurant-store"
 
 interface RestaurantSignUpProps {
   userData: {
@@ -22,112 +22,68 @@ interface RestaurantSignUpProps {
   }
 }
 
-type Day = "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday" | "sunday"
-
-interface OperatingHours {
-  day: Day
-  isOpen: boolean
-  openTime: string
-  closeTime: string
-}
-
 export function RestaurantSignUp({ userData }: RestaurantSignUpProps) {
-  const [step, setStep] = useState(1)
-  const [restaurantName, setRestaurantName] = useState("")
-  const [address, setAddress] = useState("")
-  const [licenseNumber, setLicenseNumber] = useState("")
-  const [restaurantType, setRestaurantType] = useState("")
-  const [showRestaurantTypeModal, setShowRestaurantTypeModal] = useState(false)
-  const [cuisineTypes, setCuisineTypes] = useState<string[]>([])
-  const [showCuisineTypesModal, setShowCuisineTypesModal] = useState(false)
-  const [operatingHours, setOperatingHours] = useState<OperatingHours[]>([
-    { day: "monday", isOpen: true, openTime: "09:00", closeTime: "22:00" },
-    { day: "tuesday", isOpen: true, openTime: "09:00", closeTime: "22:00" },
-    { day: "wednesday", isOpen: true, openTime: "09:00", closeTime: "22:00" },
-    { day: "thursday", isOpen: true, openTime: "09:00", closeTime: "22:00" },
-    { day: "friday", isOpen: true, openTime: "09:00", closeTime: "23:00" },
-    { day: "saturday", isOpen: true, openTime: "10:00", closeTime: "23:00" },
-    { day: "sunday", isOpen: true, openTime: "10:00", closeTime: "22:00" },
-  ])
-  const [documents, setDocuments] = useState<{ name: string; file: File | null }[]>([
-    { name: "Business License", file: null },
-    { name: "Food Safety Certificate", file: null },
-  ])
-  const [location, setLocation] = useState("")
-  const [showMap, setShowMap] = useState(false)
-  const [locationConfirmed, setLocationConfirmed] = useState(false)
-  const [showSuccessModal, setShowSuccessModal] = useState(false)
-  const [errors, setErrors] = useState<{ [key: string]: string }>({})
-
-  const validateStep1 = () => {
-    const newErrors: { [key: string]: string } = {}
-
-    if (!restaurantName) {
-      newErrors.restaurantName = "Restaurant name is required"
-    }
-
-    if (!address) {
-      newErrors.address = "Address is required"
-    }
-
-    if (!licenseNumber) {
-      newErrors.licenseNumber = "License number is required"
-    }
-
-    if (!restaurantType) {
-      newErrors.restaurantType = "Restaurant type is required"
-    }
-
-    if (cuisineTypes.length === 0) {
-      newErrors.cuisineTypes = "At least one cuisine type is required"
-    }
-
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
-  }
-
-  const validateStep2 = () => {
-    // Operating hours validation if needed
-    return true
-  }
-
-  const validateStep3 = () => {
-    const newErrors: { [key: string]: string } = {}
-
-    const missingDocuments = documents.some((doc) => !doc.file)
-    if (missingDocuments) {
-      newErrors.documents = "All documents are required"
-    }
-
-    if (!location) {
-      newErrors.location = "Location is required"
-    }
-
-    if (!locationConfirmed) {
-      newErrors.locationConfirmed = "Please confirm your location on the map"
-    }
-
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
-  }
+  // Get state and actions from the store
+  const {
+    // Basic info
+    restaurantName,
+    address,
+    licenseNumber,
+    restaurantType,
+    cuisineTypes,
+    
+    // Operating hours
+    operatingHours,
+    
+    // Documents
+    documents,
+    
+    // Location
+    location,
+    locationConfirmed,
+    
+    // UI state
+    step,
+    showRestaurantTypeModal,
+    showCuisineTypesModal,
+    showMap,
+    showSuccessModal,
+    errors,
+    
+    // Actions
+    setRestaurantName,
+    setAddress,
+    setLicenseNumber,
+    setRestaurantType,
+    toggleCuisineType,
+    updateOperatingHours,
+    updateDocument,
+    addDocument,
+    setLocation,
+    confirmLocation,
+    setStep,
+    toggleModal,
+    validateStep,
+    clearErrors,
+  } = useRestaurantStore()
 
   const handleStep1Submit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (validateStep1()) {
+    if (validateStep(1)) {
       setStep(2)
     }
   }
 
   const handleStep2Submit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (validateStep2()) {
+    if (validateStep(2)) {
       setStep(3)
     }
   }
 
   const handleStep3Submit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (validateStep3()) {
+    if (validateStep(3)) {
       // Handle sign up logic
       console.log("Restaurant sign up with:", {
         ...userData,
@@ -140,38 +96,8 @@ export function RestaurantSignUp({ userData }: RestaurantSignUpProps) {
         documents,
         location,
       })
-      setShowSuccessModal(true)
+      toggleModal('success', true)
     }
-  }
-
-  const handleRestaurantTypeSelect = (type: string) => {
-    setRestaurantType(type)
-    setShowRestaurantTypeModal(false)
-  }
-
-  const handleCuisineTypeToggle = (type: string) => {
-    if (cuisineTypes.includes(type)) {
-      setCuisineTypes(cuisineTypes.filter((t) => t !== type))
-    } else {
-      setCuisineTypes([...cuisineTypes, type])
-    }
-  }
-
-  const handleOperatingHoursChange = (index: number, field: keyof OperatingHours, value: any) => {
-    const updatedHours = [...operatingHours]
-    updatedHours[index] = { ...updatedHours[index], [field]: value }
-    setOperatingHours(updatedHours)
-  }
-
-  const handleDocumentChange = (index: number, file: File | null) => {
-    const updatedDocuments = [...documents]
-    updatedDocuments[index].file = file
-    setDocuments(updatedDocuments)
-  }
-
-  const handleConfirmLocation = () => {
-    setLocationConfirmed(true)
-    setShowMap(false)
   }
 
   const containerVariants = {
@@ -211,18 +137,8 @@ export function RestaurantSignUp({ userData }: RestaurantSignUpProps) {
   const restaurantTypes = ["Fast Food", "Casual Dining", "Fine Dining", "Cafe", "Bakery", "Food Truck"]
 
   const cuisineTypeOptions = [
-    "Italian",
-    "Chinese",
-    "Indian",
-    "Mexican",
-    "Japanese",
-    "Thai",
-    "American",
-    "Mediterranean",
-    "French",
-    "Korean",
-    "Vietnamese",
-    "Greek",
+    "Italian", "Chinese", "Indian", "Mexican", "Japanese", "Thai", 
+    "American", "Mediterranean", "French", "Korean", "Vietnamese", "Greek",
   ]
 
   return (
@@ -296,7 +212,7 @@ export function RestaurantSignUp({ userData }: RestaurantSignUpProps) {
                 type="button"
                 variant="outline"
                 className={`w-full justify-between ${errors.restaurantType ? "border-red-500" : ""}`}
-                onClick={() => setShowRestaurantTypeModal(true)}
+                onClick={() => toggleModal('restaurantType', true)}
               >
                 {restaurantType ? restaurantType : "Select Restaurant Type"}
                 <UtensilsCrossed className="h-4 w-4 ml-2" />
@@ -319,7 +235,7 @@ export function RestaurantSignUp({ userData }: RestaurantSignUpProps) {
                     {type}
                     <button
                       type="button"
-                      onClick={() => handleCuisineTypeToggle(type)}
+                      onClick={() => toggleCuisineType(type)}
                       className="ml-1 p-1 rounded-full hover:bg-primary/20"
                     >
                       <X className="h-3 w-3" />
@@ -331,7 +247,7 @@ export function RestaurantSignUp({ userData }: RestaurantSignUpProps) {
                 type="button"
                 variant="outline"
                 className={`w-full ${errors.cuisineTypes ? "border-red-500" : ""}`}
-                onClick={() => setShowCuisineTypesModal(true)}
+                onClick={() => toggleModal('cuisineTypes', true)}
               >
                 Select Cuisine Types
               </Button>
@@ -369,11 +285,7 @@ export function RestaurantSignUp({ userData }: RestaurantSignUpProps) {
                   >
                     <div
                       className="flex items-center justify-between p-3 bg-gray-50 cursor-pointer"
-                      onClick={() => {
-                        const updatedHours = [...operatingHours]
-                        updatedHours[index].isOpen = !updatedHours[index].isOpen
-                        setOperatingHours(updatedHours)
-                      }}
+                      onClick={() => updateOperatingHours(index, "isOpen", !hours.isOpen)}
                     >
                       <div className="flex items-center">
                         <Clock className="h-4 w-4 mr-2 text-muted-foreground" />
@@ -405,7 +317,7 @@ export function RestaurantSignUp({ userData }: RestaurantSignUpProps) {
                             id={`open-${hours.day}`}
                             type="time"
                             value={hours.openTime}
-                            onChange={(e) => handleOperatingHoursChange(index, "openTime", e.target.value)}
+                            onChange={(e) => updateOperatingHours(index, "openTime", e.target.value)}
                           />
                         </div>
                         <div className="space-y-1">
@@ -416,7 +328,7 @@ export function RestaurantSignUp({ userData }: RestaurantSignUpProps) {
                             id={`close-${hours.day}`}
                             type="time"
                             value={hours.closeTime}
-                            onChange={(e) => handleOperatingHoursChange(index, "closeTime", e.target.value)}
+                            onChange={(e) => updateOperatingHours(index, "closeTime", e.target.value)}
                           />
                         </div>
                       </motion.div>
@@ -471,7 +383,7 @@ export function RestaurantSignUp({ userData }: RestaurantSignUpProps) {
                           className="sr-only"
                           onChange={(e) => {
                             const file = e.target.files?.[0] || null
-                            handleDocumentChange(index, file)
+                            updateDocument(index, file)
                           }}
                         />
                       </div>
@@ -489,9 +401,7 @@ export function RestaurantSignUp({ userData }: RestaurantSignUpProps) {
                   type="button"
                   variant="outline"
                   className="w-full"
-                  onClick={() => {
-                    setDocuments([...documents, { name: "", file: null }])
-                  }}
+                  onClick={addDocument}
                 >
                   <Plus className="mr-2 h-4 w-4" />
                   Add Another Document
@@ -510,10 +420,7 @@ export function RestaurantSignUp({ userData }: RestaurantSignUpProps) {
                   placeholder="Search for your restaurant location"
                   className={`pl-10 ${errors.location ? "border-red-500" : ""} ${locationConfirmed ? "pr-10 border-green-500" : ""}`}
                   value={location}
-                  onChange={(e) => {
-                    setLocation(e.target.value)
-                    setLocationConfirmed(false)
-                  }}
+                  onChange={(e) => setLocation(e.target.value)}
                 />
                 {locationConfirmed && (
                   <Check className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-green-500" />
@@ -536,7 +443,7 @@ export function RestaurantSignUp({ userData }: RestaurantSignUpProps) {
                 type="button"
                 variant="outline"
                 className="w-full flex items-center justify-center"
-                onClick={() => setShowMap(true)}
+                onClick={() => toggleModal('map', true)}
               >
                 <MapPin className="mr-2 h-4 w-4" />
                 Select on Map
@@ -554,7 +461,7 @@ export function RestaurantSignUp({ userData }: RestaurantSignUpProps) {
 
       <Modal
         isOpen={showRestaurantTypeModal}
-        onClose={() => setShowRestaurantTypeModal(false)}
+        onClose={() => toggleModal('restaurantType', false)}
         title="Select Restaurant Type"
       >
         <div className="space-y-3">
@@ -562,7 +469,7 @@ export function RestaurantSignUp({ userData }: RestaurantSignUpProps) {
             <motion.button
               key={type}
               className="w-full p-3 border rounded-lg flex items-center hover:border-primary hover:bg-primary/5 transition-colors"
-              onClick={() => handleRestaurantTypeSelect(type)}
+              onClick={() => setRestaurantType(type)}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               initial={{ opacity: 0, y: 10 }}
@@ -578,7 +485,7 @@ export function RestaurantSignUp({ userData }: RestaurantSignUpProps) {
 
       <Modal
         isOpen={showCuisineTypesModal}
-        onClose={() => setShowCuisineTypesModal(false)}
+        onClose={() => toggleModal('cuisineTypes', false)}
         title="Select Cuisine Types"
       >
         <div className="grid grid-cols-2 gap-3">
@@ -590,7 +497,7 @@ export function RestaurantSignUp({ userData }: RestaurantSignUpProps) {
                 className={`p-3 border rounded-lg flex items-center justify-between transition-colors ${
                   isSelected ? "border-primary bg-primary/5" : "hover:border-gray-300"
                 }`}
-                onClick={() => handleCuisineTypeToggle(type)}
+                onClick={() => toggleCuisineType(type)}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 initial={{ opacity: 0, y: 10 }}
@@ -604,13 +511,17 @@ export function RestaurantSignUp({ userData }: RestaurantSignUpProps) {
           })}
         </div>
         <div className="mt-4 flex justify-end">
-          <Button onClick={() => setShowCuisineTypesModal(false)} className="w-full">
+          <Button onClick={() => toggleModal('cuisineTypes', false)} className="w-full">
             Done
           </Button>
         </div>
       </Modal>
 
-      <Modal isOpen={showMap} onClose={() => setShowMap(false)} title="Select Restaurant Location">
+      <Modal 
+        isOpen={showMap} 
+        onClose={() => toggleModal('map', false)} 
+        title="Select Restaurant Location"
+      >
         <div className="space-y-4">
           <div className="relative">
             <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -629,7 +540,7 @@ export function RestaurantSignUp({ userData }: RestaurantSignUpProps) {
             </div>
           </div>
 
-          <Button onClick={handleConfirmLocation} className="w-full" disabled={!location}>
+          <Button onClick={confirmLocation} className="w-full" disabled={!location}>
             Confirm Location
           </Button>
         </div>
@@ -637,7 +548,7 @@ export function RestaurantSignUp({ userData }: RestaurantSignUpProps) {
 
       <Modal
         isOpen={showSuccessModal}
-        onClose={() => setShowSuccessModal(false)}
+        onClose={() => toggleModal('success', false)}
         title="Account Created!"
         icon={Check}
         iconClassName="text-green-500"
