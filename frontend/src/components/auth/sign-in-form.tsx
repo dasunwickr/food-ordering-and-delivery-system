@@ -12,7 +12,6 @@ import { FormInput } from "./form-input"
 import { PasswordInput } from "./password-input"
 import { SocialSignIn } from "./sign-up/social-sign-in"
 
-
 interface SignInFormProps {
   onSubmit: (email: string, password: string) => void
 }
