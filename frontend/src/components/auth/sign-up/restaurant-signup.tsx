@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import { Building, FileText, MapPin, Clock, UtensilsCrossed, Plus, Minus, Check, X } from "lucide-react"
 
@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Modal } from "@/components/auth/modal"
 import { MapSelector } from "@/components/ui/map-selector"
 import { DocumentUploader } from "@/components/shared/document-uploader"
+import { userService, CuisineType, RestaurantType } from "@/services/user-service"
 
 type Day = "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday" | "sunday"
 
@@ -51,6 +52,18 @@ export function RestaurantSignUp({ userData }: RestaurantSignUpProps) {
   const [restaurantType, setRestaurantType] = useState("")
   const [cuisineTypes, setCuisineTypes] = useState<string[]>([])
   
+  // States for database-fetched data
+  const [dbRestaurantTypes, setDbRestaurantTypes] = useState<RestaurantType[]>([])
+  const [dbCuisineTypes, setDbCuisineTypes] = useState<CuisineType[]>([])
+  const [isLoading, setIsLoading] = useState({
+    restaurantTypes: true,
+    cuisineTypes: true
+  })
+  const [loadError, setLoadError] = useState({
+    restaurantTypes: '',
+    cuisineTypes: ''
+  })
+  
   // Initial operating hours
   const defaultOperatingHours: OperatingHours[] = [
     { day: "monday", isOpen: true, openTime: "09:00", closeTime: "22:00" },
@@ -85,6 +98,36 @@ export function RestaurantSignUp({ userData }: RestaurantSignUpProps) {
   const [showMap, setShowMap] = useState(false)
   const [showSuccessModal, setShowSuccessModal] = useState(false)
   const [errors, setErrors] = useState<{ [key: string]: string }>({})
+
+  // Fetch restaurant types and cuisine types from API
+  useEffect(() => {
+    const fetchRestaurantTypes = async () => {
+      try {
+        const types = await userService.getRestaurantTypes()
+        setDbRestaurantTypes(types)
+        setIsLoading(prev => ({ ...prev, restaurantTypes: false }))
+      } catch (error) {
+        console.error("Failed to fetch restaurant types:", error)
+        setLoadError(prev => ({ ...prev, restaurantTypes: 'Failed to load restaurant types' }))
+        setIsLoading(prev => ({ ...prev, restaurantTypes: false }))
+      }
+    }
+
+    const fetchCuisineTypes = async () => {
+      try {
+        const types = await userService.getCuisineTypes()
+        setDbCuisineTypes(types)
+        setIsLoading(prev => ({ ...prev, cuisineTypes: false }))
+      } catch (error) {
+        console.error("Failed to fetch cuisine types:", error)
+        setLoadError(prev => ({ ...prev, cuisineTypes: 'Failed to load cuisine types' }))
+        setIsLoading(prev => ({ ...prev, cuisineTypes: false }))
+      }
+    }
+
+    fetchRestaurantTypes()
+    fetchCuisineTypes()
+  }, [])
 
   const handleStep1Submit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -284,9 +327,9 @@ export function RestaurantSignUp({ userData }: RestaurantSignUpProps) {
     },
   }
 
-  const restaurantTypes = ["Fast Food", "Casual Dining", "Fine Dining", "Cafe", "Bakery", "Food Truck"]
-
-  const cuisineTypeOptions = [
+  // Fallback options in case API fails
+  const fallbackRestaurantTypes = ["Fast Food", "Casual Dining", "Fine Dining", "Cafe", "Bakery", "Food Truck"]
+  const fallbackCuisineTypes = [
     "Italian", "Chinese", "Indian", "Mexican", "Japanese", "Thai", 
     "American", "Mediterranean", "French", "Korean", "Vietnamese", "Greek",
   ]
@@ -585,7 +628,7 @@ export function RestaurantSignUp({ userData }: RestaurantSignUpProps) {
         title="Select Restaurant Type"
       >
         <div className="space-y-3">
-          {restaurantTypes.map((type, index) => (
+          {(isLoading.restaurantTypes ? fallbackRestaurantTypes : dbRestaurantTypes.map(type => type.type)).map((type, index) => (
             <motion.button
               key={type}
               className="w-full p-3 border rounded-lg flex items-center hover:border-primary hover:bg-primary/5 transition-colors"
@@ -609,7 +652,7 @@ export function RestaurantSignUp({ userData }: RestaurantSignUpProps) {
         title="Select Cuisine Types"
       >
         <div className="grid grid-cols-2 gap-3">
-          {cuisineTypeOptions.map((type, index) => {
+          {(isLoading.cuisineTypes ? fallbackCuisineTypes : dbCuisineTypes.map(type => type.name)).map((type, index) => {
             const isSelected = cuisineTypes.includes(type)
             return (
               <motion.button
