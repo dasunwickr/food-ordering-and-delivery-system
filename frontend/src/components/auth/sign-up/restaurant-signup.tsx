@@ -80,18 +80,14 @@ export function RestaurantSignUp({ userData }: RestaurantSignUpProps) {
     { day: "sunday", isOpen: true, openTime: "10:00", closeTime: "22:00" },
   ]
   
-  // Initial default documents
-  const defaultDocuments = [
-    { name: "Business License", url: "" },
-    // { name: "Food Safety Certificate", url: "" }
-  ];
+  // Document states - manage each document independently
+  const [businessLicense, setBusinessLicense] = useState<{ name: string; url: string }>({ name: "Business License", url: "" })
+  const [foodSafetyCertificate, setFoodSafetyCertificate] = useState<{ name: string; url: string }>({ name: "Food Safety Certificate", url: "" })
+  // Store additional documents in an array
+  const [additionalDocuments, setAdditionalDocuments] = useState<{ name: string; url: string }[]>([])
   
   // Operating hours state
   const [operatingHours, setOperatingHours] = useState<OperatingHours[]>(defaultOperatingHours)
-  
-  // Documents state
-  const [documents, setDocuments] = useState<{ name: string; url: string }[]>(defaultDocuments);
-  const [editDocumentName, setEditDocumentName] = useState<{index: number, value: string} | null>(null);
   
   // Location state
   const [location, setLocation] = useState("")
@@ -184,7 +180,7 @@ export function RestaurantSignUp({ userData }: RestaurantSignUpProps) {
           restaurantTypeId: restaurantTypeId,
           cuisineTypeIds: selectedCuisineTypeIds,
           operatingHours: operatingHours,
-          documents: documents,
+          documents: [businessLicense, foodSafetyCertificate, ...additionalDocuments], 
           location: location,
           locationCoordinates: selectedLocation || undefined
         }
@@ -225,22 +221,19 @@ export function RestaurantSignUp({ userData }: RestaurantSignUpProps) {
   }
   
   const updateDocument = (index: number, documentInfo: { name: string; url: string }) => {
-    const updatedDocuments = [...documents];
-    // Preserve the document name for "Business License" and "Food Safety Certificate"
-    if (index < 2) {
-      updatedDocuments[index] = {
-        name: updatedDocuments[index].name,
-        url: documentInfo.url
-      };
+    if (index === 0) {
+      setBusinessLicense(documentInfo);
+    } else if (index === 1) {
+      setFoodSafetyCertificate(documentInfo);
     } else {
-      // Allow name changes for additional documents
-      updatedDocuments[index] = documentInfo;
+      const updatedDocuments = [...additionalDocuments];
+      updatedDocuments[index - 2] = documentInfo;
+      setAdditionalDocuments(updatedDocuments);
     }
-    setDocuments(updatedDocuments);
   };
   
   const addDocument = () => {
-    setDocuments([...documents, { name: "Additional Document", url: "" }]);
+    setAdditionalDocuments([...additionalDocuments, { name: "Additional Document", url: "" }]);
   };
   
   const confirmLocationSelection = () => {
@@ -295,9 +288,19 @@ export function RestaurantSignUp({ userData }: RestaurantSignUpProps) {
       isValid = true
     }
     else if (step === 3) {
-      const missingDocuments = documents.some(doc => !doc.url || doc.url.trim() === "");
-      if (missingDocuments) {
-        newErrors.documents = "All documents are required";
+      if (!businessLicense.url || businessLicense.url.trim() === "") {
+        newErrors.businessLicense = "Business license document is required";
+        isValid = false;
+      }
+      
+      if (!foodSafetyCertificate.url || foodSafetyCertificate.url.trim() === "") {
+        newErrors.foodSafetyCertificate = "Food safety certificate is required";
+        isValid = false;
+      }
+      
+      const hasInvalidAdditionalDocs = additionalDocuments.some(doc => (!doc.url || doc.url.trim() === ""));
+      if (additionalDocuments.length > 0 && hasInvalidAdditionalDocs) {
+        newErrors.additionalDocuments = "All additional documents must have files uploaded";
         isValid = false;
       }
       
@@ -327,7 +330,9 @@ export function RestaurantSignUp({ userData }: RestaurantSignUpProps) {
     setRestaurantType("")
     setCuisineTypes([])
     setOperatingHours(defaultOperatingHours)
-    setDocuments(defaultDocuments)
+    setBusinessLicense({ name: "Business License", url: "" })
+    setFoodSafetyCertificate({ name: "Food Safety Certificate", url: "" })
+    setAdditionalDocuments([])
     setLocation("")
     setLocationConfirmed(false)
     setStep(1)
@@ -579,12 +584,26 @@ export function RestaurantSignUp({ userData }: RestaurantSignUpProps) {
               </div>
 
               <div className="space-y-3">
-                {documents.map((doc, index) => (
+                <DocumentUploader
+                  key={`document-${businessLicense.name}`}
+                  documentName={businessLicense.name}
+                  currentDocument={businessLicense}
+                  onDocumentUpdate={(documentInfo) => updateDocument(0, documentInfo)}
+                  folder="food-ordering-system/restaurant-documents"
+                />
+                <DocumentUploader
+                  key={`document-${foodSafetyCertificate.name}`}
+                  documentName={foodSafetyCertificate.name}
+                  currentDocument={foodSafetyCertificate}
+                  onDocumentUpdate={(documentInfo) => updateDocument(1, documentInfo)}
+                  folder="food-ordering-system/restaurant-documents"
+                />
+                {additionalDocuments.map((doc, index) => (
                   <DocumentUploader
                     key={`document-${doc.name}-${index}`}
                     documentName={doc.name}
                     currentDocument={doc}
-                    onDocumentUpdate={(documentInfo) => updateDocument(index, documentInfo)}
+                    onDocumentUpdate={(documentInfo) => updateDocument(index + 2, documentInfo)}
                     folder="food-ordering-system/restaurant-documents"
                   />
                 ))}

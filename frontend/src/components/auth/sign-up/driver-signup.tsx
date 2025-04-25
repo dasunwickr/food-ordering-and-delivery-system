@@ -35,15 +35,12 @@ export function DriverSignUp({ userData }: DriverSignUpProps) {
   const [showVehicleSelector, setShowVehicleSelector] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   
-  // Default required documents
-  const defaultDocuments = [
-    { name: "Driver's License", url: "" },
-    { name: "Vehicle Registration", url: "" },
-    { name: "Vehicle Insurance", url: "" }
-  ]
-  
-  // Documents state
-  const [documents, setDocuments] = useState<{ name: string; url: string }[]>(defaultDocuments)
+  // Document states - manage each document independently
+  const [driversLicense, setDriversLicense] = useState<{ name: string; url: string }>({ name: "Driver's License", url: "" })
+  const [vehicleRegistration, setVehicleRegistration] = useState<{ name: string; url: string }>({ name: "Vehicle Registration", url: "" })
+  const [vehicleInsurance, setVehicleInsurance] = useState<{ name: string; url: string }>({ name: "Vehicle Insurance", url: "" })
+  // Store additional documents in an array
+  const [additionalDocuments, setAdditionalDocuments] = useState<{ name: string; url: string }[]>([])
   
   // Location state
   const [location, setLocation] = useState("")
@@ -88,7 +85,12 @@ export function DriverSignUp({ userData }: DriverSignUpProps) {
           // Driver specific data
           vehicleTypeId: vehicleType,
           licensePlate: licensePlate,
-          documents: documents,
+          documents: [
+            driversLicense,
+            vehicleRegistration,
+            vehicleInsurance,
+            ...additionalDocuments
+          ],
           location: location,
           // Add coordinates if available from your map component
         }
@@ -122,7 +124,7 @@ export function DriverSignUp({ userData }: DriverSignUpProps) {
       isValid = false
     }
     
-    const missingDocuments = documents.some((doc) => !doc.url || doc.url.trim() === "")
+    const missingDocuments = !driversLicense.url || !vehicleRegistration.url || !vehicleInsurance.url || additionalDocuments.some((doc) => !doc.url || doc.url.trim() === "")
     if (missingDocuments) {
       newErrors.documents = "All documents are required"
       isValid = false
@@ -142,14 +144,14 @@ export function DriverSignUp({ userData }: DriverSignUpProps) {
     return isValid
   }
 
-  const updateDocument = (index: number, documentInfo: { name: string; url: string }) => {
-    const updatedDocuments = [...documents];
+  const updateAdditionalDocument = (index: number, documentInfo: { name: string; url: string }) => {
+    const updatedDocuments = [...additionalDocuments];
     updatedDocuments[index] = documentInfo;
-    setDocuments(updatedDocuments);
+    setAdditionalDocuments(updatedDocuments);
   }
 
   const addDocument = () => {
-    setDocuments([...documents, { name: "Additional Document", url: "" }])
+    setAdditionalDocuments([...additionalDocuments, { name: "Additional Document", url: "" }])
   }
 
   const confirmLocationSelection = () => {
@@ -254,12 +256,30 @@ export function DriverSignUp({ userData }: DriverSignUpProps) {
           </div>
 
           <div className="space-y-3">
-            {documents.map((doc, index) => (
+            <DocumentUploader
+              documentName={driversLicense.name}
+              currentDocument={driversLicense}
+              onDocumentUpdate={(documentInfo) => setDriversLicense(documentInfo)}
+              folder="food-ordering-system/driver-documents"
+            />
+            <DocumentUploader
+              documentName={vehicleRegistration.name}
+              currentDocument={vehicleRegistration}
+              onDocumentUpdate={(documentInfo) => setVehicleRegistration(documentInfo)}
+              folder="food-ordering-system/driver-documents"
+            />
+            <DocumentUploader
+              documentName={vehicleInsurance.name}
+              currentDocument={vehicleInsurance}
+              onDocumentUpdate={(documentInfo) => setVehicleInsurance(documentInfo)}
+              folder="food-ordering-system/driver-documents"
+            />
+            {additionalDocuments.map((doc, index) => (
               <DocumentUploader
                 key={index}
                 documentName={doc.name}
                 currentDocument={doc}
-                onDocumentUpdate={(documentInfo) => updateDocument(index, documentInfo)}
+                onDocumentUpdate={(documentInfo) => updateAdditionalDocument(index, documentInfo)}
                 folder="food-ordering-system/driver-documents"
               />
             ))}
