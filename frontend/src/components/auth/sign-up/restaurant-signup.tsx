@@ -37,17 +37,17 @@ interface RestaurantSignUpProps {
 interface SelectedLocation {
   lat: number;
   lng: number;
+  address: string;
 }
 
 interface MapSelectorProps {
   height?: string;
-  onConfirmLocation?: (selectedLocation: { lat: number; lng: number }) => void;
+  onConfirmLocation?: (selectedLocation: { lat: number; lng: number; address: string }) => void;
 }
 
 export function RestaurantSignUp({ userData }: RestaurantSignUpProps) {
   // Basic info state
   const [restaurantName, setRestaurantName] = useState("")
-  const [address, setAddress] = useState("")
   const [licenseNumber, setLicenseNumber] = useState("")
   const [restaurantType, setRestaurantType] = useState("")
   const [cuisineTypes, setCuisineTypes] = useState<string[]>([])
@@ -78,7 +78,7 @@ export function RestaurantSignUp({ userData }: RestaurantSignUpProps) {
   // Initial default documents
   const defaultDocuments = [
     { name: "Business License", url: "" },
-    { name: "Food Safety Certificate", url: "" }
+    // { name: "Food Safety Certificate", url: "" }
   ];
   
   // Operating hours state
@@ -86,6 +86,7 @@ export function RestaurantSignUp({ userData }: RestaurantSignUpProps) {
   
   // Documents state
   const [documents, setDocuments] = useState<{ name: string; url: string }[]>(defaultDocuments);
+  const [editDocumentName, setEditDocumentName] = useState<{index: number, value: string} | null>(null);
   
   // Location state
   const [location, setLocation] = useState("")
@@ -150,7 +151,6 @@ export function RestaurantSignUp({ userData }: RestaurantSignUpProps) {
       console.log("Restaurant sign up with:", {
         ...userData,
         restaurantName,
-        address,
         licenseNumber,
         restaurantType,
         cuisineTypes,
@@ -184,7 +184,16 @@ export function RestaurantSignUp({ userData }: RestaurantSignUpProps) {
   
   const updateDocument = (index: number, documentInfo: { name: string; url: string }) => {
     const updatedDocuments = [...documents];
-    updatedDocuments[index] = documentInfo;
+    // Preserve the document name for "Business License" and "Food Safety Certificate"
+    if (index < 2) {
+      updatedDocuments[index] = {
+        name: updatedDocuments[index].name,
+        url: documentInfo.url
+      };
+    } else {
+      // Allow name changes for additional documents
+      updatedDocuments[index] = documentInfo;
+    }
     setDocuments(updatedDocuments);
   };
   
@@ -221,11 +230,6 @@ export function RestaurantSignUp({ userData }: RestaurantSignUpProps) {
     if (step === 1) {
       if (!restaurantName) {
         newErrors.restaurantName = "Restaurant name is required"
-        isValid = false
-      }
-      
-      if (!address) {
-        newErrors.address = "Address is required"
         isValid = false
       }
       
@@ -277,7 +281,6 @@ export function RestaurantSignUp({ userData }: RestaurantSignUpProps) {
   const resetStore = () => {
     // Reset all state values to default
     setRestaurantName("")
-    setAddress("")
     setLicenseNumber("")
     setRestaurantType("")
     setCuisineTypes([])
@@ -356,24 +359,6 @@ export function RestaurantSignUp({ userData }: RestaurantSignUpProps) {
               {errors.restaurantName && (
                 <motion.p className="text-sm text-red-500" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                   {errors.restaurantName}
-                </motion.p>
-              )}
-            </motion.div>
-
-            <motion.div className="space-y-2" variants={itemVariants}>
-              <Label htmlFor="address" className="text-sm font-medium">
-                Address
-              </Label>
-              <Textarea
-                id="address"
-                placeholder="Full restaurant address"
-                className={`min-h-[80px] ${errors.address ? "border-red-500" : ""}`}
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-              />
-              {errors.address && (
-                <motion.p className="text-sm text-red-500" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                  {errors.address}
                 </motion.p>
               )}
             </motion.div>
@@ -554,7 +539,7 @@ export function RestaurantSignUp({ userData }: RestaurantSignUpProps) {
               <div className="space-y-3">
                 {documents.map((doc, index) => (
                   <DocumentUploader
-                    key={index}
+                    key={`document-${doc.name}-${index}`}
                     documentName={doc.name}
                     currentDocument={doc}
                     onDocumentUpdate={(documentInfo) => updateDocument(index, documentInfo)}
@@ -688,10 +673,10 @@ export function RestaurantSignUp({ userData }: RestaurantSignUpProps) {
         <div className="space-y-4">
           <MapSelector 
             height="350px" 
-            onConfirmLocation={(selectedLocation: SelectedLocation): void => {
-              const formattedLocation = `Lat: ${selectedLocation.lat}, Lng: ${selectedLocation.lng}`;
-              setLocation(formattedLocation);
-              confirmLocationSelection();
+            onConfirmLocation={(selectedLocation: SelectedLocation) => {
+              setLocation(selectedLocation.address);
+              setLocationConfirmed(true);
+              toggleModal('map', false);
             }} 
           />
         </div>
