@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Modal } from "@/components/auth/modal"
 import { MapSelector } from "@/components/ui/map-selector"
+import { DocumentUploader } from "@/components/shared/document-uploader"
 
 type Day = "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday" | "sunday"
 
@@ -20,11 +21,6 @@ interface OperatingHours {
   isOpen: boolean
   openTime: string
   closeTime: string
-}
-
-interface Document {
-  name: string
-  file: File | null
 }
 
 interface RestaurantSignUpProps {
@@ -67,16 +63,16 @@ export function RestaurantSignUp({ userData }: RestaurantSignUpProps) {
   ]
   
   // Initial default documents
-  const defaultDocuments: Document[] = [
-    { name: "Business License", file: null },
-    { name: "Food Safety Certificate", file: null },
-  ]
+  const defaultDocuments = [
+    { name: "Business License", url: "" },
+    { name: "Food Safety Certificate", url: "" }
+  ];
   
   // Operating hours state
   const [operatingHours, setOperatingHours] = useState<OperatingHours[]>(defaultOperatingHours)
   
   // Documents state
-  const [documents, setDocuments] = useState<Document[]>(defaultDocuments)
+  const [documents, setDocuments] = useState<{ name: string; url: string }[]>(defaultDocuments);
   
   // Location state
   const [location, setLocation] = useState("")
@@ -143,15 +139,15 @@ export function RestaurantSignUp({ userData }: RestaurantSignUpProps) {
     setOperatingHours(updatedHours)
   }
   
-  const updateDocument = (index: number, file: File | null) => {
-    const updatedDocuments = [...documents]
-    updatedDocuments[index].file = file
-    setDocuments(updatedDocuments)
-  }
+  const updateDocument = (index: number, documentInfo: { name: string; url: string }) => {
+    const updatedDocuments = [...documents];
+    updatedDocuments[index] = documentInfo;
+    setDocuments(updatedDocuments);
+  };
   
   const addDocument = () => {
-    setDocuments([...documents, { name: "", file: null }])
-  }
+    setDocuments([...documents, { name: "Additional Document", url: "" }]);
+  };
   
   const confirmLocationSelection = () => {
     setLocationConfirmed(true)
@@ -210,10 +206,10 @@ export function RestaurantSignUp({ userData }: RestaurantSignUpProps) {
       isValid = true
     }
     else if (step === 3) {
-      const missingDocuments = documents.some((doc) => !doc.file)
+      const missingDocuments = documents.some(doc => !doc.url || doc.url.trim() === "");
       if (missingDocuments) {
-        newErrors.documents = "All documents are required"
-        isValid = false
+        newErrors.documents = "All documents are required";
+        isValid = false;
       }
       
       if (!location) {
@@ -514,41 +510,13 @@ export function RestaurantSignUp({ userData }: RestaurantSignUpProps) {
 
               <div className="space-y-3">
                 {documents.map((doc, index) => (
-                  <div
+                  <DocumentUploader
                     key={index}
-                    className={`p-4 border rounded-lg ${doc.file ? "border-green-500 bg-green-50" : "border-gray-200"}`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <FileText className={`h-5 w-5 mr-2 ${doc.file ? "text-green-500" : "text-gray-400"}`} />
-                        <span>{doc.name}</span>
-                      </div>
-                      <div>
-                        <Label
-                          htmlFor={`document-${index}`}
-                          className="px-3 py-1 text-xs rounded-full bg-primary/10 text-primary hover:bg-primary/20 cursor-pointer"
-                        >
-                          {doc.file ? "Change" : "Upload"}
-                        </Label>
-                        <Input
-                          id={`document-${index}`}
-                          type="file"
-                          accept="image/*,.pdf"
-                          className="sr-only"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0] || null
-                            updateDocument(index, file)
-                          }}
-                        />
-                      </div>
-                    </div>
-                    {doc.file && (
-                      <div className="mt-2 text-xs text-green-600 flex items-center">
-                        <Check className="h-3 w-3 mr-1" />
-                        {doc.file.name}
-                      </div>
-                    )}
-                  </div>
+                    documentName={doc.name}
+                    currentDocument={doc}
+                    onDocumentUpdate={(documentInfo) => updateDocument(index, documentInfo)}
+                    folder="food-ordering-system/restaurant-documents"
+                  />
                 ))}
 
                 <Button

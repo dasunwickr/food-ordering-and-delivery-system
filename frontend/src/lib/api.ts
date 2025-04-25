@@ -39,7 +39,7 @@ api.interceptors.response.use(
 // Auth service APIs
 export const authApi = {
   signIn: async (email: string, password: string) => {
-    const response = await api.post("/auth/signin", { email, password });
+    const response = await api.post("/api/auth/signin", { email, password });
     return response.data;
   },
   
