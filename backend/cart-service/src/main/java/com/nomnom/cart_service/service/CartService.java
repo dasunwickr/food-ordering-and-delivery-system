@@ -65,7 +65,6 @@ public class CartService implements ICart {
         Optional<CartItem> optionalCartItem = cart.getItems().stream()
                 .filter(i -> i.getItemId().equals(itemId))
                 .findFirst();
-
         if (optionalCartItem.isPresent()) {
             CartItem cartItem = optionalCartItem.get();
             if (newQuantity <= 0) {
@@ -75,8 +74,8 @@ public class CartService implements ICart {
                 cartItem.updateTotalPrice(); // Recalculate total price using existing unit price
             }
         }
-        cart.recalculateTotalPrice();
-        return cartRepository.save(cart);
+        cart.recalculateTotalPrice(); // Recalculate the total price of the cart
+        return cartRepository.save(cart); // Save the updated cart
     }
 
     @Override

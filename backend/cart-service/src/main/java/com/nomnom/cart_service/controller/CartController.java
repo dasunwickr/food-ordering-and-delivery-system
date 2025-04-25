@@ -1,6 +1,7 @@
 package com.nomnom.cart_service.controller;
 
 import com.nomnom.cart_service.dto.CartDTO;
+import com.nomnom.cart_service.model.Cart;
 import com.nomnom.cart_service.response.CartResponse;
 import com.nomnom.cart_service.service.ICart;
 import com.nomnom.cart_service.service.CartService;
@@ -9,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequiredArgsConstructor
@@ -30,13 +32,16 @@ public class CartController {
         return ResponseEntity.ok(mapToCartDTO(cartService.addItemToCart(customerId, restaurantId, request)));
     }
 
-    @PutMapping("/update/{customerId}/{restaurantId}/{itemId}")
-    public ResponseEntity<CartDTO> updateCartItemQuantity(
+    @PutMapping("/api/cart/update/{customerId}/{restaurantId}/{itemId}")
+    public ResponseEntity<Cart> updateCartItemQuantity(
             @PathVariable String customerId,
             @PathVariable String restaurantId,
             @PathVariable String itemId,
-            @RequestParam int newQuantity) {
-        return ResponseEntity.ok(mapToCartDTO(cartService.updateCartItemQuantity(customerId, restaurantId, itemId, newQuantity)));
+            @RequestBody Map<String, Integer> requestBody
+    ) {
+        int newQuantity = requestBody.get("newQuantity");
+        Cart updatedCart = cartService.updateCartItemQuantity(customerId, restaurantId, itemId, newQuantity);
+        return ResponseEntity.ok(updatedCart);
     }
 
     @DeleteMapping("/remove/{customerId}/{restaurantId}/{itemId}")
