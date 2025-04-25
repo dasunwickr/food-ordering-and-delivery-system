@@ -26,8 +26,9 @@ export function ProfileImageUploader({
     // Extract the secure URL from the Cloudinary response
     const imageUrl = result?.info?.secure_url
     
-    // Print the profile image URL when uploaded
-    console.log('Profile image uploaded:', imageUrl)
+    // Print the full result and image URL for debugging
+    console.log('Profile image upload result:', result)
+    console.log('Profile image URL:', imageUrl)
     
     if (imageUrl) {
       // Update local state immediately for immediate UI feedback
@@ -43,9 +44,14 @@ export function ProfileImageUploader({
   }
 
   // Handle upload error
-  const handleUploadError = () => {
+  const handleUploadError = (error: any) => {
+    console.error("Upload error:", error)
     toast.error("An error occurred while uploading the image")
     setIsUploading(false)
+  }
+
+  const handleUploadStart = () => {
+    setIsUploading(true)
   }
 
   // Update local image when prop changes (e.g. after saving to backend)
@@ -77,6 +83,10 @@ export function ProfileImageUploader({
         }`}
       >
         <CldUploadButton
+          onUpload={(result: any) => {
+            handleUploadStart();
+            return result;
+          }}
           options={{
             maxFiles: 1,
             resourceType: "image",
@@ -90,9 +100,9 @@ export function ProfileImageUploader({
             croppingAspectRatio: 1,
             croppingShowDimensions: true
           }}
-          onUpload={handleUploadSuccess}
+          onSuccess={handleUploadSuccess}
           onError={handleUploadError}
-          uploadPreset="food_ordering_app"
+          uploadPreset={process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || "food_ordering_app"}
           className="h-full w-full flex items-center justify-center"
         >
           <Button 
@@ -100,7 +110,7 @@ export function ProfileImageUploader({
             size="icon" 
             className="h-10 w-10 rounded-full bg-black/50 text-white hover:bg-black/70"
             disabled={isUploading}
-            onClick={() => setIsUploading(true)}
+            type="button"
           >
             {isUploading ? (
               <Loader2 className="h-5 w-5 animate-spin" />

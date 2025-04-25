@@ -33,7 +33,8 @@ export function ProfileImageUploader({
     // Extract the secure URL from the Cloudinary upload result
     const imageUrl = result?.info?.secure_url
     
-    console.log('Profile image uploaded:', imageUrl)
+    console.log('Profile image uploaded:', result)
+    console.log('Profile image URL:', imageUrl)
     
     if (imageUrl) {
       // Update local state immediately for immediate UI feedback
@@ -49,9 +50,14 @@ export function ProfileImageUploader({
   }
 
   // Handle upload error
-  const handleUploadError = () => {
+  const handleUploadError = (error: any) => {
+    console.error("Upload error:", error)
     toast.error("An error occurred while uploading the image")
     setIsUploading(false)
+  }
+
+  const handleUploadStart = () => {
+    setIsUploading(true)
   }
 
   return (
@@ -91,9 +97,9 @@ export function ProfileImageUploader({
             croppingAspectRatio: 1,
             croppingShowDimensions: true
           }}
-          onUpload={handleUploadSuccess}
+          onSuccess={handleUploadSuccess}
+          onUpload={handleUploadStart}
           onError={handleUploadError}
-          uploadPreset="food_ordering_app"
           className="h-full w-full flex items-center justify-center"
         >
           <div 

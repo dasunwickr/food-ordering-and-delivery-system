@@ -42,7 +42,8 @@ export function DocumentUploader({
   const handleUploadSuccess = (result: any) => {
     const documentUrl = result?.info?.secure_url
     
-    console.log('Document uploaded:', documentUrl)
+    console.log('Document uploaded result:', result)
+    console.log('Document URL:', documentUrl)
     
     if (documentUrl) {
       // Create a new document object to ensure state is properly updated
@@ -63,9 +64,14 @@ export function DocumentUploader({
     setIsUploading(false)
   }
 
-  const handleUploadError = () => {
+  const handleUploadError = (error: any) => {
+    console.error("Document upload error:", error)
     toast.error(`An error occurred while uploading ${currentDocument.name || editName}`)
     setIsUploading(false)
+  }
+  
+  const handleUploadStart = () => {
+    setIsUploading(true)
   }
 
   const openDocument = () => {
@@ -163,10 +169,16 @@ export function DocumentUploader({
               showUploadMoreButton: false,
               singleUploadAutoClose: true,
             }}
-            onSuccess={handleUploadSuccess}
-            onError={handleUploadError}
-            onUpload={() => setIsUploading(true)}
-            uploadPreset="food_ordering_app"
+            onSuccess={(result) => {
+              setIsUploading(false);
+              handleUploadSuccess(result);
+            }}
+            onError={(error) => {
+              setIsUploading(false);
+              handleUploadError(error);
+            }}
+            onUpload={handleUploadStart}
+            uploadPreset={process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || "food_ordering_app"}
             className="h-auto p-0"
           >
             <div 
