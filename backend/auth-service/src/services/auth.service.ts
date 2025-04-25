@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { hashPassword, comparePassword } from '../utils/auth';
 import { UserModel } from '../models/User';
+import { createSession } from '../utils/sessionClient';
 
 const USER_SERVICE_URL = process.env.USER_SERVICE_URL || 'http://user-service:8085/api/users';
 
@@ -48,17 +49,29 @@ export const registerUser = async (
 
 export const loginUser = async (
   email: string,
-  password: string
+  password: string,
+  device: string,
+  ipAddress: string
 ) => {
   const user = await UserModel.findOne({ email });
   if (!user) throw new Error('User not found');
 
   const valid = await comparePassword(password, user.password);
   if (!valid) throw new Error('Invalid credentials');
-
-  return { 
-    userId: user._id.toString()
-  };
+  
+  // Create a session for the user
+  try {
+    const sessionResult = await createSession(user._id.toString(), ipAddress, device);
+    
+    return { 
+      userId: user._id.toString(),
+      sessionId: sessionResult.session?.sessionId,
+      sessionToken: sessionResult.token
+    };
+  } catch (error: any) {
+    console.error('Session creation error:', error);
+    throw new Error('Failed to create session');
+  }
 };
 
 export const forgotPassword = async (email: string) => {

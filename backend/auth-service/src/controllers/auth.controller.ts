@@ -14,14 +14,18 @@ export const signUp = async (req: Request, res: Response) => {
 
 export const signIn = async (req: Request, res: Response) => {
   try {
-    const { email, password } = SignInSchema.parse(req.body);
-    const result = await AuthService.loginUser(email, password,);
-    res.status(200).json({ message: 'Logged in', ...result });
+    const { email, password, device, ipAddress } = SignInSchema.parse(req.body);
+    const result = await AuthService.loginUser(email, password, device, ipAddress);
+    res.status(200).json({ 
+      message: 'Logged in successfully', 
+      userId: result.userId,
+      sessionId: result.sessionId,
+      token: result.sessionToken
+    });
   } catch (err: any) {
     res.status(400).json({ error: err.message });
   }
 };
-
 
 export const forgotPassword = async (req: Request, res: Response) => {
   try {

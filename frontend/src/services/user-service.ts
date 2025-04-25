@@ -91,6 +91,69 @@ export const userService = {
     return response.data;
   },
 
+  // User login
+  login: async (email: string, password: string): Promise<any> => {
+    try {
+      // Get device info
+      const device = navigator.userAgent;
+      
+      // Get IP address (in a real app, this would often be captured on the server side)
+      let ipAddress = '127.0.0.1';
+      try {
+        // This is optional and can be removed if you prefer to handle IP on the server
+        const ipResponse = await axios.get<{ ip: string }>('https://api.ipify.org?format=json');
+        ipAddress = ipResponse.data.ip;
+      } catch (err) {
+        console.warn('Could not detect IP address, using default');
+      }
+      
+      interface AuthResponse {
+        token: string;
+        userId: string;
+        sessionId: string;
+      }
+      
+      const response = await api.post<AuthResponse>('/auth-service/auth/signin', {
+        email,
+        password,
+        device,
+        ipAddress
+      });
+      
+      // Store token in localStorage for authentication
+      if (response.data.token) {
+        localStorage.setItem('authToken', response.data.token);
+        localStorage.setItem('userId', response.data.userId);
+        localStorage.setItem('sessionId', response.data.sessionId);
+      }
+      
+      return response.data;
+    } catch (error) {
+      console.error('Login failed:', error);
+      throw error;
+    }
+  },
+  
+  // Logout function
+  logout: async (): Promise<void> => {
+    // Get the session ID to invalidate
+    const sessionId = localStorage.getItem('sessionId');
+    
+    // Remove auth data from localStorage
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('userId');
+    localStorage.removeItem('sessionId');
+    
+    // Call backend to invalidate session
+    if (sessionId) {
+      try {
+        await api.post('/session-service/api/sessions/invalidate', { sessionId });
+      } catch (err) {
+        console.error('Error invalidating session:', err);
+      }
+    }
+  },
+
   // Get all cuisine types
   getCuisineTypes: async (): Promise<CuisineType[]> => {
     const response = await api.get<CuisineType[]>('/user-service/cuisine-types');
@@ -108,11 +171,10 @@ export const userService = {
     const response = await api.get<VehicleType[]>('/user-service/vehicle-types');
     return response.data;
   },
-
-  // Register a new user (customer, restaurant, or driver)
+  
   register: async (data: CustomerRegistrationData | RestaurantRegistrationData | DriverRegistrationData, userType: 'customer' | 'restaurant' | 'driver'): Promise<any> => {
-    // Format data according to API expectations
-    let formattedData: any = {
+    // Prepare the registration data for the backend
+    const registrationData = {
       email: data.email,
       password: data.password,
       userType: userType.toUpperCase(),
@@ -123,87 +185,57 @@ export const userService = {
         profilePictureUrl: data.profilePictureUrl || undefined,
       }
     };
-
-    // Add user type specific fields
-    if (userType === 'restaurant') {
-      const restaurantData = data as RestaurantRegistrationData;
-      
-      // Format operating hours to match the API expectations
-      const formattedOperatingHours = restaurantData.operatingHours.map(hour => ({
-        day: hour.day.charAt(0).toUpperCase() + hour.day.slice(1), // Capitalize first letter
-        openingTime: hour.openTime,
-        closingTime: hour.closeTime,
-        isOpen: hour.isOpen
-      }));
-
-      // Handle location data
-      const locationObj = restaurantData.locationCoordinates || { lat: 0, lng: 0 };
-
-      // Add restaurant-specific fields to the profile
-      formattedData.profile = {
-        ...formattedData.profile,
-        restaurantName: restaurantData.restaurantName,
-        restaurantLicenseNumber: restaurantData.licenseNumber,
-        restaurantTypeId: restaurantData.restaurantTypeId,
-        cuisineTypeIds: restaurantData.cuisineTypeIds,
-        restaurantDocuments: restaurantData.documents,
-        restaurantAddress: restaurantData.location,
-        location: locationObj,
-        openingTime: formattedOperatingHours,
-      };
-    } 
-    else if (userType === 'driver') {
-      const driverData = data as DriverRegistrationData;
-      
-      // Handle location data
-      const locationObj = driverData.locationCoordinates || { lat: 0, lng: 0 };
-
-      // Add driver-specific fields to the profile
-      formattedData.profile = {
-        ...formattedData.profile,
-        vehicleTypeId: driverData.vehicleTypeId,
-        vehicleNumber: driverData.licensePlate,
-        vehicleDocuments: driverData.documents,
-        location: locationObj,
-        driverStatus: "OFFLINE" 
-      };
-    }
-    else if (userType === 'customer') {
-      const customerData = data as CustomerRegistrationData;
-      
-      // Handle optional location data if present
-      if (customerData.locationCoordinates) {
-        formattedData.profile.location = customerData.locationCoordinates;
+    
+    // Add type-specific data to the profile
+    if (userType === 'restaurant' && 'restaurantName' in data) {
+      Object.assign(registrationData.profile, {
+        restaurantName: data.restaurantName,
+        restaurantLicenseNumber: data.licenseNumber,
+        restaurantTypeId: data.restaurantTypeId,
+        cuisineTypeIds: data.cuisineTypeIds,
+        restaurantDocuments: data.documents,
+        restaurantAddress: data.location,
+        location: data.locationCoordinates,
+        openingTime: data.operatingHours.map(hours => ({
+          day: hours.day,
+          openingTime: hours.openTime,
+          closingTime: hours.closeTime,
+          isOpen: hours.isOpen
+        }))
+      });
+    } else if (userType === 'driver' && 'vehicleTypeId' in data) {
+      Object.assign(registrationData.profile, {
+        vehicleTypeId: data.vehicleTypeId,
+        vehicleNumber: data.licensePlate,
+        vehicleDocuments: data.documents,
+        location: data.locationCoordinates
+      });
+    } else if (userType === 'customer') {
+      // Basic customer data already added to the common profile section
+      if ('locationCoordinates' in data && data.locationCoordinates) {
+        Object.assign(registrationData.profile, {
+          location: data.locationCoordinates
+        });
       }
     }
-
-    console.log('Registration data:', formattedData);
     
-    try {
-      // Fix the endpoint path to match API gateway configuration
-      const response = await api.post('/auth-service/auth/signup', formattedData);
-      return response.data;
-    } catch (error) {
-      console.error('Registration failed:', error);
-      throw error;
-    }
+    // Send registration data to backend
+    const response = await api.post('/auth-service/auth/signup', registrationData);
+    return response.data;
   },
-
-  // Create a new user
+  
   createUser: async (userData: Partial<User>): Promise<User> => {
     const response = await api.post<User>('/api/users', userData);
     return response.data;
   },
-
-  // Update user profile
+  
   updateUser: async (id: string, userData: Partial<User>): Promise<User> => {
     const response = await api.put<User>(`/api/users/${id}`, userData);
     return response.data;
   },
-
-  // Update profile image
+  
   updateProfileImage: async (userId: string, imageUrl: string): Promise<User> => {
-    const response = await api.patch<User>(`/api/users/${userId}/profile-image`, { profileImage: imageUrl });
+    const response = await api.put<User>(`/api/users/${userId}/profile-picture`, { profilePictureUrl: imageUrl });
     return response.data;
   }
 };
