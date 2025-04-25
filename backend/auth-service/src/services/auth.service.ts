@@ -1,7 +1,9 @@
 import axios from 'axios';
-import { hashPassword, comparePassword } from '../utils/auth';
+import { hashPassword, comparePassword, generateOtp } from '../utils/auth';
 import { UserModel } from '../models/User';
 import { createSession } from '../utils/sessionClient';
+import { OtpModel } from '../models/Otp';
+import { sendEmail } from '../utils/email';
 
 const USER_SERVICE_URL = process.env.USER_SERVICE_URL || 'http://user-service:8085/api/users';
 
@@ -65,8 +67,9 @@ export const loginUser = async (
     
     return { 
       userId: user._id.toString(),
-      sessionId: sessionResult.session?.sessionId,
-      sessionToken: sessionResult.token
+      sessionId: sessionResult.sessionId, // Direct access without optional chaining
+      sessionToken: sessionResult.token,
+      userType: user.userType
     };
   } catch (error: any) {
     console.error('Session creation error:', error);
@@ -78,7 +81,54 @@ export const forgotPassword = async (email: string) => {
   const user = await UserModel.findOne({ email });
   if (!user) throw new Error('User not found');
 
-  // Return basic success message - session invalidation removed
+  // Generate a 6-digit OTP
+  const otp = generateOtp();
+  const expiresAt = new Date();
+  expiresAt.setMinutes(expiresAt.getMinutes() + 15); // OTP expires in 15 minutes
+
+  // Save OTP in database
+  await OtpModel.findOneAndUpdate(
+    { email },
+    { 
+      email,
+      otp,
+      expiresAt
+    },
+    { upsert: true, new: true }
+  );
+
+  try {
+    // Send OTP via email utility instead of notification service
+    await sendEmail(
+      email,
+      'Password Reset Verification Code',
+      `<h1>Password Reset</h1>
+      <p>Your verification code is: <strong>${otp}</strong></p>
+      <p>This code will expire in 15 minutes.</p>`
+    );
+
+    return { success: true };
+  } catch (error: any) {
+    console.error('Failed to send OTP email:', error.message);
+    throw new Error('Failed to send verification code. Please try again.');
+  }
+};
+
+export const verifyOtp = async (email: string, otp: string) => {
+  const user = await UserModel.findOne({ email });
+  if (!user) throw new Error('User not found');
+
+  const otpRecord = await OtpModel.findOne({ email });
+  if (!otpRecord) throw new Error('No verification code found. Please request a new code.');
+
+  if (otpRecord.otp !== otp) throw new Error('Invalid verification code');
+
+  if (otpRecord.expiresAt < new Date()) throw new Error('Verification code has expired. Please request a new code.');
+
+  // Mark OTP as verified
+  otpRecord.verified = true;
+  await otpRecord.save();
+
   return { success: true };
 };
 
@@ -86,10 +136,17 @@ export const resetPassword = async (email: string, newPassword: string, ip: stri
   const user = await UserModel.findOne({ email });
   if (!user) throw new Error('User not found');
 
+  // Verify that OTP was verified
+  const otpRecord = await OtpModel.findOne({ email, verified: true });
+  if (!otpRecord) throw new Error('Please verify your email with the verification code first');
+
   const hashedPassword = await hashPassword(newPassword);
   user.password = hashedPassword;
   await user.save();
 
-  // Return basic success message - session invalidation removed
+  // Delete the OTP record after successful password reset
+  await OtpModel.deleteOne({ email });
+
+  // Return basic success message
   return { success: true };
 };

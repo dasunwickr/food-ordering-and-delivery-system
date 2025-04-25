@@ -37,6 +37,19 @@ export const forgotPassword = async (req: Request, res: Response) => {
   }
 };
 
+export const verifyOtp = async (req: Request, res: Response) => {
+  try {
+    const { email, otp } = req.body;
+    if (!email || !otp) {
+       res.status(400).json({ error: 'Email and OTP are required' });
+    }
+    const result = await AuthService.verifyOtp(email, otp);
+    res.status(200).json({ message: 'OTP verified successfully', ...result });
+  } catch (err: any) {
+    res.status(400).json({ error: err.message });
+  }
+};
+
 export const resetPassword = async (req: Request, res: Response) => {
   try {
     const { email, newPassword, ipAddress } = ResetPasswordSchema.parse(req.body);

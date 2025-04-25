@@ -97,37 +97,51 @@ export const userService = {
       // Get device info
       const device = navigator.userAgent;
       
-      // Get IP address (in a real app, this would often be captured on the server side)
-      let ipAddress = '127.0.0.1';
-      try {
-        // This is optional and can be removed if you prefer to handle IP on the server
-        const ipResponse = await axios.get<{ ip: string }>('https://api.ipify.org?format=json');
-        ipAddress = ipResponse.data.ip;
-      } catch (err) {
-        console.warn('Could not detect IP address, using default');
-      }
-      
       interface AuthResponse {
         token: string;
         userId: string;
         sessionId: string;
+        userType?: string;
       }
       
       const response = await api.post<AuthResponse>('/auth-service/auth/signin', {
         email,
         password,
         device,
-        ipAddress
+        ipAddress: "127.0.0.1" // TODO: Replace with actual IP fetching logic
       });
       
-      // Store token in localStorage for authentication
+      console.log('Auth response:', response.data);
+      const result = { ...response.data };
+      
       if (response.data.token) {
         localStorage.setItem('authToken', response.data.token);
         localStorage.setItem('userId', response.data.userId);
         localStorage.setItem('sessionId', response.data.sessionId);
+        
+        // Get the user type after login
+        try {
+          interface UserResponse {
+            userType: string;
+            [key: string]: any;
+          }
+          
+          const userResponse = await api.get<UserResponse>(`/user-service/api/users/email/${email}`);
+          console.log('User response:', userResponse.data);
+          
+          if (userResponse.data && userResponse.data.userType) {
+            result.userType = userResponse.data.userType;
+            // Store standardized lowercase version
+            const normalizedUserType = userResponse.data.userType.toLowerCase();
+            result.userType = normalizedUserType;
+            localStorage.setItem('userType', normalizedUserType);
+          }
+        } catch (userError) {
+          console.error('Error fetching user details:', userError);
+        }
       }
       
-      return response.data;
+      return result;
     } catch (error) {
       console.error('Login failed:', error);
       throw error;
@@ -143,6 +157,24 @@ export const userService = {
     localStorage.removeItem('authToken');
     localStorage.removeItem('userId');
     localStorage.removeItem('sessionId');
+    localStorage.removeItem('userType');
+    
+    // Remove cookies as well
+    if (typeof document !== 'undefined') {
+      // Use js-cookie if imported
+      if (typeof window.Cookies !== 'undefined') {
+        window.Cookies.remove('authToken');
+        window.Cookies.remove('userId');
+        window.Cookies.remove('sessionId');
+        window.Cookies.remove('userType');
+      } else {
+        // Fallback to document.cookie
+        document.cookie = 'authToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+        document.cookie = 'userId=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+        document.cookie = 'sessionId=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+        document.cookie = 'userType=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+      }
+    }
     
     // Call backend to invalidate session
     if (sessionId) {

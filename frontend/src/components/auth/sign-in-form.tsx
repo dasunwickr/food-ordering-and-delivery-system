@@ -39,10 +39,12 @@ export function SignInForm({ onSubmit, isLoading = false }: SignInFormProps) {
     return Object.keys(newErrors).length === 0
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (validateForm()) {
-      onSubmit(email, password)
+      // Call the provided onSubmit function with email and password
+      await onSubmit(email, password)
+      // Redirection is now handled in the parent component
     }
   }
 
