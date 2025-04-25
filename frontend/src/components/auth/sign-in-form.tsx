@@ -5,7 +5,7 @@ import type React from "react"
 import { useState } from "react"
 import Link from "next/link"
 import { motion } from "framer-motion"
-import { ArrowRight, Mail } from "lucide-react"
+import { ArrowRight, Mail, Loader2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { FormInput } from "./form-input"
@@ -14,9 +14,10 @@ import { SocialSignIn } from "./sign-up/social-sign-in"
 
 interface SignInFormProps {
   onSubmit: (email: string, password: string) => void
+  isLoading?: boolean
 }
 
-export function SignInForm({ onSubmit }: SignInFormProps) {
+export function SignInForm({ onSubmit, isLoading = false }: SignInFormProps) {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({})
@@ -38,10 +39,12 @@ export function SignInForm({ onSubmit }: SignInFormProps) {
     return Object.keys(newErrors).length === 0
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (validateForm()) {
-      onSubmit(email, password)
+      // Call the provided onSubmit function with email and password
+      await onSubmit(email, password)
+      // Redirection is now handled in the parent component
     }
   }
 
@@ -86,6 +89,7 @@ export function SignInForm({ onSubmit }: SignInFormProps) {
           onChange={setEmail}
           error={errors.email}
           icon={<Mail className="h-4 w-4" />}
+          disabled={isLoading}
         />
       </motion.div>
 
@@ -99,14 +103,30 @@ export function SignInForm({ onSubmit }: SignInFormProps) {
           </Link>
         </div>
         <div className="relative">
-          <PasswordInput id="password" label="" value={password} onChange={setPassword} error={errors.password} />
+          <PasswordInput 
+            id="password" 
+            label="" 
+            value={password} 
+            onChange={setPassword} 
+            error={errors.password} 
+            disabled={isLoading}
+          />
         </div>
       </motion.div>
 
       <motion.div variants={itemVariants}>
-        <Button type="submit" className="w-full">
-          Sign In
-          <ArrowRight className="ml-2 h-4 w-4" />
+        <Button type="submit" className="w-full" disabled={isLoading}>
+          {isLoading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Signing In...
+            </>
+          ) : (
+            <>
+              Sign In
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </>
+          )}
         </Button>
       </motion.div>
 
