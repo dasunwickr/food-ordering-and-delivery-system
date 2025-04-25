@@ -50,7 +50,7 @@ public class CartService implements ICart {
                     item.getQuantity(),
                     item.getPotionSize(), // Pass the potion size
                     item.getUnitPrice(),  // Use the provided unit price
-                    0
+                    item.getImage()
             );
             newItem.updateTotalPrice();
             cart.getItems().add(newItem);
@@ -113,7 +113,8 @@ public class CartService implements ICart {
         private String itemName;
         private int quantity;
         private CartItem.PotionSize potionSize;
-        private double unitPrice; // Added field for unit price
+        private double unitPrice;// Added field for unit price
+        private String image;
 
         public String getItemId() {
             return itemId;
@@ -149,6 +150,14 @@ public class CartService implements ICart {
 
         public void setUnitPrice(double unitPrice) {
             this.unitPrice = unitPrice;
+        }
+
+        public String getImage() {
+            return image;
+        }
+
+        public void setImage(String image) {
+            this.image = image;
         }
     }
 }

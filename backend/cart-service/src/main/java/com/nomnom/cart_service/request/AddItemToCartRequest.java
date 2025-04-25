@@ -13,4 +13,6 @@ public class AddItemToCartRequest {
     private String itemName;
     private int quantity;
     private CartItem.PotionSize potionSize;
+    private double unitPrice;
+    private String image;
 }

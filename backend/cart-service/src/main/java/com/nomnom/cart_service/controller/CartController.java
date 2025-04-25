@@ -2,6 +2,7 @@ package com.nomnom.cart_service.controller;
 
 import com.nomnom.cart_service.dto.CartDTO;
 import com.nomnom.cart_service.model.Cart;
+import com.nomnom.cart_service.request.AddItemToCartRequest;
 import com.nomnom.cart_service.response.CartResponse;
 import com.nomnom.cart_service.service.ICart;
 import com.nomnom.cart_service.service.CartService;
@@ -28,8 +29,16 @@ public class CartController {
     public ResponseEntity<CartDTO> addItemToCart(
             @PathVariable String customerId,
             @PathVariable String restaurantId,
-            @RequestBody CartService.CartItemRequest request) {
-        return ResponseEntity.ok(mapToCartDTO(cartService.addItemToCart(customerId, restaurantId, request)));
+            @RequestBody AddItemToCartRequest request) {
+        CartService.CartItemRequest cartItemRequest = new CartService.CartItemRequest();
+        cartItemRequest.setItemId(request.getItemId());
+        cartItemRequest.setItemName(request.getItemName());
+        cartItemRequest.setQuantity(request.getQuantity());
+        cartItemRequest.setPotionSize(request.getPotionSize());
+        cartItemRequest.setUnitPrice(request.getUnitPrice());
+        cartItemRequest.setImage(request.getImage()); // Map the image URL
+
+        return ResponseEntity.ok(mapToCartDTO(cartService.addItemToCart(customerId, restaurantId, cartItemRequest)));
     }
 
     @PutMapping("/api/cart/update/{customerId}/{restaurantId}/{itemId}")
@@ -79,7 +88,8 @@ public class CartController {
                         item.getQuantity(),
                         item.getPotionSize() != null ? CartDTO.CartItemDTO.PotionSize.valueOf(item.getPotionSize().name()) : null, // Map potion size
                         item.getPrice(),
-                        item.getTotalPrice()
+                        item.getTotalPrice(),
+                        item.getImage()
                 )).toList(),
                 cart.getTotalPrice(),
                 cart.getCreatedAt(),

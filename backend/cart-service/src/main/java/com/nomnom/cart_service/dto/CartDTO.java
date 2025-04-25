@@ -33,5 +33,6 @@ public class CartDTO {
         private PotionSize potionSize;
         private double price;
         private double totalPrice;
+        private String image;
     }
 }
