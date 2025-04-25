@@ -70,7 +70,7 @@ export function CustomerSignUp({ userData }: CustomerSignUpProps) {
           locationCoordinates: {
             lat: location.lat,
             lng: location.lng,
-            address: location.address
+            // address: location.address
           }
         }
 

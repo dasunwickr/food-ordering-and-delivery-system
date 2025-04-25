@@ -7,8 +7,10 @@ import { Input } from "@/components/ui/input"
 import { FileText, Upload, X, Check, Loader2, Download } from "lucide-react"
 import { CldUploadButton } from "next-cloudinary"
 import { toast } from "sonner"
+import { generateDocumentId } from "@/utils/id-generator"
 
 interface DocumentInfo {
+  id?: string
   name: string
   url: string
 }
@@ -49,6 +51,7 @@ export function DocumentUploader({
       // Create a new document object to ensure state is properly updated
       // Use the document's current name to prevent name switching
       const updatedDocument = {
+        id: generateDocumentId(),
         name: currentDocument.name || editName,
         url: documentUrl
       }
@@ -84,6 +87,7 @@ export function DocumentUploader({
     if (editName.trim()) {
       onDocumentUpdate({
         ...currentDocument,
+        id: currentDocument.id || generateDocumentId(), // Ensure document has an ID
         name: editName
       })
       setIsEditingName(false)
