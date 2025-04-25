@@ -165,7 +165,7 @@ export const userService = {
         vehicleNumber: driverData.licensePlate,
         vehicleDocuments: driverData.documents,
         location: locationObj,
-        driverStatus: "PENDING_APPROVAL" // Default status for new drivers
+        driverStatus: "OFFLINE" 
       };
     }
     else if (userType === 'customer') {
