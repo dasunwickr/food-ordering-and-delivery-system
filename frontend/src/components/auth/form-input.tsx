@@ -14,6 +14,7 @@ interface FormInputProps {
   onChange: (value: string) => void
   error?: string
   icon?: ReactNode
+  suffix?: ReactNode
   className?: string
 }
 
@@ -26,6 +27,7 @@ export function FormInput({
   onChange,
   error,
   icon,
+  suffix,
   className,
 }: FormInputProps) {
   return (
@@ -43,6 +45,7 @@ export function FormInput({
           value={value}
           onChange={(e) => onChange(e.target.value)}
         />
+        {suffix && <div className="absolute right-3 top-1/2 -translate-y-1/2">{suffix}</div>}
       </div>
       {error && (
         <motion.p className="text-sm text-red-500" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>

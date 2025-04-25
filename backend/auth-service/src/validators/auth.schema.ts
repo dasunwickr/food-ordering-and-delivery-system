@@ -29,14 +29,14 @@ export const SignUpSchema = z.object({
       id: z.string().optional(),
       name: z.string().optional(),
       url: z.string().optional()
-    }),
+    }).optional(),
     restaurantAddress: z.string().optional(),
     openingTime:z.array( z.object({
       day: z.string().optional(),
       openingTime: z.string().optional(),
       closingTime: z.string().optional(),
       isOpen: z.boolean().optional()
-    })),
+    })).optional(),
     restaurantStatus: z.string().optional(),
 
     // Driver specific fields
@@ -46,49 +46,95 @@ export const SignUpSchema = z.object({
       id: z.string().optional(),
       name: z.string().optional(),
       url: z.string().optional()
-    })),
+    })).optional(),
     driverStatus: z.string().optional(),
 
-  
+  // Admin specific fields
+  adminType: z.string().optional(),
 
-  }).superRefine((data, ctx) => {
-    const userType = (ctx as any).parent.userType; 
+  })
+}).superRefine((data, ctx) => {
+  const userType = data.userType;
+  const profile = data.profile;
 
-    if (userType === 'RESTAURANT') {
-      if (!data.restaurantName) {
-        ctx.addIssue({ code: 'custom', message: 'Restaurant name is required' });
-      }
-      if (!data.restaurantAddress) {
-        ctx.addIssue({ code: 'custom', message: 'Restaurant address is required' });
-      }
-      if (!data.restaurantLicenseNumber) {
-        ctx.addIssue({ code: 'custom', message: 'Restaurant license number is required' });
-      }
-      if (!Array.isArray(data.cuisineTypeIds) || data.cuisineTypeIds.length === 0) {
-        ctx.addIssue({ code: 'custom', message: 'Cuisine types are required' });
-      }
-      if (!data.restaurantTypeId) {
-        ctx.addIssue({ code: 'custom', message: 'Restaurant type is required' });
-      }
-      if (!Array.isArray(data.openingTime) || data.openingTime.length === 0) {
-        ctx.addIssue({ code: 'custom', message: 'Opening hours are required' });
-      }
+  if (userType === 'RESTAURANT') {
+    if (!profile.restaurantName) {
+      ctx.addIssue({ 
+        code: 'custom', 
+        message: 'Restaurant name is required',
+        path: ['profile', 'restaurantName']
+      });
     }
-
-    if (userType === 'DRIVER') {
-      if (!data.vehicleNumber) {
-        ctx.addIssue({ code: 'custom', message: 'Vehicle number is required' });
-      }
-      if (!data.vehicleTypeId) {
-        ctx.addIssue({ code: 'custom', message: 'Vehicle type is required' });
-      }
-      if (!Array.isArray(data.vehicleDocuments) || data.vehicleDocuments.length === 0) {
-        ctx.addIssue({ code: 'custom', message: 'Vehicle documents are required' });
-      }
+    if (!profile.restaurantAddress) {
+      ctx.addIssue({ 
+        code: 'custom', 
+        message: 'Restaurant address is required',
+        path: ['profile', 'restaurantAddress']
+      });
     }
-  }),
-  device: z.string(),
-  ipAddress: z.string()
+    if (!profile.restaurantLicenseNumber) {
+      ctx.addIssue({ 
+        code: 'custom', 
+        message: 'Restaurant license number is required',
+        path: ['profile', 'restaurantLicenseNumber'] 
+      });
+    }
+    if (!Array.isArray(profile.cuisineTypeIds) || profile.cuisineTypeIds.length === 0) {
+      ctx.addIssue({ 
+        code: 'custom', 
+        message: 'Cuisine types are required',
+        path: ['profile', 'cuisineTypeIds']
+      });
+    }
+    if (!profile.restaurantTypeId) {
+      ctx.addIssue({ 
+        code: 'custom', 
+        message: 'Restaurant type is required',
+        path: ['profile', 'restaurantTypeId']
+      });
+    }
+    if (!Array.isArray(profile.openingTime) || profile.openingTime.length === 0) {
+      ctx.addIssue({ 
+        code: 'custom', 
+        message: 'Opening hours are required',
+        path: ['profile', 'openingTime']
+      });
+    }
+  }
+
+  if (userType === 'DRIVER') {
+    if (!profile.vehicleNumber) {
+      ctx.addIssue({ 
+        code: 'custom', 
+        message: 'Vehicle number is required',
+        path: ['profile', 'vehicleNumber']
+      });
+    }
+    if (!profile.vehicleTypeId) {
+      ctx.addIssue({ 
+        code: 'custom', 
+        message: 'Vehicle type is required',
+        path: ['profile', 'vehicleTypeId']
+      });
+    }
+    if (!Array.isArray(profile.vehicleDocuments) || profile.vehicleDocuments.length === 0) {
+      ctx.addIssue({ 
+        code: 'custom', 
+        message: 'Vehicle documents are required',
+        path: ['profile', 'vehicleDocuments']
+      });
+    }
+  }
+
+  if (userType === 'ADMIN') {
+    if (!profile.adminType) {
+      ctx.addIssue({ 
+        code: 'custom', 
+        message: 'Admin type is required',
+        path: ['profile', 'adminType']
+      });
+    }
+  }
 });
 
 export const SignInSchema = z.object({

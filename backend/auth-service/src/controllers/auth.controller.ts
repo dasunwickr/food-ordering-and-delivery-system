@@ -4,8 +4,8 @@ import * as AuthService from '../services/auth.service';
 
 export const signUp = async (req: Request, res: Response) => {
   try {
-    const { email, password, userType, profile, device, ipAddress } = SignUpSchema.parse(req.body);
-    const result = await AuthService.registerUser(email, password, userType, profile, device, ipAddress);
+    const { email, password, userType, profile } = SignUpSchema.parse(req.body);
+    const result = await AuthService.registerUser(email, password, userType, profile);
     res.status(201).json({ message: 'User registered', ...result });
   } catch (err: any) {
     res.status(400).json({ error: err.message });
@@ -14,8 +14,8 @@ export const signUp = async (req: Request, res: Response) => {
 
 export const signIn = async (req: Request, res: Response) => {
   try {
-    const { email, password, device, ipAddress } = SignInSchema.parse(req.body);
-    const result = await AuthService.loginUser(email, password, device, ipAddress);
+    const { email, password } = SignInSchema.parse(req.body);
+    const result = await AuthService.loginUser(email, password,);
     res.status(200).json({ message: 'Logged in', ...result });
   } catch (err: any) {
     res.status(400).json({ error: err.message });
@@ -27,7 +27,7 @@ export const forgotPassword = async (req: Request, res: Response) => {
   try {
     const { email } = ForgotPasswordSchema.parse(req.body);
     const result = await AuthService.forgotPassword(email);
-    res.status(200).json({ message: 'All sessions invalidated', ...result });
+    res.status(200).json({ message: 'Password reset request processed', ...result });
   } catch (err: any) {
     res.status(400).json({ error: err.message });
   }
@@ -37,7 +37,7 @@ export const resetPassword = async (req: Request, res: Response) => {
   try {
     const { email, newPassword, ipAddress } = ResetPasswordSchema.parse(req.body);
     const result = await AuthService.resetPassword(email, newPassword, ipAddress);
-    res.status(200).json({ message: 'Password reset', ...result });
+    res.status(200).json({ message: 'Password reset successful', ...result });
   } catch (err: any) {
     res.status(400).json({ error: err.message });
   }

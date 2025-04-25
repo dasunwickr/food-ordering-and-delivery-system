@@ -4,7 +4,6 @@ import { connectDB } from './config/db';
 import authRoutes from './routes/auth.routes';
 import { errorHandler } from './middleware/errorHandler';
 import cors from 'cors';
-import axios from 'axios';
 
 dotenv.config();
 const app = express();
@@ -24,6 +23,5 @@ const PORT = process.env.PORT || 5000;
 connectDB().then(() => {
   app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
-    console.log(`Session Service URL: ${process.env.SESSION_SERVICE_URL}`);
   });
 });

@@ -1,21 +1,14 @@
 import axios from 'axios';
 import { hashPassword, comparePassword } from '../utils/auth';
-import {
-  createSession,
-  invalidateAllSessions,
-  invalidateAllExceptCurrent
-} from '../utils/sessionClient';
 import { UserModel } from '../models/User';
 
-const USER_SERVICE_URL = process.env.USER_SERVICE_URL || 'http://localhost:8085/api/users';
+const USER_SERVICE_URL = process.env.USER_SERVICE_URL || 'http://user-service:8085/api/users';
 
 export const registerUser = async (
   email: string,
   password: string,
   userType: string,
-  profile: Record<string, any>,
-  device: string,
-  ip: string
+  profile: Record<string, any>
 ) => {
   const existing = await UserModel.findOne({ email });
   if (existing) throw new Error('Email already exists');
@@ -42,12 +35,9 @@ export const registerUser = async (
     const { data: createdUser } = await axios.post(USER_SERVICE_URL, fullUserData);
 
     console.log('User created in User Service:', createdUser);
-    // Create session with the session service
-    const session = await createSession(createdUser.id || localUser._id.toString(), ip, device);
 
     return { 
-      userId: createdUser.id || localUser._id.toString(), 
-      token: session.token 
+      userId: createdUser.id || localUser._id.toString()
     };
   } catch (error: any) {
     // Rollback local user creation if user service registration fails
@@ -58,9 +48,7 @@ export const registerUser = async (
 
 export const loginUser = async (
   email: string,
-  password: string,
-  device: string,
-  ip: string
+  password: string
 ) => {
   const user = await UserModel.findOne({ email });
   if (!user) throw new Error('User not found');
@@ -68,12 +56,8 @@ export const loginUser = async (
   const valid = await comparePassword(password, user.password);
   if (!valid) throw new Error('Invalid credentials');
 
-  // Create session with the session service
-  const session = await createSession(user._id.toString(), ip, device);
-
   return { 
-    userId: user._id.toString(), 
-    token: session.token 
+    userId: user._id.toString()
   };
 };
 
@@ -81,8 +65,8 @@ export const forgotPassword = async (email: string) => {
   const user = await UserModel.findOne({ email });
   if (!user) throw new Error('User not found');
 
-  const result = await invalidateAllSessions(user._id.toString());
-  return result;
+  // Return basic success message - session invalidation removed
+  return { success: true };
 };
 
 export const resetPassword = async (email: string, newPassword: string, ip: string) => {
@@ -93,7 +77,6 @@ export const resetPassword = async (email: string, newPassword: string, ip: stri
   user.password = hashedPassword;
   await user.save();
 
-  // Invalidate all sessions except the current one
-  const result = await invalidateAllExceptCurrent(user._id.toString(), ip);
-  return result;
+  // Return basic success message - session invalidation removed
+  return { success: true };
 };
