@@ -25,11 +25,11 @@ export const SignUpSchema = z.object({
     restaurantLicenseNumber: z.string().optional(),
     restaurantTypeId: z.string().optional(),
     cuisineTypeIds: z.array(z.string()).optional(),
-    restaurantDocuments: z.object({
+    restaurantDocuments: z.array(z.object({
       id: z.string().optional(),
       name: z.string().optional(),
       url: z.string().optional()
-    }).optional(),
+    }).optional()).optional(),
     restaurantAddress: z.string().optional(),
     openingTime:z.array( z.object({
       day: z.string().optional(),

@@ -2,17 +2,17 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
-import { FileText, Car, MapPin, Check, Upload } from "lucide-react"
+import { FileText, Car, MapPin, Check, Upload, Search } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Modal } from "@/components/auth/modal"
 import { MapSelector } from "@/components/ui/map-selector"
 import { DocumentUploader } from "@/components/shared/document-uploader"
+import { userService, VehicleType } from "@/services/user-service"
 
 interface DriverSignUpProps {
   userData: {
@@ -21,13 +21,19 @@ interface DriverSignUpProps {
     lastName: string
     phone: string
     profileImage: string | null
+    password: string
   }
 }
 
 export function DriverSignUp({ userData }: DriverSignUpProps) {
   // Vehicle info state
   const [vehicleType, setVehicleType] = useState("")
+  const [vehicleTypeText, setVehicleTypeText] = useState("") // To display selected vehicle type name
   const [licensePlate, setLicensePlate] = useState("")
+  const [vehicleTypes, setVehicleTypes] = useState<VehicleType[]>([])
+  const [isLoading, setIsLoading] = useState(false)
+  const [showVehicleSelector, setShowVehicleSelector] = useState(false)
+  const [searchQuery, setSearchQuery] = useState("")
   
   // Default required documents
   const defaultDocuments = [
@@ -48,18 +54,57 @@ export function DriverSignUp({ userData }: DriverSignUpProps) {
   const [showSuccessModal, setShowSuccessModal] = useState(false)
   const [errors, setErrors] = useState<{ [key: string]: string }>({})
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Fetch vehicle types on component mount
+  useEffect(() => {
+    const fetchVehicleTypes = async () => {
+      setIsLoading(true);
+      try {
+        const types = await userService.getVehicleTypes();
+        setVehicleTypes(types);
+      } catch (error) {
+        console.error("Failed to fetch vehicle types:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchVehicleTypes();
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (validateForm()) {
-      // Handle sign up logic
-      console.log("Driver sign up with:", {
-        ...userData,
-        vehicleType,
-        licensePlate,
-        documents,
-        location,
-      })
-      setShowSuccessModal(true)
+      try {
+        // Format data for registration
+        const registrationData = {
+          // Common user data
+          email: userData.email,
+          password: userData.password,
+          firstName: userData.firstName,
+          lastName: userData.lastName,
+          phone: userData.phone,
+          profilePictureUrl: userData.profileImage, // Changed from profileImage to profilePictureUrl
+          
+          // Driver specific data
+          vehicleTypeId: vehicleType,
+          licensePlate: licensePlate,
+          documents: documents,
+          location: location,
+          // Add coordinates if available from your map component
+        }
+
+        // Call the registration service
+        await userService.register(registrationData, "driver")
+        
+        // Show success modal
+        setShowSuccessModal(true)
+      } catch (error: any) {
+        console.error("Registration failed:", error)
+        setErrors({
+          ...errors,
+          general: error.response?.data?.message || "Registration failed. Please try again."
+        })
+      }
     }
   }
 
@@ -112,6 +157,17 @@ export function DriverSignUp({ userData }: DriverSignUpProps) {
     setShowMap(false)
   }
 
+  // Filter vehicle types based on search query
+  const filteredVehicleTypes = vehicleTypes.filter(type => 
+    type.type.toLowerCase().includes(searchQuery.toLowerCase())
+  )
+
+  const selectVehicleType = (id: string, typeName: string) => {
+    setVehicleType(id)
+    setVehicleTypeText(typeName)
+    setShowVehicleSelector(false)
+  }
+
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -135,17 +191,6 @@ export function DriverSignUp({ userData }: DriverSignUpProps) {
     },
   }
 
-  const vehicleTypes = [
-    "Motorcycle", 
-    "Compact Car", 
-    "Sedan", 
-    "SUV", 
-    "Van", 
-    "Pickup Truck",
-    "Bicycle",
-    "Electric Scooter",
-  ]
-
   return (
     <>
       <motion.form
@@ -159,19 +204,17 @@ export function DriverSignUp({ userData }: DriverSignUpProps) {
           <Label htmlFor="vehicleType" className="text-sm font-medium">
             Vehicle Type
           </Label>
-          <Select value={vehicleType} onValueChange={setVehicleType}>
-            <SelectTrigger
+          <div className="relative">
+            <Car className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
               id="vehicleType"
-              className={errors.vehicleType ? "border-red-500" : ""}
-            >
-              <SelectValue placeholder="Select your vehicle type" />
-            </SelectTrigger>
-            <SelectContent>
-              {vehicleTypes.map((type) => (
-                <SelectItem key={type} value={type}>{type}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+              placeholder={isLoading ? "Loading vehicle types..." : "Select your vehicle type"}
+              className={`pl-10 ${errors.vehicleType ? "border-red-500" : ""} cursor-pointer`}
+              value={vehicleTypeText}
+              readOnly
+              onClick={() => !isLoading && setShowVehicleSelector(true)}
+            />
+          </div>
           {errors.vehicleType && (
             <motion.p className="text-sm text-red-500" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
               {errors.vehicleType}
@@ -313,6 +356,32 @@ export function DriverSignUp({ userData }: DriverSignUpProps) {
           <Button onClick={() => (window.location.href = "/driver")} className="w-full">
             Go to Dashboard
           </Button>
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={showVehicleSelector}
+        onClose={() => setShowVehicleSelector(false)}
+        title="Select Vehicle Type"
+      >
+        <div className="space-y-4">
+          <Input
+            placeholder="Search vehicle types..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+          <div className="space-y-2">
+            {filteredVehicleTypes.map((type) => (
+              <Button
+                key={type.id}
+                variant="outline"
+                className="w-full"
+                onClick={() => selectVehicleType(type.id, type.type)}
+              >
+                {type.type}
+              </Button>
+            ))}
+          </div>
         </div>
       </Modal>
     </>

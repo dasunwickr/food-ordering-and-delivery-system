@@ -4,16 +4,15 @@ import type React from "react"
 
 import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
-import { Building, FileText, MapPin, Clock, UtensilsCrossed, Plus, Minus, Check, X } from "lucide-react"
+import { Building, FileText, MapPin, Clock, UtensilsCrossed, Plus, Minus, Check, X, Search, AlertCircle } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 import { Modal } from "@/components/auth/modal"
 import { MapSelector } from "@/components/ui/map-selector"
 import { DocumentUploader } from "@/components/shared/document-uploader"
-import { userService, CuisineType, RestaurantType } from "@/services/user-service"
+import { userService, CuisineType, RestaurantType, RestaurantRegistrationData } from "@/services/user-service"
 
 type Day = "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday" | "sunday"
 
@@ -24,9 +23,11 @@ interface OperatingHours {
   closeTime: string
 }
 
+// Update the interface to include password
 interface RestaurantSignUpProps {
   userData: {
     email: string
+    password: string
     firstName: string
     lastName: string
     phone: string
@@ -64,6 +65,10 @@ export function RestaurantSignUp({ userData }: RestaurantSignUpProps) {
     cuisineTypes: ''
   })
   
+  // Search states for filtering restaurant and cuisine types
+  const [restaurantTypeSearch, setRestaurantTypeSearch] = useState("")
+  const [cuisineTypeSearch, setCuisineTypeSearch] = useState("")
+  
   // Initial operating hours
   const defaultOperatingHours: OperatingHours[] = [
     { day: "monday", isOpen: true, openTime: "09:00", closeTime: "22:00" },
@@ -91,6 +96,7 @@ export function RestaurantSignUp({ userData }: RestaurantSignUpProps) {
   // Location state
   const [location, setLocation] = useState("")
   const [locationConfirmed, setLocationConfirmed] = useState(false)
+  const [selectedLocation, setSelectedLocation] = useState<{lat: number; lng: number} | null>(null)
   
   // UI state
   const [step, setStep] = useState(1)
@@ -99,6 +105,8 @@ export function RestaurantSignUp({ userData }: RestaurantSignUpProps) {
   const [showMap, setShowMap] = useState(false)
   const [showSuccessModal, setShowSuccessModal] = useState(false)
   const [errors, setErrors] = useState<{ [key: string]: string }>({})
+  const [isRegistering, setIsRegistering] = useState(false)
+  const [registrationError, setRegistrationError] = useState<string | null>(null)
 
   // Fetch restaurant types and cuisine types from API
   useEffect(() => {
@@ -144,21 +152,55 @@ export function RestaurantSignUp({ userData }: RestaurantSignUpProps) {
     }
   }
 
-  const handleStep3Submit = (e: React.FormEvent) => {
+  const handleStep3Submit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (validateStep(3)) {
-      // Handle sign up logic
-      console.log("Restaurant sign up with:", {
-        ...userData,
-        restaurantName,
-        licenseNumber,
-        restaurantType,
-        cuisineTypes,
-        operatingHours,
-        documents,
-        location,
-      })
-      setShowSuccessModal(true)
+      setIsRegistering(true)
+      setRegistrationError(null)
+      
+      try {
+        // Find the selected restaurant type ID
+        const selectedRestaurantType = dbRestaurantTypes.find(rt => rt.type === restaurantType)
+        const restaurantTypeId = selectedRestaurantType?.id || ""
+        
+        // Find the selected cuisine type IDs
+        const selectedCuisineTypeIds = dbCuisineTypes
+          .filter(ct => cuisineTypes.includes(ct.name))
+          .map(ct => ct.id)
+          
+        // Format data for registration
+        const registrationData: RestaurantRegistrationData = {
+          // Common user data
+          email: userData.email,
+          password: userData.password, // Use the password passed from parent
+          firstName: userData.firstName,
+          lastName: userData.lastName,
+          phone: userData.phone,
+          profilePictureUrl: userData.profileImage, // Changed from profileImage to profilePictureUrl
+          
+          // Restaurant specific data
+          restaurantName: restaurantName,
+          licenseNumber: licenseNumber,
+          restaurantTypeId: restaurantTypeId,
+          cuisineTypeIds: selectedCuisineTypeIds,
+          operatingHours: operatingHours,
+          documents: documents,
+          location: location,
+          locationCoordinates: selectedLocation || undefined
+        }
+
+        // Call the registration service
+        await userService.register(registrationData, "restaurant")
+        
+        // Show success modal
+        setShowSuccessModal(true)
+        
+      } catch (error: any) {
+        console.error("Registration failed:", error)
+        setRegistrationError(error.response?.data?.message || "Registration failed. Please try again.")
+      } finally {
+        setIsRegistering(false)
+      }
     }
   }
 
@@ -598,9 +640,24 @@ export function RestaurantSignUp({ userData }: RestaurantSignUpProps) {
               </Button>
             </motion.div>
 
+            {registrationError && (
+              <motion.div 
+                className="p-3 border border-red-500 bg-red-50 rounded-md flex items-start"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+              >
+                <AlertCircle className="h-5 w-5 text-red-500 mr-2 mt-0.5" />
+                <p className="text-sm text-red-700">{registrationError}</p>
+              </motion.div>
+            )}
+
             <motion.div variants={itemVariants}>
-              <Button type="submit" className="w-full">
-                Complete Sign Up
+              <Button 
+                type="submit" 
+                className="w-full"
+                disabled={isRegistering}
+              >
+                {isRegistering ? "Creating Account..." : "Complete Sign Up"}
               </Button>
             </motion.div>
           </motion.form>
@@ -613,21 +670,32 @@ export function RestaurantSignUp({ userData }: RestaurantSignUpProps) {
         title="Select Restaurant Type"
       >
         <div className="space-y-3">
-          {(isLoading.restaurantTypes ? fallbackRestaurantTypes : dbRestaurantTypes.map(type => type.type)).map((type, index) => (
-            <motion.button
-              key={type}
-              className="w-full p-3 border rounded-lg flex items-center hover:border-primary hover:bg-primary/5 transition-colors"
-              onClick={() => handleRestaurantTypeSelect(type)}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.05 }}
-            >
-              <UtensilsCrossed className="h-5 w-5 mr-3 text-primary" />
-              <span>{type}</span>
-            </motion.button>
-          ))}
+          <div className="relative mb-4">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search restaurant types..."
+              className="pl-10"
+              value={restaurantTypeSearch}
+              onChange={(e) => setRestaurantTypeSearch(e.target.value)}
+            />
+          </div>
+          {(isLoading.restaurantTypes ? fallbackRestaurantTypes : dbRestaurantTypes.map(type => type.type))
+            .filter(type => type.toLowerCase().includes(restaurantTypeSearch.toLowerCase()))
+            .map((type, index) => (
+              <motion.button
+                key={type}
+                className="w-full p-3 border rounded-lg flex items-center hover:border-primary hover:bg-primary/5 transition-colors"
+                onClick={() => handleRestaurantTypeSelect(type)}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.05 }}
+              >
+                <UtensilsCrossed className="h-5 w-5 mr-3 text-primary" />
+                <span>{type}</span>
+              </motion.button>
+            ))}
         </div>
       </Modal>
 
@@ -636,27 +704,40 @@ export function RestaurantSignUp({ userData }: RestaurantSignUpProps) {
         onClose={() => toggleModal('cuisineTypes', false)}
         title="Select Cuisine Types"
       >
-        <div className="grid grid-cols-2 gap-3">
-          {(isLoading.cuisineTypes ? fallbackCuisineTypes : dbCuisineTypes.map(type => type.name)).map((type, index) => {
-            const isSelected = cuisineTypes.includes(type)
-            return (
-              <motion.button
-                key={type}
-                className={`p-3 border rounded-lg flex items-center justify-between transition-colors ${
-                  isSelected ? "border-primary bg-primary/5" : "hover:border-gray-300"
-                }`}
-                onClick={() => toggleCuisineType(type)}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.03 }}
-              >
-                <span>{type}</span>
-                {isSelected && <Check className="h-4 w-4 text-primary" />}
-              </motion.button>
-            )
-          })}
+        <div className="space-y-3">
+          <div className="relative mb-4">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search cuisine types..."
+              className="pl-10"
+              value={cuisineTypeSearch}
+              onChange={(e) => setCuisineTypeSearch(e.target.value)}
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            {(isLoading.cuisineTypes ? fallbackCuisineTypes : dbCuisineTypes.map(type => type.name))
+              .filter(type => type.toLowerCase().includes(cuisineTypeSearch.toLowerCase()))
+              .map((type, index) => {
+                const isSelected = cuisineTypes.includes(type)
+                return (
+                  <motion.button
+                    key={type}
+                    className={`p-3 border rounded-lg flex items-center justify-between transition-colors ${
+                      isSelected ? "border-primary bg-primary/5" : "hover:border-gray-300"
+                    }`}
+                    onClick={() => toggleCuisineType(type)}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.03 }}
+                  >
+                    <span>{type}</span>
+                    {isSelected && <Check className="h-4 w-4 text-primary" />}
+                  </motion.button>
+                )
+              })}
+          </div>
         </div>
         <div className="mt-4 flex justify-end">
           <Button onClick={() => toggleModal('cuisineTypes', false)} className="w-full">
@@ -673,8 +754,9 @@ export function RestaurantSignUp({ userData }: RestaurantSignUpProps) {
         <div className="space-y-4">
           <MapSelector 
             height="350px" 
-            onConfirmLocation={(selectedLocation: SelectedLocation) => {
-              setLocation(selectedLocation.address);
+            onConfirmLocation={(selectedLoc: SelectedLocation) => {
+              setLocation(selectedLoc.address);
+              setSelectedLocation({lat: selectedLoc.lat, lng: selectedLoc.lng});
               setLocationConfirmed(true);
               toggleModal('map', false);
             }} 

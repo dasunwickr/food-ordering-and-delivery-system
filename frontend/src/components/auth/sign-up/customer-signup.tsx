@@ -12,6 +12,7 @@ import { Modal } from "@/components/auth/modal"
 import { MapSelector } from "@/components/ui/map-selector"
 import { useAtom } from "jotai"
 import { locationAtom, locationSelectedAtom, showMapAtom, toggleMapAtom } from "@/atoms/location-atoms"
+import { userService } from "@/services/user-service"
 
 interface CustomerSignUpProps {
   userData: {
@@ -20,6 +21,7 @@ interface CustomerSignUpProps {
     lastName: string
     phone: string
     profileImage: string | null
+    password: string
   }
 }
 
@@ -51,15 +53,37 @@ export function CustomerSignUp({ userData }: CustomerSignUpProps) {
     return Object.keys(newErrors).length === 0
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (validateLocation() && locationConfirmed) {
-      // Handle sign up logic
-      console.log("Customer sign up with:", {
-        ...userData,
-        location,
-      })
-      setShowSuccessModal(true)
+      try {
+        const registrationData = {
+          // Common user data
+          email: userData.email,
+          password: userData.password,
+          firstName: userData.firstName,
+          lastName: userData.lastName,
+          phone: userData.phone,
+          profilePictureUrl: userData.profileImage,
+          
+          // Customer specific data
+          locationCoordinates: {
+            lat: location.lat,
+            lng: location.lng,
+            address: location.address
+          }
+        }
+
+        // Call the registration service
+        await userService.register(registrationData, "customer")
+        
+        setShowSuccessModal(true)
+      } catch (error: any) {
+        console.error("Registration failed:", error)
+        setErrors({
+          location: error.response?.data?.message || "Registration failed. Please try again."
+        })
+      }
     } else if (!locationConfirmed && location.address) {
       setErrors({
         location: "Please confirm your location first",

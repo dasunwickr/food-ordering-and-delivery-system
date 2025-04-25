@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Camera, Loader2 } from "lucide-react"
 import { CldUploadButton } from "next-cloudinary"
@@ -20,6 +20,13 @@ export function ProfileImageUploader({
   const [isHovering, setIsHovering] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   const [localImage, setLocalImage] = useState(currentImage)
+  
+  // Update local image when prop changes
+  useEffect(() => {
+    if (currentImage !== localImage && !isUploading) {
+      setLocalImage(currentImage)
+    }
+  }, [currentImage, localImage, isUploading])
 
   // Handle successful upload from Cloudinary
   const handleUploadSuccess = (result: any) => {
@@ -45,11 +52,6 @@ export function ProfileImageUploader({
   const handleUploadError = () => {
     toast.error("An error occurred while uploading the image")
     setIsUploading(false)
-  }
-
-  // Update local image when prop changes (e.g. after saving to backend)
-  if (currentImage !== localImage && !isUploading) {
-    setLocalImage(currentImage)
   }
 
   return (
