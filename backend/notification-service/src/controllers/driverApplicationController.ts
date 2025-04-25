@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { sendSMS, sendEmail } from '../services/notificationService';
 import { Notification } from '../models/notificationModel'; // Import the Notification model
+import { AdminEmail } from '../models/adminEmailModel'; // Import the AdminEmail model
 import dotenv from 'dotenv';
 
 // Load environment variables
@@ -17,36 +18,43 @@ export const applyToBecomeDriver = async (req: Request, res: Response): Promise<
   }
 
   try {
-    // Notify the admin via email
-    const adminEmail = process.env.ADMIN_EMAIL;
-    if (!adminEmail) {
-      console.error('Admin email is not configured in the .env file.');
-    } else {
-      const adminEmailSubject = `New Delivery Driver Application Submitted`;
-      const adminEmailText = `A new application has been submitted by ${name}.`;
-        
-      ;
-      const adminEmailHtml = `
-        <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto;">
-          <h1 style="color: #28a745; text-align: center;">📝 New Delivery Driver Application</h1>
-          <p><strong>Name:</strong> ${name}</p>
-          <p><strong>Email:</strong> ${email}</p>
-          <p><strong>User ID:</strong> ${userId}</p>
-          <p><strong>Phone Number:</strong> ${phoneNumber}</p>
-          <p style="text-align: center; margin-top: 20px; font-size: 14px; color: #666;">
-            Please review the application and take appropriate action. ❤️
-          </p>
-        </div>
-      `;
+    // Fetch all admin emails from the database
+    const adminEmails = await AdminEmail.find({}, { email: 1, _id: 0 });
 
-      // Send the email notification
+    if (adminEmails.length === 0) {
+      console.error('No admin emails found in the database.');
+      res.status(500).json({ error: 'Failed to send notification: No admin emails found.' });
+      return;
+    }
+
+    // Extract the email addresses from the results
+    const adminEmailAddresses = adminEmails.map((admin) => admin.email);
+
+    // Notify all admins via email
+    const adminEmailSubject = `New Delivery Driver Application Submitted`;
+    const adminEmailText = `A new application has been submitted by ${name}.`;
+    const adminEmailHtml = `
+      <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto;">
+        <h1 style="color: #28a745; text-align: center;">📝 New Delivery Driver Application</h1>
+        <p><strong>Name:</strong> ${name}</p>
+        <p><strong>Email:</strong> ${email}</p>
+        <p><strong>User ID:</strong> ${userId}</p>
+        <p><strong>Phone Number:</strong> ${phoneNumber}</p>
+        <p style="text-align: center; margin-top: 20px; font-size: 14px; color: #666;">
+          Please review the application and take appropriate action. ❤️
+        </p>
+      </div>
+    `;
+
+    // Send the email notification to all admin emails
+    for (const adminEmail of adminEmailAddresses) {
       await sendEmail(adminEmail, adminEmailSubject, adminEmailText, adminEmailHtml);
 
       // Store the notification in the database
       const adminNotification = new Notification({
         title: 'New Delivery Driver Application',
         message: adminEmailText,
-        phoneNumber:phoneNumber,
+        phoneNumber: phoneNumber,
         email: adminEmail,
         status: 'send',
       });
@@ -59,7 +67,6 @@ export const applyToBecomeDriver = async (req: Request, res: Response): Promise<
     res.status(500).json({ error: 'Failed to submit application' });
   }
 };
-
 // Update application status (Admin action)
 export const updateApplicationStatus = async (req: Request, res: Response): Promise<void> => {
   const { userId, status, name, phoneNumber, email } = req.body;

@@ -11,6 +11,7 @@ import { allocateDelivery } from './controllers/driverController';
 import { applyToBecomeDriver, updateApplicationStatus } from './controllers/driverApplicationController';
 import { processPayment,notifyDriverAboutPaymentDeposit,notifyRestaurantAboutPaymentDeposit } from './controllers/paymentController';
 import { applyToBecomeRestaurant, updateRestaurantApplicationStatus } from './controllers/restaurantController';
+import { addAdminEmail,getAllAdminEmails } from '../src/controllers/adminController';
 // Load environment variables
 dotenv.config();
 
@@ -75,8 +76,8 @@ app.post('/drivers/apply', applyToBecomeDriver);
 
 // Route to update application status (Admin action)
 app.post('/drivers/application/status', updateApplicationStatus);
-
-
+app.post('/admin-emails', addAdminEmail);
+app.get('/admin-emails', getAllAdminEmails);
 // Start the server
 server.listen(PORT, () => {
   logger.info(`Server is running on port ${PORT}`);
