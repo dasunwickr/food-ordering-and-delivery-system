@@ -12,7 +12,8 @@ public class CreateOrderRequest {
     private String restaurantId;
     private String customerName;
     private String customerContact;
-    private String deliveryLocation;
+    private double longitude; // Updated field
+    private double latitude;  // Updated field
     private String paymentType;
     private DriverDetails driverDetails;
 

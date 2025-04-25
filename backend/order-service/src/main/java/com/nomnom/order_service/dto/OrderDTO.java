@@ -1,5 +1,6 @@
 package com.nomnom.order_service.dto;
 
+import com.nomnom.order_service.model.Order;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -29,7 +30,8 @@ public class OrderDTO {
     public static class CustomerDetailsDTO {
         private String name;
         private String contact;
-        private String location;
+        private double longitude; // New field
+        private double latitude;  // New field
     }
 
     @Data
@@ -39,8 +41,15 @@ public class OrderDTO {
         private String itemId;
         private String itemName;
         private int quantity;
+        private PotionSize potionSize; // New field
         private double price;
         private double totalPrice;
+        private String image; // New field
+
+        // Enum for PotionSize
+        public enum PotionSize {
+            Small, Medium, Large
+        }
     }
 
     @Data
