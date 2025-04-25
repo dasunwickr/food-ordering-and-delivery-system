@@ -111,13 +111,29 @@ export const userService = {
         ipAddress: "127.0.0.1" // TODO: Replace with actual IP fetching logic
       });
       
-      console.log('Auth response:', response.data);
+      console.log('Auth response in user-service:', response.data);
+      // Check if we're getting sessionId in the response
+      if (response.data.sessionId) {
+        console.log('SessionId received:', response.data.sessionId);
+      } else {
+        console.warn('No sessionId received in response:', response.data);
+        // Check if it exists under a different property name
+        console.log('Full response properties:', Object.keys(response.data));
+      }
+      
       const result = { ...response.data };
       
       if (response.data.token) {
         localStorage.setItem('authToken', response.data.token);
         localStorage.setItem('userId', response.data.userId);
-        localStorage.setItem('sessionId', response.data.sessionId);
+        
+        // Try to store sessionId if it exists
+        if (response.data.sessionId) {
+          localStorage.setItem('sessionId', response.data.sessionId);
+          console.log('SessionId stored in localStorage:', response.data.sessionId);
+        } else {
+          console.warn('No sessionId available to store in localStorage');
+        }
         
         // Get the user type after login
         try {
@@ -225,9 +241,10 @@ export const userService = {
         restaurantLicenseNumber: data.licenseNumber,
         restaurantTypeId: data.restaurantTypeId,
         cuisineTypeIds: data.cuisineTypeIds,
-        restaurantDocuments: data.documents,
+        restaurantDocuments: data.documents, // Backend expects restaurantDocuments
         restaurantAddress: data.location,
         location: data.locationCoordinates,
+        // Ensure this matches the backend schema
         openingTime: data.operatingHours.map(hours => ({
           day: hours.day,
           openingTime: hours.openTime,
@@ -239,7 +256,7 @@ export const userService = {
       Object.assign(registrationData.profile, {
         vehicleTypeId: data.vehicleTypeId,
         vehicleNumber: data.licensePlate,
-        vehicleDocuments: data.documents,
+        vehicleDocuments: data.documents, // Backend expects vehicleDocuments
         location: data.locationCoordinates
       });
     } else if (userType === 'customer') {
@@ -251,9 +268,14 @@ export const userService = {
       }
     }
     
-    // Send registration data to backend
-    const response = await api.post('/auth-service/auth/signup', registrationData);
-    return response.data;
+    try {
+      // Send registration data to backend
+      const response = await api.post('/auth-service/auth/signup', registrationData);
+      return response.data;
+    } catch (error: any) {
+      console.error('Registration error:', error.response?.data || error);
+      throw error;
+    }
   },
   
   createUser: async (userData: Partial<User>): Promise<User> => {

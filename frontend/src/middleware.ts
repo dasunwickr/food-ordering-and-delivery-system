@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { cookies } from 'next/headers';
 
+// TODO: Fix the Next JS Middleware
 // Routes that need protection based on user type
 type UserType = 'ADMIN' | 'CUSTOMER' | 'RESTAURANT' | 'DRIVER';
 

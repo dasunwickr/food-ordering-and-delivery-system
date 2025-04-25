@@ -8,6 +8,9 @@ import { AdminsTable } from "@/components/user-service/users/admins/admins-table
 import { CreateAdminModal } from "@/components/user-service/users/admins/create-admin-modal"
 import { EditAdminModal } from "@/components/user-service/users/admins/edit-admin-modal"
 import { DeleteAdminModal } from "@/components/user-service/users/admins/delete-admin-modal"
+import { userService } from "@/services/user-service"
+import { toast } from "sonner"
+import api from "@/lib/axios"
 
 // Sample data
 const SAMPLE_ADMINS = [
@@ -71,6 +74,64 @@ export default function AdminsPage() {
     setDeleteModalOpen(false)
   }
 
+  const createAdmin = async (formData: any) => {
+    try {
+      // Map frontend admin type to backend format
+      let adminTypeValue = "";
+      switch (formData.adminType) {
+        case "Top Level":
+          adminTypeValue = "TOP_LEVEL_ADMIN";
+          break;
+        case "2nd Level":
+          adminTypeValue = "SECOND_LEVEL_ADMIN";
+          break;
+        case "3rd Level": 
+          adminTypeValue = "THIRD_LEVEL_ADMIN";
+          break;
+        default:
+          adminTypeValue = "THIRD_LEVEL_ADMIN";
+      }
+
+      // Prepare auth data according to validation schema requirements
+      const authData = {
+        email: formData.email,
+        password: formData.password,
+        userType: "ADMIN",
+        profile: {
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          contactNumber: formData.contactNumber,
+          profilePictureUrl: formData.profilePicture,
+          adminType: adminTypeValue // Use the mapped enum value
+        }
+      };
+      
+      console.log("Sending auth data:", authData);
+
+      // Call the auth service signup endpoint
+      const authResponse = await api.post('/auth-service/auth/signup', authData);
+      
+      if (authResponse.data && typeof authResponse.data === 'object' && 'userId' in authResponse.data) {
+        // If successful, add the new admin to the local state
+        const newAdmin = {
+          id: authResponse.data.userId,
+          ...formData
+        };
+        
+        setAdmins([...admins, newAdmin]);
+        toast.success("Admin created successfully");
+      } else {
+        toast.error("Failed to create admin account");
+      }
+    } catch (error: any) {
+      console.error("Error creating admin:", error);
+      toast.error("Failed to create admin", {
+        description: error.response?.data?.error || "An unknown error occurred"
+      });
+      throw error; // Re-throw to handle in the modal component
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
@@ -95,10 +156,7 @@ export default function AdminsPage() {
       <CreateAdminModal
         open={createModalOpen}
         onClose={() => setCreateModalOpen(false)}
-        onSubmit={(data) => {
-          setAdmins([...admins, { id: String(admins.length + 1), ...data }])
-          setCreateModalOpen(false)
-        }}
+        onSubmit={createAdmin}
       />
 
       {selectedAdmin && (

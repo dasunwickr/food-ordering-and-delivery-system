@@ -32,11 +32,29 @@ export async function signIn(data: LoginFormData): Promise<AuthResponse> {
       ipAddress,
     });
 
+    // Debug log to identify the response structure
+    console.log('Auth API Response:', {
+      token: response.data.token,
+      userId: response.data.userId,
+      sessionId: response.data.sessionId,
+      userType: response.data.userType
+    });
+
     // Store authentication data
     if (response.data.token) {
       localStorage.setItem('authToken', response.data.token);
-      if (response.data.userId) localStorage.setItem('userId', response.data.userId);
-      if (response.data.sessionId) localStorage.setItem('sessionId', response.data.sessionId);
+      
+      if (response.data.userId) {
+        localStorage.setItem('userId', response.data.userId);
+        console.log('Stored userId in localStorage:', response.data.userId);
+      }
+      
+      if (response.data.sessionId) {
+        localStorage.setItem('sessionId', response.data.sessionId);
+        console.log('Stored sessionId in localStorage:', response.data.sessionId);
+      } else {
+        console.warn('No sessionId in response to store in localStorage');
+      }
       
       // Also set cookies for middleware access
       document.cookie = `authToken=${response.data.token}; path=/; samesite=strict;`;
