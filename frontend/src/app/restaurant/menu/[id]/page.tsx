@@ -1,11 +1,12 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { useParams } from "next/navigation";
+import { useRouter,useParams } from "next/navigation"; // Import useRouter for navigation
 import { useForm, FormProvider } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
+
 import {
   FormControl,
   FormField,
@@ -54,6 +55,7 @@ interface MenuItem {
 }
 
 const UpdateMenuItem = () => {
+  const router = useRouter(); // Initialize useRouter
   const { id } = useParams(); // Extract the 'id' parameter
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -152,8 +154,8 @@ const UpdateMenuItem = () => {
 
       if (response.ok) {
         alert("Menu item updated successfully!");
-        formMethods.reset();
-        setPreview(null);
+        console.log("Navigating to /restaurant/menu");
+        router.push("/restaurant/menu");// Navigate to /restaurant/menu on success
       } else {
         alert("Failed to update menu item.");
       }
