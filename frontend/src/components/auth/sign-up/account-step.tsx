@@ -46,8 +46,12 @@ export function AccountStep({ onSubmit }: AccountStepProps) {
     const timer = setTimeout(async () => {
       setCheckingEmail(true);
       try {
+        // Define the expected response structure
+        interface EmailExistsResponse {
+          exists: boolean;
+        }
         // Try to check if email exists via the users API endpoint
-        const response = await api.get(`/user-service/users/email/${email}/exists`);
+        const response = await api.get<EmailExistsResponse>(`/user-service/users/email/${email}/exists`);
         if (response.data && response.data.exists) {
           setErrors(prev => ({ ...prev, email: "This email is already in use" }));
         }
