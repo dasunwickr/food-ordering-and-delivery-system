@@ -110,7 +110,7 @@ const RestaurantsSlider = () => {
           {restaurants.map((restaurant) => (
             <Link
               key={restaurant.id}
-              href={`/restaurant/${restaurant.id}`}
+              href={`/customer/restaurant/${restaurant.id}`}
               className="group min-w-[200px] flex-shrink-0 bg-gray-100 rounded-lg shadow-md overflow-hidden transition-transform hover:scale-105 cursor-pointer"
             >
               {/* Image Section */}

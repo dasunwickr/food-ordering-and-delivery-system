@@ -75,7 +75,7 @@ const DisplayCategoriesFood = () => {
   return (
     <div className="max-w-8xl mx-auto p-6 bg-white overflow-hidden">
       {/* Ensure no vertical scrollbar */}
-      <h1 className="text-2xl font-bold text-amber-700 mb-6 text-center">
+      <h1 className="text-2xl font-bold text-amber-700 mb-6">
         Available Categories
       </h1>
 
@@ -103,7 +103,7 @@ const DisplayCategoriesFood = () => {
           {categories.map((category) => (
             <Link
               key={category.id}
-              href={`/categories/${encodeURIComponent(category.name)}`}
+              href={`/customer/categories/${encodeURIComponent(category.name)}`}
               className="group min-w-[200px] flex-shrink-0 bg-gray-100 rounded-lg shadow-md overflow-hidden transition-transform hover:scale-105 cursor-pointer"
             >
               {/* Image Section */}
