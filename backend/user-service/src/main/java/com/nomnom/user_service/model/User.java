@@ -1,9 +1,9 @@
 package com.nomnom.user_service.model;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+
 import lombok.*;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
@@ -20,10 +20,10 @@ import org.springframework.data.mongodb.core.mapping.Document;
         property = "userType"
 )
 @JsonSubTypes({
-        @JsonSubTypes.Type(value = Admin.class, name = "admin"),
-        @JsonSubTypes.Type(value = Customer.class, name = "customer"),
-        @JsonSubTypes.Type(value = Driver.class, name = "driver"),
-        @JsonSubTypes.Type(value = RestaurantOwner.class, name = "restaurantOwner")
+        @JsonSubTypes.Type(value = Admin.class, name = "ADMIN"),
+        @JsonSubTypes.Type(value = Customer.class, name = "CUSTOMER"),
+        @JsonSubTypes.Type(value = Driver.class, name = "DRIVER"),
+        @JsonSubTypes.Type(value = Restaurant.class, name = "RESTAURANT")
 })
 
 public abstract class User {
@@ -34,13 +34,6 @@ public abstract class User {
 
     private String lastName;
 
-    private String address;
-
-    private Double longitude;
-
-
-    private Double latitude;
-
     @JsonProperty("email")
     private String email;
 
@@ -49,4 +42,8 @@ public abstract class User {
 
     @JsonProperty("userType")
     private String userType;
+
+    private String status;
+    
+    private String profilePicture;
 }

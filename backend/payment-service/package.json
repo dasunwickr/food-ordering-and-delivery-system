@@ -2,14 +2,15 @@
   "name": "payment-service",
   "version": "1.0.0",
   "description": "",
+  "type": "module",
   "main": "index.js",
   "scripts": {
-    "dev": "nodemon --exec ts-node src/index.ts"
+    "start": "node index.js",
+    "dev": "nodemon index.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "packageManager": "pnpm@10.6.5",
   "dependencies": {
     "@types/express": "^5.0.1",
     "axios": "^1.8.4",
@@ -19,7 +20,6 @@
   },
   "devDependencies": {
     "nodemon": "^3.1.9",
-    "ts-node": "^10.9.2",
-    "typescript": "^5.8.2"
+    "stripe": "^18.0.0"
   }
 }

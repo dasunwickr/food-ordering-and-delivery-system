@@ -13,6 +13,7 @@ const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_A
 
 
 const orderStatusTemplatesPath = path.join(__dirname, '../data/orderStatusTemplates.json');
+const paymentTemplatesPath = path.join(__dirname, '../data/paymentTemplates.json');
 
 // Send order status notifications (SMS and Email)
 export const sendOrderStatusNotification = async (
@@ -176,6 +177,135 @@ export const sendEmailsFromTemplate = async (
     console.log(`Sent emails to ${recipients.length} recipients using the template.`);
   } catch (error) {
     console.error('Error sending emails:', error);
+    throw error;
+  }
+};
+
+// Send payment notifications (SMS and Email)
+export const sendPaymentNotification = async (
+  paymentStatus: string,
+  phoneNumber: string,
+  email: string,
+  orderId: string
+): Promise<void> => {
+  try {
+    // Read the payment templates
+    const rawData = fs.readFileSync(paymentTemplatesPath, 'utf-8');
+    const templates = JSON.parse(rawData);
+
+    // Use the requested payment status template if it exists, otherwise use a default message
+    const template = templates[paymentStatus] || {
+      text: `Your payment status has been updated to ${paymentStatus}.`,
+    };
+
+    // Customize the template with the order ID
+    const smsMessage = `💳 Payment Update for Order (#${orderId}): ${template.text}`;
+    const emailSubject = `💰 Payment Status - Your Payment for Order (#${orderId}) is ${paymentStatus}`;
+    const emailText = `Your payment for order (#${orderId}) is ${paymentStatus}.
+${template.text}`;
+    const emailHtml = `
+      <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto;">
+        <h1 style="color: #28a745; text-align: center;">💰 Payment Status Update</h1>
+        <p style="font-size: 18px; text-align: center;">Your payment for order (#<strong>${orderId}</strong>) has been updated to:</p>
+        <p style="font-size: 24px; font-weight: bold; text-align: center; color: #007bff;">${paymentStatus}</p>
+        <div style="background-color: #f9f9f9; padding: 20px; border-radius: 8px; margin-top: 20px;">
+          <p style="font-size: 16px;">${template.text}</p>
+        </div>
+        <p style="text-align: center; margin-top: 20px; font-size: 14px; color: #666;">
+          Thank you for choosing us! ❤️
+        </p>
+      </div>
+    `;
+
+    // Send SMS notification
+    // await sendSMS(phoneNumber, smsMessage);
+
+    // Send email notification
+    await sendEmail(email, emailSubject, emailText, emailHtml);
+
+    console.log(`Payment notification sent for status: ${paymentStatus}`);
+  } catch (error) {
+    console.error('Error sending payment notification:', error);
+    throw error;
+  }
+};
+// Send driver payment deposit notification (SMS and Email)
+export const sendDriverPaymentDepositedNotification = async (
+  phoneNumber: string,
+  email: string,
+  driverName: string,
+  amount: number
+): Promise<void> => {
+  try {
+    // Customize the notification content
+    const smsMessage = `💳 Payment Update for ${driverName}: Your payment of ${amount} LKR has been successfully deposited.`;
+    const emailSubject = `💰 Payment Deposited - ${amount} LKR`;
+    const emailText = `Dear ${driverName},\n\nYour payment of ${amount} LKR has been successfully deposited into your account. Thank you for your hard work!\n\nBest regards,\nThe Team`;
+    const emailHtml = `
+      <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto;">
+        <h1 style="color: #28a745; text-align: center;">💰 Payment Deposited</h1>
+        <p style="font-size: 18px; text-align: center;">Your payment of <strong>${amount} LKR</strong> has been successfully deposited.</p>
+        <div style="background-color: #f9f9f9; padding: 20px; border-radius: 8px; margin-top: 20px;">
+          <p style="font-size: 16px;">Dear ${driverName},</p>
+          <p style="font-size: 16px;">Thank you for your hard work! Your payment has been successfully deposited into your account.</p>
+        </div>
+        <p style="text-align: center; margin-top: 20px; font-size: 14px; color: #666;">
+          Best regards,<br/>
+          The Team ❤️
+        </p>
+      </div>
+    `;
+
+    // Send SMS notification
+    // await sendSMS(phoneNumber, smsMessage);
+
+    // Send email notification
+    await sendEmail(email, emailSubject, emailText, emailHtml);
+
+    console.log(`Driver payment deposited notification sent to ${driverName}`);
+  } catch (error) {
+    console.error('Error sending driver payment notification:', error);
+    throw error;
+  }
+};
+
+
+// Send restaurant payment deposit notification (SMS and Email)
+export const sendRestaurantPaymentDepositedNotification = async (
+  phoneNumber: string,
+  email: string,
+  restaurantName: string,
+  amount: number
+): Promise<void> => {
+  try {
+    // Customize the notification content
+    const smsMessage = `💳 Payment Update for ${restaurantName}: Your payment of ${amount} LKR has been successfully deposited.`;
+    const emailSubject = `💰 Payment Deposited - ${amount} LKR`;
+    const emailText = `Dear ${restaurantName},\n\nYour payment of ${amount} LKR has been successfully deposited into your account. Thank you for partnering with us!\n\nBest regards,\nThe Team`;
+    const emailHtml = `
+      <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto;">
+        <h1 style="color: #28a745; text-align: center;">💰 Payment Deposited</h1>
+        <p style="font-size: 18px; text-align: center;">Your payment of <strong>${amount} LKR</strong> has been successfully deposited.</p>
+        <div style="background-color: #f9f9f9; padding: 20px; border-radius: 8px; margin-top: 20px;">
+          <p style="font-size: 16px;">Dear ${restaurantName},</p>
+          <p style="font-size: 16px;">Thank you for partnering with us! Your payment has been successfully deposited into your account.</p>
+        </div>
+        <p style="text-align: center; margin-top: 20px; font-size: 14px; color: #666;">
+          Best regards,<br/>
+          The Team ❤️
+        </p>
+      </div>
+    `;
+
+    // Send SMS notification
+    // await sendSMS(phoneNumber, smsMessage);
+
+    // Send email notification
+    await sendEmail(email, emailSubject, emailText, emailHtml);
+
+    console.log(`Restaurant payment deposited notification sent to ${restaurantName}`);
+  } catch (error) {
+    console.error('Error sending restaurant payment notification:', error);
     throw error;
   }
 };
