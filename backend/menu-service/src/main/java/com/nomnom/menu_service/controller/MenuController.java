@@ -27,7 +27,7 @@ public class MenuController {
     @PostMapping(value = "/add", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<MenuItems> addMenu(
             @RequestParam("itemName") String itemName,
-            @RequestParam("restaurantId") Long restaurantId,
+            @RequestParam("restaurantId") String restaurantId,
             @RequestParam("category") String category,
             @RequestParam("availabilityStatus") Boolean availabilityStatus,
             @RequestParam("description") String description,
@@ -128,7 +128,7 @@ public class MenuController {
      * Get all menu items for a specific restaurant.
      */
     @GetMapping("/restaurant/{restaurantId}")
-    public ResponseEntity<List<MenuItems>> getMenuItemsByRestaurantId(@PathVariable Long restaurantId) {
+    public ResponseEntity<List<MenuItems>> getMenuItemsByRestaurantId(@PathVariable String restaurantId) {
         try {
             List<MenuItems> menuItems = menuService.getMenuItemsByRestaurantId(restaurantId);
 

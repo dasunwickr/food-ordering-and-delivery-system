@@ -33,7 +33,7 @@ public class MenuItemService implements MenuItemServiceInterface {
         private Cloudinary cloudinary;
 
         @Override
-        public MenuItems saveItem(String itemName, Long restaurantId, Double offer, String category, Boolean availabilityStatus,
+        public MenuItems saveItem(String itemName, String restaurantId, Double offer, String category, Boolean availabilityStatus,
                                   String description, MultipartFile file, List<MenuItemPortion> portions) throws IOException {
             MenuItems item = new MenuItems();
             item.setRestaurantId(restaurantId);
@@ -136,7 +136,7 @@ public class MenuItemService implements MenuItemServiceInterface {
     }
 
     @Override
-    public List<MenuItems> getMenuItemsByRestaurantId(Long restaurantId) {
+    public List<MenuItems> getMenuItemsByRestaurantId(String restaurantId) {
         List<MenuItems> menuItems = ItemRepository.findByRestaurantIdWithPortions(restaurantId);
 
         if (menuItems.isEmpty()) {
