@@ -13,9 +13,11 @@ export const registerUser = async (
   userType: string,
   profile: Record<string, any>
 ) => {
+  // Check if user already exists
   const existing = await UserModel.findOne({ email });
   if (existing) throw new Error('Email already exists');
 
+  // Hash password
   const hashedPassword = await hashPassword(password);
 
   // Create local user for auth purposes
@@ -24,28 +26,48 @@ export const registerUser = async (
     password: hashedPassword,
     userType
   });
-  await localUser.save();
-
-  // Create user in the User Service with all profile details
-  const fullUserData = {
-    ...profile,
-    email,
-    userType
-  };
-
+  
   try {
-    // Save in User Service
-    const { data: createdUser } = await axios.post(USER_SERVICE_URL, fullUserData);
-
-    console.log('User created in User Service:', createdUser);
-
-    return { 
-      userId: createdUser.id || localUser._id.toString()
+    await localUser.save();
+    console.log('Local auth user created:', localUser._id);
+    
+    // Create user in the User Service with all profile details
+    const fullUserData = {
+      ...profile,
+      email,
+      userType
     };
+
+    // Log what we're sending to the user service
+    console.log('Sending user data to User Service:', JSON.stringify(fullUserData, null, 2));
+
+    // Save in User Service
+    try {
+      const { data: createdUser } = await axios.post(USER_SERVICE_URL, fullUserData);
+      console.log('User created in User Service:', createdUser);
+
+      return { 
+        userId: createdUser.id || localUser._id.toString()
+      };
+    } catch (userServiceError: any) {
+      // If the user service fails, we need to roll back the local user creation
+      await UserModel.deleteOne({ _id: localUser._id });
+      
+      // Specific error handling for debugging
+      if (userServiceError.response) {
+        console.error('User service error response:', {
+          status: userServiceError.response.status,
+          data: userServiceError.response.data
+        });
+        throw new Error(`User registration failed: ${userServiceError.response.data.error || userServiceError.message}`);
+      }
+      
+      throw new Error(`User registration failed: ${userServiceError.message}`);
+    }
   } catch (error: any) {
-    // Rollback local user creation if user service registration fails
-    await UserModel.deleteOne({ _id: localUser._id });
-    throw new Error(`User registration failed: ${error.message}`);
+    // Handle any other errors with local user creation
+    console.error('User registration error:', error);
+    throw error;
   }
 };
 
