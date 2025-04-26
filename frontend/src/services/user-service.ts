@@ -315,6 +315,24 @@ export const userService = {
     }
     
     try {
+      // Check if email already exists
+      try {
+        interface EmailExistsResponse {
+          exists: boolean;
+        }
+        const checkResponse = await api.get<EmailExistsResponse>(`/user-service/users/email/${data.email}/exists`);
+        if (checkResponse.data && checkResponse.data.exists) {
+          throw new Error('This email is already registered. <a href="/sign-in" className="text-blue-600 hover:underline">Sign in instead?</a>');
+        }
+      } catch (checkError: any) {
+        // If the endpoint doesn't exist or returns a different error format,
+        // we'll handle this in the main registration flow
+        if (checkError.message.includes('This email is already registered')) {
+          throw checkError;
+        }
+        // Otherwise continue with registration and let the backend handle duplicate email checks
+      }
+      
       // Send registration data to backend
       const response = await api.post('/auth-service/auth/signup', registrationData);
       
@@ -327,7 +345,22 @@ export const userService = {
       return response.data;
     } catch (error: any) {
       console.error('Registration error:', error.response?.data || error);
-      throw error;
+      
+      // Format error message based on response or error object
+      const errorMessage = 
+        error.response?.data?.error || 
+        error.response?.data?.message || 
+        error.message || 
+        'Registration failed. Please try again.';
+      
+      // Check specifically for email already exists error
+      if (errorMessage.includes('Email already exists') || 
+          errorMessage.includes('already in use') ||
+          error.response?.status === 409) {
+        throw new Error('This email is already registered. <a href="/sign-in" class="text-blue-600 hover:underline">Sign in instead?</a>');
+      }
+      
+      throw new Error(errorMessage);
     }
   },
   

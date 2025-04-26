@@ -99,5 +99,16 @@ public class UserController {
     public ResponseEntity<User> updateProfilePicture(@PathVariable String id, @RequestParam String profilePictureUrl) {
         return ResponseEntity.ok(userService.updateProfilePicture(id, profilePictureUrl));
     }
+    
+    /**
+     * Check if a user with the given email exists
+     * @param email The email to check
+     * @return ResponseEntity with exists:true if email exists, exists:false otherwise
+     */
+    @GetMapping("/email/{email}/exists")
+    public ResponseEntity<Object> checkEmailExists(@PathVariable String email) {
+        boolean exists = userService.getUserByEmail(email).isPresent();
+        return ResponseEntity.ok(java.util.Map.of("exists", exists));
+    }
 
 }
