@@ -13,6 +13,11 @@ import { FormInput } from "./form-input"
 import { PasswordInput } from "./password-input"
 import { SocialSignIn } from "./sign-up/social-sign-in"
 
+// Interface for the email existence check API response
+interface EmailExistsResponse {
+  exists: boolean;
+}
+
 interface SignInFormProps {
   onSubmit: (email: string, password: string) => void
   isLoading?: boolean
@@ -48,10 +53,10 @@ export function SignInForm({ onSubmit, isLoading = false }: SignInFormProps) {
       setCheckingEmail(true);
       try {
         // Try to check if email exists via the users API endpoint
-        const response = await api.get(`/user-service/users/email/${email}/exists`);
-        setEmailExists(response.data && response.data.exists);
+        const response = await api.get<EmailExistsResponse>(`/user-service/users/email/${email}/exists`);
+        setEmailExists(response.data.exists);
         
-        if (response.data && !response.data.exists) {
+        if (!response.data.exists) {
           setErrors(prev => ({ ...prev, email: "No account found with this email" }));
         } else {
           setErrors(prev => ({ ...prev, email: undefined }));
