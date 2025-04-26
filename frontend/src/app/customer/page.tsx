@@ -1,9 +1,12 @@
-import React from 'react'
+import React from "react";
+import DisplayCategories from "@/components/common/categories/categories"; // Adjust the import path as needed
 
-const page = () => {
+function Page() {
   return (
-    <div>page</div>
-  )
+    <div>
+      <DisplayCategories />
+    </div>
+  );
 }
 
-export default page
+export default Page;
