@@ -142,7 +142,7 @@ export const userService = {
             [key: string]: any;
           }
           
-          const userResponse = await api.get<UserResponse>(`/user-service/api/users/email/${email}`);
+          const userResponse = await api.get<UserResponse>(`/user-service/users/email/${email}`);
           console.log('User response:', userResponse.data);
           
           if (userResponse.data && userResponse.data.userType) {
@@ -220,6 +220,50 @@ export const userService = {
     return response.data;
   },
   
+  // Get all admin users
+  getAdmins: async (): Promise<User[]> => {
+    try {
+      const response = await api.get<User[]>('/user-service/users/type/ADMIN');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching admins:', error);
+      throw error;
+    }
+  },
+
+  // Get all admin users
+  getRestaurants: async (): Promise<User[]> => {
+    try {
+      const response = await api.get<User[]>('/user-service/users/type/RESTAURANT');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching restaurants:', error);
+      throw error;
+    }
+  },
+  
+  // Get all driver users
+  getDrivers: async (): Promise<User[]> => {
+    try {
+      const response = await api.get<User[]>('/user-service/users/type/DRIVER');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching drivers:', error);
+      throw error;
+    }
+  },
+
+  // Get all customer users
+  getCustomers: async (): Promise<User[]> => {
+    try {
+      const response = await api.get<User[]>('/user-service/users/type/CUSTOMER');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching customers:', error);
+      throw error;
+    }
+  },
+  
   register: async (data: CustomerRegistrationData | RestaurantRegistrationData | DriverRegistrationData, userType: 'customer' | 'restaurant' | 'driver'): Promise<any> => {
     // Prepare the registration data for the backend
     const registrationData = {
@@ -291,6 +335,20 @@ export const userService = {
   updateProfileImage: async (userId: string, imageUrl: string): Promise<User> => {
     const response = await api.put<User>(`/api/users/${userId}/profile-picture`, { profilePictureUrl: imageUrl });
     return response.data;
+  },
+  
+  // Delete a user
+  deleteUser: async (userId: string, userType: string): Promise<void> => {
+    try {
+      await api.request({
+        method: 'DELETE',
+        url: `/user-service/users/${userId}`,
+        data: { userType: userType.toUpperCase() }
+      });
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      throw error;
+    }
   }
 };
 
