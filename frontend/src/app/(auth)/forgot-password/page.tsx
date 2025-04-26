@@ -12,7 +12,7 @@ import { OtpStep } from "@/components/auth/forgot-password/otp-step"
 import { ResetPasswordStep } from "@/components/auth/forgot-password/reset-password"
 import { Modal } from "@/components/auth/modal"
 import { EmailStep } from "@/components/auth/forgot-password/email-step"
-import { forgotPassword, verifyOtp, resetPassword } from "@/services/auth.service"
+import { forgotPassword, verifyOtp, resetPassword } from "@/services/auth-service"
 import { useRouter } from "next/navigation"
 
 export default function ForgotPassword() {

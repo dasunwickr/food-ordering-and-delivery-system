@@ -1,5 +1,5 @@
 import api from '@/lib/axios';
-import axios from 'axios';
+import { setCookie } from 'cookies-next';
 
 // Types
 export interface CuisineType {
@@ -123,38 +123,46 @@ export const userService = {
       
       const result = { ...response.data };
       
-      if (response.data.token) {
-        localStorage.setItem('authToken', response.data.token);
-        localStorage.setItem('userId', response.data.userId);
-        
-        // Try to store sessionId if it exists
-        if (response.data.sessionId) {
-          localStorage.setItem('sessionId', response.data.sessionId);
-          console.log('SessionId stored in localStorage:', response.data.sessionId);
-        } else {
-          console.warn('No sessionId available to store in localStorage');
+      // Get the user type after login
+      try {
+        interface UserResponse {
+          userType: string;
+          [key: string]: any;
         }
         
-        // Get the user type after login
-        try {
-          interface UserResponse {
-            userType: string;
-            [key: string]: any;
-          }
+        const userResponse = await api.get<UserResponse>(`/user-service/users/email/${email}`);
+        console.log('User response:', userResponse.data);
+        
+        if (userResponse.data && userResponse.data.userType) {
+          result.userType = userResponse.data.userType;
+          // Store standardized lowercase version
+          const normalizedUserType = userResponse.data.userType.toLowerCase();
+          result.userType = normalizedUserType;
           
-          const userResponse = await api.get<UserResponse>(`/user-service/users/email/${email}`);
-          console.log('User response:', userResponse.data);
-          
-          if (userResponse.data && userResponse.data.userType) {
-            result.userType = userResponse.data.userType;
-            // Store standardized lowercase version
-            const normalizedUserType = userResponse.data.userType.toLowerCase();
-            result.userType = normalizedUserType;
+          // Store authentication data in localStorage for client-side access
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('authToken', response.data.token);
+            localStorage.setItem('userId', response.data.userId);
             localStorage.setItem('userType', normalizedUserType);
+            localStorage.setItem('sessionId', response.data.sessionId || '');
           }
-        } catch (userError) {
-          console.error('Error fetching user details:', userError);
+          
+          // Also set cookies for server-side auth (middleware)
+          setCookie('authToken', response.data.token, { 
+            maxAge: 30 * 24 * 60 * 60, // 30 days
+            path: '/' 
+          });
+          setCookie('userId', response.data.userId, { 
+            maxAge: 30 * 24 * 60 * 60,
+            path: '/' 
+          });
+          setCookie('userType', normalizedUserType, { 
+            maxAge: 30 * 24 * 60 * 60,
+            path: '/' 
+          });
         }
+      } catch (userError) {
+        console.error('Error fetching user details:', userError);
       }
       
       return result;
@@ -166,39 +174,25 @@ export const userService = {
   
   // Logout function
   logout: async (): Promise<void> => {
-    // Get the session ID to invalidate
-    const sessionId = localStorage.getItem('sessionId');
-    
-    // Remove auth data from localStorage
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('userId');
-    localStorage.removeItem('sessionId');
-    localStorage.removeItem('userType');
-    
-    // Remove cookies as well
-    if (typeof document !== 'undefined') {
-      // Use js-cookie if imported
-      if (typeof window.Cookies !== 'undefined') {
-        window.Cookies.remove('authToken');
-        window.Cookies.remove('userId');
-        window.Cookies.remove('sessionId');
-        window.Cookies.remove('userType');
-      } else {
-        // Fallback to document.cookie
-        document.cookie = 'authToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-        document.cookie = 'userId=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-        document.cookie = 'sessionId=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-        document.cookie = 'userType=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-      }
-    }
-    
     // Call backend to invalidate session
-    if (sessionId) {
-      try {
-        await api.post('/session-service/api/sessions/invalidate', { sessionId });
-      } catch (err) {
-        console.error('Error invalidating session:', err);
+    try {
+      await api.post('/session-service/api/sessions/invalidate');
+      console.log('Session invalidated');
+      
+      // Clear localStorage
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('userId');
+        localStorage.removeItem('userType');
+        localStorage.removeItem('sessionId');
       }
+      
+      // Clear cookies
+      document.cookie = 'authToken=; Max-Age=0; path=/;';
+      document.cookie = 'userId=; Max-Age=0; path=/;';
+      document.cookie = 'userType=; Max-Age=0; path=/;';
+    } catch (err) {
+      console.error('Error invalidating session:', err);
     }
   },
 
@@ -295,10 +289,9 @@ export const userService = {
         restaurantLicenseNumber: data.licenseNumber,
         restaurantTypeId: data.restaurantTypeId,
         cuisineTypeIds: data.cuisineTypeIds,
-        restaurantDocuments: data.documents, // Backend expects restaurantDocuments
+        restaurantDocuments: data.documents, 
         restaurantAddress: data.location,
         location: data.locationCoordinates,
-        // Ensure this matches the backend schema
         openingTime: data.operatingHours.map(hours => ({
           day: hours.day,
           openingTime: hours.openTime,
@@ -310,11 +303,10 @@ export const userService = {
       Object.assign(registrationData.profile, {
         vehicleTypeId: data.vehicleTypeId,
         vehicleNumber: data.licensePlate,
-        vehicleDocuments: data.documents, // Backend expects vehicleDocuments
+        vehicleDocuments: data.documents, 
         location: data.locationCoordinates
       });
     } else if (userType === 'customer') {
-      // Basic customer data already added to the common profile section
       if ('locationCoordinates' in data && data.locationCoordinates) {
         Object.assign(registrationData.profile, {
           location: data.locationCoordinates
@@ -325,6 +317,13 @@ export const userService = {
     try {
       // Send registration data to backend
       const response = await api.post('/auth-service/auth/signup', registrationData);
+      
+      // After successful registration, redirect to sign-in page
+      if (typeof window !== 'undefined' && window.location) {
+        // Use window.location to redirect
+        window.location.href = '/sign-in';
+      }
+      
       return response.data;
     } catch (error: any) {
       console.error('Registration error:', error.response?.data || error);

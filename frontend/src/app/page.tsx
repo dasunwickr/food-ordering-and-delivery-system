@@ -2,40 +2,40 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { getUserType, isAuthenticated } from "@/services/auth-service";
 import { Button } from "@/components/ui/button";
 import {
-  ResizableHandle,
   ResizablePanel,
   ResizablePanelGroup,
+  ResizableHandle,
 } from "@/components/ui/resizable";
 
 export default function Home() {
   const router = useRouter();
 
-  // TODO : Check routing and authentication logic
-  
   useEffect(() => {
     // Check if user is already authenticated
-    const authToken = localStorage.getItem("authToken");
-    const userType = localStorage.getItem("userType");
-    
-    if (authToken && userType) {
-      // Redirect based on user type
-      switch (userType.toLowerCase()) {
-        case "admin":
-          router.push("/admin");
-          break;
-        case "customer":
-          router.push("/customer");
-          break;
-        case "restaurant":
-          router.push("/restaurant");
-          break;
-        case "driver":
-          router.push("/driver");
-          break;
-        default:
-          router.push("/browse");
+    if (isAuthenticated()) {
+      const userType = getUserType();
+
+      if (userType) {
+        // Redirect based on user type
+        switch (userType.toLowerCase()) {
+          case "admin":
+            router.push("/admin");
+            break;
+          case "customer":
+            router.push("/customer");
+            break;
+          case "restaurant":
+            router.push("/restaurant");
+            break;
+          case "driver":
+            router.push("/driver");
+            break;
+          default:
+            router.push("/browse");
+        }
       }
     }
   }, [router]);

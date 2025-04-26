@@ -1,16 +1,15 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { cookies } from 'next/headers';
 
-// TODO: Fix the Next JS Middleware
-// Routes that need protection based on user type
-type UserType = 'ADMIN' | 'CUSTOMER' | 'RESTAURANT' | 'DRIVER';
+// User types for role-based access control
+type UserType = 'admin' | 'customer' | 'restaurant' | 'driver';
 
-const PROTECTED_ROUTES: Record<UserType, string[]> = {
-  ADMIN: ['/admin'],
-  CUSTOMER: ['/customer'],
-  RESTAURANT: ['/restaurant'],
-  DRIVER: ['/driver']
+// Map of routes to the user types that can access them
+const PROTECTED_ROUTES: Record<string, UserType> = {
+  '/admin': 'admin',
+  '/customer': 'customer',
+  '/restaurant': 'restaurant',
+  '/driver': 'driver',
 };
 
 // Public routes that don't require authentication
@@ -18,6 +17,7 @@ const PUBLIC_ROUTES = [
   '/sign-in',
   '/sign-up',
   '/forgot-password',
+  '/reset-password',
   '/',
   '/about',
   '/contact',
@@ -26,14 +26,10 @@ const PUBLIC_ROUTES = [
   '/_next',
   '/favicon.ico',
   '/placeholder.svg',
+  '/unauthorized', // Added unauthorized page to public routes
 ];
 
-// Check if the path is a protected route
-function isProtectedRoute(pathname: string): boolean {
-  return Object.values(PROTECTED_ROUTES).flat().some(route => pathname.startsWith(route));
-}
-
-export async function middleware(request: NextRequest) {
+export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   
   // Skip middleware on public routes
@@ -41,31 +37,44 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
   
-  // In middleware, we need to use cookies as localStorage is not accessible
-  // The auth flow should set cookies in addition to localStorage
+  // Get auth token and user type from cookies
   const token = request.cookies.get('authToken')?.value;
-  const userType = request.cookies.get('userType')?.value;
+  const userType = request.cookies.get('userType')?.value?.toLowerCase() as UserType;
+  const userId = request.cookies.get('userId')?.value;
   
-  // If no token or user type, redirect to sign in
-  if (!token || !userType) {
+  // If no token, user type, or user ID, redirect to sign in
+  if (!token || !userType || !userId) {
+    console.log(`Authentication required: Redirecting from ${pathname} to sign-in`);
     return NextResponse.redirect(new URL('/sign-in', request.url));
   }
   
-  const userTypeUpperCase = userType.toUpperCase();
-  if (isProtectedRoute(pathname)) {
-    const userTypes = Object.keys(PROTECTED_ROUTES) as UserType[];
-    
-    for (const type of userTypes) {
-      if (PROTECTED_ROUTES[type].some(route => pathname.startsWith(route))) {
-        // User is trying to access a route that requires a specific user type
-        if (userTypeUpperCase !== type) {
-          return NextResponse.redirect(new URL('/unauthorized', request.url));
-        }
-      }
-    }
+  // Check route access permissions
+  const routePrefix = `/${pathname.split('/')[1]}`;
+  const requiredUserType = PROTECTED_ROUTES[routePrefix];
+  
+  // If this is a protected route and user type doesn't match required type
+  if (requiredUserType && userType !== requiredUserType) {
+    console.log(`Access denied: ${userType} trying to access ${routePrefix} which requires ${requiredUserType}`);
+    return NextResponse.redirect(new URL('/unauthorized', request.url));
   }
   
-  return NextResponse.next();
+  // If the user is at the root, redirect them to their appropriate dashboard
+  if (pathname === '/') {
+    const dashboardUrl = `/${userType}`;
+    return NextResponse.redirect(new URL(dashboardUrl, request.url));
+  }
+  
+  // Add auth headers to the request for backend services
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set('x-user-id', userId);
+  requestHeaders.set('x-user-type', userType);
+  
+  // Continue with added auth headers
+  return NextResponse.next({
+    request: {
+      headers: requestHeaders,
+    },
+  });
 }
 
 // Specify which routes this middleware should run on
