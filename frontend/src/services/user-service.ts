@@ -204,8 +204,13 @@ export const userService = {
 
   // Get all cuisine types
   getCuisineTypes: async (): Promise<CuisineType[]> => {
-    const response = await api.get<CuisineType[]>('/user-service/cuisine-types');
-    return response.data;
+    try {
+      const response = await api.get<CuisineType[]>('/user-service/cuisine-types');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching cuisine types:', error);
+      throw error;
+    }
   },
 
   // Get all restaurant types
@@ -216,8 +221,13 @@ export const userService = {
 
   // Get all vehicle types for drivers
   getVehicleTypes: async (): Promise<VehicleType[]> => {
-    const response = await api.get<VehicleType[]>('/user-service/vehicle-types');
-    return response.data;
+    try {
+      const response = await api.get<VehicleType[]>('/user-service/vehicle-types');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching vehicle types:', error);
+      throw error;
+    }
   },
   
   // Get all admin users
@@ -349,7 +359,106 @@ export const userService = {
       console.error('Error deleting user:', error);
       throw error;
     }
-  }
+  },
+
+  // Restaurant Types Management
+  createRestaurantType: async (restaurantType: Omit<RestaurantType, "id">): Promise<RestaurantType> => {
+    try {
+      const response = await api.post<RestaurantType>('/user-service/restaurant-types', restaurantType);
+      return response.data;
+    } catch (error) {
+      console.error('Error creating restaurant type:', error);
+      throw error;
+    }
+  },
+  
+  updateRestaurantType: async (restaurantType: RestaurantType): Promise<RestaurantType> => {
+    try {
+      const response = await api.put<RestaurantType>(
+        `/user-service/restaurant-types/${restaurantType.id}`, 
+        { type: restaurantType.type, capacity: restaurantType.capacity }
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error updating restaurant type:', error);
+      throw error;
+    }
+  },
+  
+  deleteRestaurantType: async (id: string): Promise<void> => {
+    try {
+      await api.delete(`/user-service/restaurant-types/${id}`);
+    } catch (error) {
+      console.error('Error deleting restaurant type:', error);
+      throw error;
+    }
+  },
+
+  // Vehicle Types Management
+  createVehicleType: async (vehicleType: Omit<VehicleType, "id">): Promise<VehicleType> => {
+    try {
+      const response = await api.post<VehicleType>('/user-service/vehicle-types', vehicleType);
+      return response.data;
+    } catch (error) {
+      console.error('Error creating vehicle type:', error);
+      throw error;
+    }
+  },
+  
+  updateVehicleType: async (vehicleType: VehicleType): Promise<VehicleType> => {
+    try {
+      const response = await api.put<VehicleType>(
+        `/user-service/vehicle-types/${vehicleType.id}`, 
+        { type: vehicleType.type, capacity: vehicleType.capacity }
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error updating vehicle type:', error);
+      throw error;
+    }
+  },
+  
+  deleteVehicleType: async (id: string): Promise<void> => {
+    try {
+      await api.delete(`/user-service/vehicle-types/${id}`);
+    } catch (error) {
+      console.error('Error deleting vehicle type:', error);
+      throw error;
+    }
+  },
+
+  // Cuisine Types Management
+  createCuisineType: async (cuisineType: Omit<CuisineType, "id">): Promise<CuisineType> => {
+    try {
+      const response = await api.post<CuisineType>('/user-service/cuisine-types', cuisineType);
+      return response.data;
+    } catch (error) {
+      console.error('Error creating cuisine type:', error);
+      throw error;
+    }
+  },
+  
+  updateCuisineType: async (cuisineType: CuisineType): Promise<CuisineType> => {
+    try {
+      const response = await api.put<CuisineType>(
+        `/user-service/cuisine-types/${cuisineType.id}`, 
+        { name: cuisineType.name }
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error updating cuisine type:', error);
+      throw error;
+    }
+  },
+  
+  deleteCuisineType: async (id: string): Promise<void> => {
+    try {
+      await api.delete(`/user-service/cuisine-types/${id}`);
+    } catch (error) {
+      console.error('Error deleting cuisine type:', error);
+      throw error;
+    }
+  },
 };
 
 export default userService;
