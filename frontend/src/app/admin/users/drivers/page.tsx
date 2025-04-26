@@ -1,59 +1,70 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { DriversTable } from "@/components/user-service/users/drivers/drivers-table"
 import { DriverDetailsModal } from "@/components/user-service/users/drivers/driver-detials-modal"
 import { EditDriverModal } from "@/components/user-service/users/drivers/edit-driver-modal"
-import { userService } from "@/services/user-service"
-import { toast } from "sonner"
-import { Loader2 } from "lucide-react"
+
+// Sample data
+const SAMPLE_DRIVERS = [
+  {
+    id: "1",
+    firstName: "Michael",
+    lastName: "Johnson",
+    email: "michael.j@example.com",
+    contactNumber: "+1 234 567 893",
+    profilePicture: "/placeholder.svg?height=40&width=40",
+    vehicleType: "Car",
+    vehicleNumber: "ABC-1234",
+    documents: [
+      { name: "Driver's License", url: "#" },
+      { name: "Vehicle Registration", url: "#" },
+      { name: "Insurance", url: "#" },
+    ],
+    status: "Active",
+  },
+  {
+    id: "2",
+    firstName: "Sarah",
+    lastName: "Williams",
+    email: "sarah.w@example.com",
+    contactNumber: "+1 234 567 894",
+    profilePicture: "/placeholder.svg?height=40&width=40",
+    vehicleType: "Motorcycle",
+    vehicleNumber: "XYZ-5678",
+    documents: [
+      { name: "Driver's License", url: "#" },
+      { name: "Vehicle Registration", url: "#" },
+      { name: "Insurance", url: "#" },
+    ],
+    status: "Active",
+  },
+  {
+    id: "3",
+    firstName: "David",
+    lastName: "Brown",
+    email: "david.b@example.com",
+    contactNumber: "+1 234 567 895",
+    profilePicture: "/placeholder.svg?height=40&width=40",
+    vehicleType: "Bicycle",
+    vehicleNumber: "N/A",
+    documents: [
+      { name: "ID Card", url: "#" },
+      { name: "Proof of Address", url: "#" },
+    ],
+    status: "Pending",
+  },
+]
 
 export default function DriversPage() {
-  const [drivers, setDrivers] = useState<any[]>([])
+  const [drivers, setDrivers] = useState(SAMPLE_DRIVERS)
   const [searchQuery, setSearchQuery] = useState("")
   const [activeTab, setActiveTab] = useState("all")
   const [detailsModalOpen, setDetailsModalOpen] = useState(false)
   const [editModalOpen, setEditModalOpen] = useState(false)
   const [selectedDriver, setSelectedDriver] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    fetchDrivers()
-  }, [activeTab])
-
-  const fetchDrivers = async () => {
-    try {
-      setLoading(true)
-      setError(null)
-      
-      const fetchedDrivers = await userService.getDrivers()
-      
-      const transformedDrivers = fetchedDrivers.map(driver => ({
-        id: driver.id,
-        firstName: driver.firstName,
-        lastName: driver.lastName,
-        email: driver.email,
-        contactNumber: driver.contactNumber || driver.phone,
-        profilePicture: driver.profilePictureUrl || driver.profilePicture || "/placeholder.svg",
-        vehicleType: driver.vehicleType?.type || driver.vehicleType || "Not specified",
-        vehicleNumber: driver.vehicleNumber || "N/A",
-        documents: driver.vehicleDocuments || driver.documents || [],
-        status: driver.driverStatus || driver.status || "Pending",
-        location: driver.location || { lat: 0, lng: 0 },
-      }))
-      
-      setDrivers(transformedDrivers)
-    } catch (err) {
-      console.error('Failed to fetch drivers:', err)
-      setError('Failed to load drivers. Please try again later.')
-      toast.error('Failed to load drivers')
-    } finally {
-      setLoading(false)
-    }
-  }
 
   const filteredDrivers = drivers.filter((driver) => {
     const matchesSearch =
@@ -61,6 +72,10 @@ export default function DriversPage() {
       driver.lastName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       driver.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
       driver.vehicleNumber.toLowerCase().includes(searchQuery.toLowerCase())
+
+    if (activeTab === "all") return matchesSearch
+    if (activeTab === "active") return matchesSearch && driver.status === "Active"
+    if (activeTab === "pending") return matchesSearch && driver.status === "Pending"
 
     return matchesSearch
   })
@@ -75,26 +90,12 @@ export default function DriversPage() {
     setEditModalOpen(true)
   }
 
-  const handleApprove = async (id: string) => {
-    try {
-      await userService.approveUser(id, 'driver')
-      setDrivers(drivers.map((driver) => (driver.id === id ? { ...driver, status: "Active" } : driver)))
-      toast.success('Driver approved successfully')
-    } catch (err) {
-      console.error('Failed to approve driver:', err)
-      toast.error('Failed to approve driver')
-    }
+  const handleApprove = (id: string) => {
+    setDrivers(drivers.map((driver) => (driver.id === id ? { ...driver, status: "Active" } : driver)))
   }
 
-  const handleReject = async (id: string) => {
-    try {
-      await userService.rejectUser(id, 'driver')
-      setDrivers(drivers.map((driver) => (driver.id === id ? { ...driver, status: "Rejected" } : driver)))
-      toast.success('Driver rejected successfully')
-    } catch (err) {
-      console.error('Failed to reject driver:', err)
-      toast.error('Failed to reject driver')
-    }
+  const handleReject = (id: string) => {
+    setDrivers(drivers.map((driver) => (driver.id === id ? { ...driver, status: "Rejected" } : driver)))
   }
 
   return (
@@ -118,29 +119,13 @@ export default function DriversPage() {
         </Tabs>
       </div>
 
-      {loading ? (
-        <div className="flex h-[400px] w-full items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
-      ) : error ? (
-        <div className="flex h-[400px] w-full flex-col items-center justify-center">
-          <p className="text-destructive">{error}</p>
-          <button
-            onClick={fetchDrivers}
-            className="mt-4 rounded-md bg-primary px-4 py-2 text-primary-foreground"
-          >
-            Retry
-          </button>
-        </div>
-      ) : (
-        <DriversTable
-          drivers={filteredDrivers}
-          onViewDetails={handleViewDetails}
-          onEdit={handleEdit}
-          onApprove={handleApprove}
-          onReject={handleReject}
-        />
-      )}
+      <DriversTable
+        drivers={filteredDrivers}
+        onViewDetails={handleViewDetails}
+        onEdit={handleEdit}
+        onApprove={handleApprove}
+        onReject={handleReject}
+      />
 
       {selectedDriver && (
         <>

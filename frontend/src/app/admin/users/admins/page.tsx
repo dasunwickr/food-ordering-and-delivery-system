@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -10,51 +10,46 @@ import { EditAdminModal } from "@/components/user-service/users/admins/edit-admi
 import { DeleteAdminModal } from "@/components/user-service/users/admins/delete-admin-modal"
 import { userService } from "@/services/user-service"
 import { toast } from "sonner"
-import { Loader2 } from "lucide-react"
+import api from "@/lib/axios"
+
+// Sample data
+const SAMPLE_ADMINS = [
+  {
+    id: "1",
+    firstName: "John",
+    lastName: "Doe",
+    email: "john.doe@example.com",
+    contactNumber: "+1 234 567 890",
+    profilePicture: "/placeholder.svg?height=40&width=40",
+    adminType: "Top Level",
+  },
+  {
+    id: "2",
+    firstName: "Jane",
+    lastName: "Smith",
+    email: "jane.smith@example.com",
+    contactNumber: "+1 234 567 891",
+    profilePicture: "/placeholder.svg?height=40&width=40",
+    adminType: "2nd Level",
+  },
+  {
+    id: "3",
+    firstName: "Robert",
+    lastName: "Johnson",
+    email: "robert.johnson@example.com",
+    contactNumber: "+1 234 567 892",
+    profilePicture: "/placeholder.svg?height=40&width=40",
+    adminType: "3rd Level",
+  },
+]
 
 export default function AdminsPage() {
-  const [admins, setAdmins] = useState<any[]>([])
+  const [admins, setAdmins] = useState(SAMPLE_ADMINS)
   const [searchQuery, setSearchQuery] = useState("")
   const [createModalOpen, setCreateModalOpen] = useState(false)
   const [editModalOpen, setEditModalOpen] = useState(false)
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
   const [selectedAdmin, setSelectedAdmin] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    fetchAdmins()
-  }, [])
-
-  const fetchAdmins = async () => {
-    try {
-      setLoading(true)
-      setError(null)
-      
-      const fetchedAdmins = await userService.getAdmins()
-      
-      // Transform the API data to match the format expected by the component
-      const transformedAdmins = fetchedAdmins.map(admin => ({
-        id: admin.id,
-        firstName: admin.firstName,
-        lastName: admin.lastName,
-        email: admin.email,
-        contactNumber: admin.contactNumber || admin.phone || "Not provided",
-        profilePicture: admin.profilePictureUrl || admin.profilePicture || "/placeholder.svg",
-        adminType: admin.adminType === "TOP_LEVEL_ADMIN" ? "Top Level" :
-                  admin.adminType === "SECOND_LEVEL_ADMIN" ? "2nd Level" :
-                  admin.adminType === "THIRD_LEVEL_ADMIN" ? "3rd Level" : "Admin",
-      }))
-      
-      setAdmins(transformedAdmins)
-    } catch (err) {
-      console.error('Failed to fetch admins:', err)
-      setError('Failed to load admins. Please try again later.')
-      toast.error('Failed to load admins')
-    } finally {
-      setLoading(false)
-    }
-  }
 
   const filteredAdmins = admins.filter(
     (admin) =>
@@ -73,19 +68,10 @@ export default function AdminsPage() {
     setDeleteModalOpen(true)
   }
 
-  const confirmDelete = async (password: string) => {
-    try {
-      // In a real app, you would verify password and then delete the admin
-      // await userService.deleteAdmin(selectedAdmin.id, password);
-      
-      // For now, we'll just update the UI
-      setAdmins(admins.filter((admin) => admin.id !== selectedAdmin.id))
-      setDeleteModalOpen(false)
-      toast.success('Admin deleted successfully')
-    } catch (err) {
-      console.error('Failed to delete admin:', err)
-      toast.error('Failed to delete admin')
-    }
+  const confirmDelete = (password: string) => {
+    // In a real app, verify password before deleting
+    setAdmins(admins.filter((admin) => admin.id !== selectedAdmin.id))
+    setDeleteModalOpen(false)
   }
 
   const createAdmin = async (formData: any) => {
@@ -107,18 +93,7 @@ export default function AdminsPage() {
       }
 
       // Prepare auth data according to validation schema requirements
-      const authData: {
-        email: string;
-        password: string;
-        userType: string;
-        profile: {
-          firstName: string;
-          lastName: string;
-          contactNumber: string;
-          profilePictureUrl?: string;
-          adminType: string;
-        }
-      } = {
+      const authData = {
         email: formData.email,
         password: formData.password,
         userType: "ADMIN",
@@ -130,19 +105,20 @@ export default function AdminsPage() {
           adminType: adminTypeValue // Use the mapped enum value
         }
       };
+      
+      console.log("Sending auth data:", authData);
 
       // Call the auth service signup endpoint
-      const authResponse = await userService.register(authData as any, "admin");
+      const authResponse = await api.post('/auth-service/auth/signup', authData);
       
-      if (authResponse && authResponse.userId) {
+      if (authResponse.data && typeof authResponse.data === 'object' && 'userId' in authResponse.data) {
         // If successful, add the new admin to the local state
         const newAdmin = {
-          id: authResponse.userId,
+          id: authResponse.data.userId,
           ...formData
         };
         
         setAdmins([...admins, newAdmin]);
-        setCreateModalOpen(false);
         toast.success("Admin created successfully");
       } else {
         toast.error("Failed to create admin account");
@@ -175,23 +151,7 @@ export default function AdminsPage() {
         />
       </div>
 
-      {loading ? (
-        <div className="flex h-[400px] w-full items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
-      ) : error ? (
-        <div className="flex h-[400px] w-full flex-col items-center justify-center">
-          <p className="text-destructive">{error}</p>
-          <button
-            onClick={fetchAdmins}
-            className="mt-4 rounded-md bg-primary px-4 py-2 text-primary-foreground"
-          >
-            Retry
-          </button>
-        </div>
-      ) : (
-        <AdminsTable admins={filteredAdmins} onEdit={handleEdit} onDelete={handleDelete} />
-      )}
+      <AdminsTable admins={filteredAdmins} onEdit={handleEdit} onDelete={handleDelete} />
 
       <CreateAdminModal
         open={createModalOpen}

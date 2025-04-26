@@ -1,71 +1,102 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { RestaurantsTable } from "@/components/user-service/users/restaurants/restaurant-table"
 import { RestaurantDetailsModal } from "@/components/user-service/users/restaurants/restaurant-details-modal"
 import { EditRestaurantModal } from "@/components/user-service/users/restaurants/edit-restaurant-modal"
-import { userService } from "@/services/user-service"
-import { toast } from "sonner"
-import { Loader2 } from "lucide-react"
+
+// Sample data
+const SAMPLE_RESTAURANTS = [
+  {
+    id: "1",
+    name: "Burger Palace",
+    address: "123 Main St, New York, NY",
+    licenseNumber: "LIC-12345",
+    type: "Fast Food",
+    cuisines: ["American", "Burgers"],
+    status: "Active",
+    documents: [
+      { name: "Business License", url: "#" },
+      { name: "Food Safety Certificate", url: "#" },
+    ],
+    openingTimes: [
+      { day: "Monday", open: "09:00", close: "22:00" },
+      { day: "Tuesday", open: "09:00", close: "22:00" },
+      { day: "Wednesday", open: "09:00", close: "22:00" },
+      { day: "Thursday", open: "09:00", close: "22:00" },
+      { day: "Friday", open: "09:00", close: "23:00" },
+      { day: "Saturday", open: "10:00", close: "23:00" },
+      { day: "Sunday", open: "10:00", close: "22:00" },
+    ],
+    location: { lat: 40.7128, lng: -74.006 },
+  },
+  {
+    id: "2",
+    name: "Sushi Express",
+    address: "456 Broadway, New York, NY",
+    licenseNumber: "LIC-67890",
+    type: "Restaurant",
+    cuisines: ["Japanese", "Sushi"],
+    status: "Active",
+    documents: [
+      { name: "Business License", url: "#" },
+      { name: "Food Safety Certificate", url: "#" },
+    ],
+    openingTimes: [
+      { day: "Monday", open: "11:00", close: "22:00" },
+      { day: "Tuesday", open: "11:00", close: "22:00" },
+      { day: "Wednesday", open: "11:00", close: "22:00" },
+      { day: "Thursday", open: "11:00", close: "22:00" },
+      { day: "Friday", open: "11:00", close: "23:00" },
+      { day: "Saturday", open: "12:00", close: "23:00" },
+      { day: "Sunday", open: "12:00", close: "22:00" },
+    ],
+    location: { lat: 40.7228, lng: -73.998 },
+  },
+  {
+    id: "3",
+    name: "Pizza Corner",
+    address: "789 5th Ave, New York, NY",
+    licenseNumber: "LIC-24680",
+    type: "Restaurant",
+    cuisines: ["Italian", "Pizza"],
+    status: "Pending",
+    documents: [
+      { name: "Business License", url: "#" },
+      { name: "Food Safety Certificate", url: "#" },
+    ],
+    openingTimes: [
+      { day: "Monday", open: "10:00", close: "23:00" },
+      { day: "Tuesday", open: "10:00", close: "23:00" },
+      { day: "Wednesday", open: "10:00", close: "23:00" },
+      { day: "Thursday", open: "10:00", close: "23:00" },
+      { day: "Friday", open: "10:00", close: "00:00" },
+      { day: "Saturday", open: "11:00", close: "00:00" },
+      { day: "Sunday", open: "11:00", close: "23:00" },
+    ],
+    location: { lat: 40.7648, lng: -73.977 },
+  },
+]
 
 export default function RestaurantsPage() {
-  const [restaurants, setRestaurants] = useState<any[]>([])
+  const [restaurants, setRestaurants] = useState(SAMPLE_RESTAURANTS)
   const [searchQuery, setSearchQuery] = useState("")
   const [activeTab, setActiveTab] = useState("all")
   const [detailsModalOpen, setDetailsModalOpen] = useState(false)
   const [editModalOpen, setEditModalOpen] = useState(false)
   const [selectedRestaurant, setSelectedRestaurant] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    fetchRestaurants()
-  }, [activeTab])
-
-  const fetchRestaurants = async () => {
-    try {
-      setLoading(true)
-      setError(null)
-
-      let statusFilter: 'ACTIVE' | 'PENDING' | 'REJECTED' | undefined
-      
-      if (activeTab === 'active') statusFilter = 'ACTIVE'
-      else if (activeTab === 'pending') statusFilter = 'PENDING'
-      else if (activeTab === 'rejected') statusFilter = 'REJECTED'
-      
-      const fetchedRestaurants = await userService.getRestaurants()
-      
-      // Transform the API data to match the format expected by the component
-      const transformedRestaurants = fetchedRestaurants.map(restaurant => ({
-        id: restaurant.id,
-        name: restaurant.restaurantName || restaurant.name,
-        address: restaurant.restaurantAddress || restaurant.address,
-        licenseNumber: restaurant.restaurantLicenseNumber || restaurant.licenseNumber,
-        type: restaurant.restaurantType?.type || restaurant.type || "N/A",
-        cuisines: restaurant.cuisineTypes?.map((ct: { name: string }) => ct.name) || restaurant.cuisines || [],
-        status: restaurant.restaurantStatus || restaurant.status || "Pending",
-        documents: restaurant.restaurantDocuments || restaurant.documents || [],
-        openingTimes: restaurant.openingTime || restaurant.openingTimes || [],
-        location: restaurant.location || { lat: 0, lng: 0 },
-      }))
-      
-      setRestaurants(transformedRestaurants)
-    } catch (err) {
-      console.error('Failed to fetch restaurants:', err)
-      setError('Failed to load restaurants. Please try again later.')
-      toast.error('Failed to load restaurants')
-    } finally {
-      setLoading(false)
-    }
-  }
 
   const filteredRestaurants = restaurants.filter((restaurant) => {
     const matchesSearch =
       restaurant.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       restaurant.address.toLowerCase().includes(searchQuery.toLowerCase()) ||
       restaurant.licenseNumber.toLowerCase().includes(searchQuery.toLowerCase())
+
+    if (activeTab === "all") return matchesSearch
+    if (activeTab === "active") return matchesSearch && restaurant.status === "Active"
+    if (activeTab === "pending") return matchesSearch && restaurant.status === "Pending"
 
     return matchesSearch
   })
@@ -80,30 +111,16 @@ export default function RestaurantsPage() {
     setEditModalOpen(true)
   }
 
-  const handleApprove = async (id: string) => {
-    try {
-      await userService.approveUser(id, 'restaurant')
-      setRestaurants(
-        restaurants.map((restaurant) => (restaurant.id === id ? { ...restaurant, status: "Active" } : restaurant))
-      )
-      toast.success('Restaurant approved successfully')
-    } catch (err) {
-      console.error('Failed to approve restaurant:', err)
-      toast.error('Failed to approve restaurant')
-    }
+  const handleApprove = (id: string) => {
+    setRestaurants(
+      restaurants.map((restaurant) => (restaurant.id === id ? { ...restaurant, status: "Active" } : restaurant)),
+    )
   }
 
-  const handleReject = async (id: string) => {
-    try {
-      await userService.rejectUser(id, 'restaurant')
-      setRestaurants(
-        restaurants.map((restaurant) => (restaurant.id === id ? { ...restaurant, status: "Rejected" } : restaurant))
-      )
-      toast.success('Restaurant rejected successfully')
-    } catch (err) {
-      console.error('Failed to reject restaurant:', err)
-      toast.error('Failed to reject restaurant')
-    }
+  const handleReject = (id: string) => {
+    setRestaurants(
+      restaurants.map((restaurant) => (restaurant.id === id ? { ...restaurant, status: "Rejected" } : restaurant)),
+    )
   }
 
   return (
@@ -127,29 +144,13 @@ export default function RestaurantsPage() {
         </Tabs>
       </div>
 
-      {loading ? (
-        <div className="flex h-[400px] w-full items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
-      ) : error ? (
-        <div className="flex h-[400px] w-full flex-col items-center justify-center">
-          <p className="text-destructive">{error}</p>
-          <button
-            onClick={fetchRestaurants}
-            className="mt-4 rounded-md bg-primary px-4 py-2 text-primary-foreground"
-          >
-            Retry
-          </button>
-        </div>
-      ) : (
-        <RestaurantsTable
-          restaurants={filteredRestaurants}
-          onViewDetails={handleViewDetails}
-          onEdit={handleEdit}
-          onApprove={handleApprove}
-          onReject={handleReject}
-        />
-      )}
+      <RestaurantsTable
+        restaurants={filteredRestaurants}
+        onViewDetails={handleViewDetails}
+        onEdit={handleEdit}
+        onApprove={handleApprove}
+        onReject={handleReject}
+      />
 
       {selectedRestaurant && (
         <>
@@ -166,8 +167,8 @@ export default function RestaurantsPage() {
             onSubmit={(data) => {
               setRestaurants(
                 restaurants.map((restaurant) =>
-                  restaurant.id === selectedRestaurant.id ? { ...restaurant, ...data } : restaurant
-                )
+                  restaurant.id === selectedRestaurant.id ? { ...restaurant, ...data } : restaurant,
+                ),
               )
               setEditModalOpen(false)
             }}

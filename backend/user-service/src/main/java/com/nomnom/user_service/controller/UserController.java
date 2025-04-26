@@ -1,5 +1,6 @@
 package com.nomnom.user_service.controller;
 
+import com.nomnom.user_service.enums.UserType;
 import com.nomnom.user_service.model.Driver;
 import com.nomnom.user_service.model.Restaurant;
 import com.nomnom.user_service.model.User;
@@ -42,8 +43,8 @@ public class UserController {
     }
 
     @GetMapping("/type/{userType}")
-    public ResponseEntity<List<User>> getUsersByType(@PathVariable String userType) {
-        return ResponseEntity.ok(userService.getUsersByType(userType));
+    public ResponseEntity<List<User>> getUsersByType(@PathVariable UserType userType) {
+        return ResponseEntity.ok(userService.getUsersByType(userType.name()));
     }
 
     @PutMapping("/{id}")
