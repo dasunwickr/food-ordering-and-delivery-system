@@ -1,5 +1,4 @@
 import api from '@/lib/axios';
-import axios from 'axios';
 
 // Types
 export interface CuisineType {
@@ -83,12 +82,105 @@ export interface CustomerRegistrationData extends RegisterCommonData {
   };
 }
 
+export interface AdminRegistrationData extends RegisterCommonData {
+  adminType:"TOP_LEVEL_ADMIN" | "SECOND_LEVEL_ADMIN" | "THIRD_LEVEL_ADMIN";
+}
+
 // User related API calls
 export const userService = {
   // Get the current user profile
   getCurrentUser: async (): Promise<User> => {
     const response = await api.get<User>('/api/users/me');
     return response.data;
+  },
+
+  // Get all users of a specific type
+  getUsersByType: async (userType: 'customer' | 'restaurant' | 'driver' | 'admin'): Promise<any[]> => {
+    try {
+      const response = await api.get<any[]>(`/user-service/api/users/type/${userType.toUpperCase()}`);
+      return response.data || []; 
+    } catch (error) {
+      console.error(`Error fetching ${userType} users:`, error);
+      throw error;
+    }
+  },
+
+  // Get drivers with details
+  getDrivers: async (): Promise<any[]> => {
+    try {
+      // Updated URL to match the API gateway format similar to other endpoints
+      let url = 'user-service/users/type/driver';
+      
+      const response = await api.get<any[]>(url);
+      return response.data || []; 
+    } catch (error) {
+      console.error('Error fetching drivers:', error);
+      throw error;
+    }
+  },
+
+  getCustomers: async (): Promise<any[]> => {
+    try {
+      // Updated URL to match the API gateway format similar to other endpoints
+      let url = 'user-service/users/type/customer';
+      
+      const response = await api.get<any[]>(url);
+      return response.data || []; 
+    } catch (error) {
+      console.error('Error fetching drivers:', error);
+      throw error;
+    }
+  },
+
+  getRestaurants: async (): Promise<any[]> => {
+    try {
+      // Updated URL to match the API gateway format similar to other endpoints
+      let url = 'user-service/users/type/restaurant';
+      
+      const response = await api.get<any[]>(url);
+      return response.data || []; 
+    } catch (error) {
+      console.error('Error fetching drivers:', error);
+      throw error;
+    }
+  },
+
+  getAdmins: async (): Promise<any[]> => {
+    try {
+      // Updated URL to match the API gateway format similar to other endpoints
+      let url = 'user-service/users/type/admin';
+      
+      const response = await api.get<any[]>(url);
+      return response.data || []; 
+    } catch (error) {
+      console.error('Error fetching drivers:', error);
+      throw error;
+    }
+  },
+
+
+  // Approve a restaurant or driver
+  approveUser: async (id: string, userType: 'restaurant' | 'driver'): Promise<any> => {
+    try {
+      const endpoint = userType === 'restaurant' ? 'restaurants' : 'drivers';
+      const response = await api.put(`/user-service/api/${endpoint}/${id}/approve`);
+      return response.data;
+    } catch (error) {
+      console.error(`Error approving ${userType}:`, error);
+      throw error;
+    }
+  },
+
+  // Reject a restaurant or driver
+  rejectUser: async (id: string, userType: 'restaurant' | 'driver', reason?: string): Promise<any> => {
+    try {
+      const endpoint = userType === 'restaurant' ? 'restaurants' : 'drivers';
+      const response = await api.put(`/user-service/api/${endpoint}/${id}/reject`, { reason });
+      return response.data;
+    } catch (error) {
+      console.error(`Error rejecting ${userType}:`, error);
+      throw error;
+    }
   },
 
   // User login
@@ -220,7 +312,7 @@ export const userService = {
     return response.data;
   },
   
-  register: async (data: CustomerRegistrationData | RestaurantRegistrationData | DriverRegistrationData, userType: 'customer' | 'restaurant' | 'driver'): Promise<any> => {
+  register: async (data: CustomerRegistrationData | RestaurantRegistrationData | DriverRegistrationData , userType: 'customer' | 'restaurant' | 'driver' | 'admin'): Promise<any> => {
     // Prepare the registration data for the backend
     const registrationData = {
       email: data.email,
