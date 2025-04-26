@@ -1,4 +1,4 @@
-import MenuItems from "@/components/common/menu/menuItems/MenuItems";
+import MenuItems from "@/components/restaurant/menu-items";
 
 // Fetch menu items on the server side
 async function fetchMenuItems() {
