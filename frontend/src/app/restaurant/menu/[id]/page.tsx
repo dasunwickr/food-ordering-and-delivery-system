@@ -1,5 +1,12 @@
 "use client";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import axios from "axios";
+import { useRouter,useParams } from "next/navigation"; // Import useRouter for navigation
+import { useForm, FormProvider } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Button } from "@/components/ui/button";
+
 import {
   FormControl,
   FormField,
@@ -8,13 +15,9 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { useForm, FormProvider } from "react-hook-form";
-import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
 
 // Define the schema for form validation using Zod
-const addMenuSchema = z.object({
+const updateMenuSchema = z.object({
   restaurantId: z.string().min(1, "Restaurant ID is required"),
   itemName: z.string().min(1, "Item name is required"),
   description: z.string().min(1, "Description is required"),
@@ -31,17 +34,36 @@ const addMenuSchema = z.object({
 });
 
 // Infer the type from the schema
-type AddMenuFormValues = z.infer<typeof addMenuSchema>;
+type UpdateMenuFormValues = z.infer<typeof updateMenuSchema>;
 
-const AddMenuForm = () => {
+// Define the MenuItem interface
+interface MenuItem {
+  id: number;
+  restaurantId: number;
+  itemName: string;
+  description: string;
+  category: string;
+  availabilityStatus: boolean;
+  offer: number;
+  imageUrl?: string;
+  imagePublicId?: string;
+  portions: {
+    id: number;
+    portionSize: string;
+    price: number;
+  }[];
+}
+
+const UpdateMenuItem = () => {
+  const router = useRouter(); // Initialize useRouter
+  const { id } = useParams(); // Extract the 'id' parameter
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
-  const [portionFields, setPortionFields] = useState<
-    { portionSize: string; price: number }[]
-  >([{ portionSize: "", price: 0 }]);
 
   // Initialize form with react-hook-form and Zod validation
-  const formMethods = useForm<AddMenuFormValues>({
-    resolver: zodResolver(addMenuSchema),
+  const formMethods = useForm<UpdateMenuFormValues>({
+    resolver: zodResolver(updateMenuSchema),
     defaultValues: {
       restaurantId: "",
       itemName: "",
@@ -50,14 +72,67 @@ const AddMenuForm = () => {
       availabilityStatus: true,
       offer: 0,
       image: undefined,
-      portions: [{ portionSize: "", price: 0 }],
+      portions: [],
     },
   });
 
+  // Fetch the menu item details
+  useEffect(() => {
+    const fetchMenuItem = async () => {
+      try {
+        const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8083";
+        const response = await axios.get<MenuItem>(`${API_URL}/menu/${id}`);
+        const fetchedMenuItem = response.data;
+
+        if (!fetchedMenuItem) {
+          setError("Menu item data is invalid or missing.");
+          setLoading(false);
+          return;
+        }
+
+        // Set initial form values
+        formMethods.setValue("restaurantId", String(fetchedMenuItem.restaurantId));
+        formMethods.setValue("itemName", fetchedMenuItem.itemName);
+        formMethods.setValue("description", fetchedMenuItem.description);
+        formMethods.setValue("category", fetchedMenuItem.category);
+        formMethods.setValue("availabilityStatus", fetchedMenuItem.availabilityStatus);
+        formMethods.setValue("offer", fetchedMenuItem.offer);
+        formMethods.setValue("portions", fetchedMenuItem.portions);
+
+        if (fetchedMenuItem.imageUrl) {
+          setPreview(fetchedMenuItem.imageUrl); // Set preview for existing image
+        }
+
+        setLoading(false);
+      } catch (err) {
+        setError("Failed to fetch menu item details.");
+        setLoading(false);
+        console.error("Error fetching menu item:", err);
+      }
+    };
+
+    fetchMenuItem();
+  }, [id, formMethods]);
+
+  // Handle file input changes
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files[0]) {
+      formMethods.setValue("image", files[0]); // Update form state with the selected file
+      setPreview(URL.createObjectURL(files[0])); // Update preview
+    }
+  };
+
   // Handle form submission
-  const onSubmit = async (values: AddMenuFormValues) => {
+  const onSubmit = async (values: UpdateMenuFormValues) => {
     const formDataToSend = new FormData();
+
     Object.entries(values).forEach(([key, value]) => {
+      if (value === undefined || value === null) {
+        console.warn(`Skipping field '${key}' because it is undefined or null.`);
+        return; // Skip undefined or null values
+      }
+
       if (value instanceof File) {
         formDataToSend.append(key, value);
       } else if (typeof value === "boolean") {
@@ -71,55 +146,39 @@ const AddMenuForm = () => {
     });
 
     try {
-      const response = await fetch("http://localhost:8083/menu/add", {
-        method: "POST",
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8083";
+      const response = await fetch(`${API_URL}/menu/update/${id}`, {
+        method: "PUT",
         body: formDataToSend,
       });
+
       if (response.ok) {
-        alert("Menu item added successfully!");
-        formMethods.reset();
-        setPreview(null);
-        setPortionFields([{ portionSize: "", price: 0 }]);
+        alert("Menu item updated successfully!");
+        console.log("Navigating to /restaurant/menu");
+        router.push("/restaurant/menu");// Navigate to /restaurant/menu on success
       } else {
-        alert("Failed to add menu item.");
+        alert("Failed to update menu item.");
       }
     } catch (error) {
-      console.error("Error adding menu item:", error);
-      alert("An error occurred while adding the menu item.");
+      console.error("Error updating menu item:", error);
+      alert("An error occurred while updating the menu item.");
     }
   };
 
-  // Handle file input changes
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (files && files[0]) {
-      formMethods.setValue("image", files[0]); // Update form state with the selected file
-      setPreview(URL.createObjectURL(files[0])); // Update preview
-    }
-  };
+  // Render loading state
+  if (loading) {
+    return <p>Loading menu item...</p>;
+  }
 
-  // Add a new portion field
-  const addPortionField = () => {
-    setPortionFields([...portionFields, { portionSize: "", price: 0 }]);
-  };
-
-  // Remove a portion field
-  const removePortionField = (index: number) => {
-    const updatedFields = portionFields.filter((_, i) => i !== index);
-    setPortionFields(updatedFields);
-    formMethods.setValue(
-      "portions",
-      updatedFields.map((field) => ({
-        portionSize: field.portionSize,
-        price: field.price,
-      }))
-    );
-  };
+  // Render error state
+  if (error) {
+    return <p style={{ color: "red" }}>{error}</p>;
+  }
 
   return (
     <div className="max-w-2xl mx-auto p-6 bg-background shadow-lg rounded-lg">
       <h1 className="text-2xl font-bold text-center text-primary mb-6">
-        Add Menu Item
+        Update Menu Item
       </h1>
       <FormProvider {...formMethods}>
         <form
@@ -134,7 +193,11 @@ const AddMenuForm = () => {
               <FormItem>
                 <FormLabel>Restaurant ID</FormLabel>
                 <FormControl>
-                  <Input type="number" {...field} />
+                  <Input
+                    {...field}
+                    readOnly // Make the restaurantId field uneditable
+                    className="bg-gray-100 cursor-not-allowed"
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -149,7 +212,7 @@ const AddMenuForm = () => {
               <FormItem>
                 <FormLabel>Item Name</FormLabel>
                 <FormControl>
-                  <Input {...field} />
+                  <Input placeholder="Enter item name" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -164,7 +227,7 @@ const AddMenuForm = () => {
               <FormItem>
                 <FormLabel>Description</FormLabel>
                 <FormControl>
-                  <Input {...field} />
+                  <Input placeholder="Enter description" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -179,7 +242,7 @@ const AddMenuForm = () => {
               <FormItem>
                 <FormLabel>Category</FormLabel>
                 <FormControl>
-                  <Input {...field} />
+                  <Input placeholder="Enter category" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -197,12 +260,10 @@ const AddMenuForm = () => {
                     type="checkbox"
                     checked={field.value}
                     onChange={(e) => field.onChange(e.target.checked)}
-                    onBlur={field.onBlur}
-                    ref={field.ref}
-                    className="w-4 h-4 text-primary"
+                    className="h-4 w-4 text-primary"
                   />
                 </FormControl>
-                <FormLabel>Available on menu</FormLabel>
+                <FormLabel>Available</FormLabel>
                 <FormMessage />
               </FormItem>
             )}
@@ -214,15 +275,13 @@ const AddMenuForm = () => {
             name="offer"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Offer ($)</FormLabel>
+                <FormLabel>Offer (%)</FormLabel>
                 <FormControl>
                   <Input
                     type="number"
-                    step="0.01"
+                    placeholder="Enter offer percentage"
                     {...field}
-                    onChange={(e) =>
-                      field.onChange(parseFloat(e.target.value))
-                    }
+                    onChange={(e) => field.onChange(parseFloat(e.target.value))}
                   />
                 </FormControl>
                 <FormMessage />
@@ -234,11 +293,11 @@ const AddMenuForm = () => {
           <FormField
             control={formMethods.control}
             name="image"
-            render={({ field }) => (
+            render={() => (
               <FormItem>
                 <FormLabel>Image</FormLabel>
                 <FormControl>
-                  <div>
+                  <>
                     <label
                       htmlFor="image-upload"
                       className="block cursor-pointer text-primary hover:underline"
@@ -249,13 +308,10 @@ const AddMenuForm = () => {
                       id="image-upload"
                       type="file"
                       accept="image/*"
-                      onChange={(e) => {
-                        handleFileChange(e);
-                        field.onChange(e.target.files?.[0]);
-                      }}
+                      onChange={handleFileChange}
                       className="hidden"
                     />
-                  </div>
+                  </>
                 </FormControl>
                 {preview && (
                   <div className="mt-3">
@@ -272,10 +328,10 @@ const AddMenuForm = () => {
           />
 
           {/* Portions */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-primary">Portions</h3>
-            {portionFields.map((portion, index) => (
-              <div key={index} className="flex items-end space-x-2">
+          <div>
+            <h3 className="text-lg font-semibold mb-2">Portions</h3>
+            {formMethods.watch("portions").map((portion, index) => (
+              <div key={index} className="flex space-x-2 mb-2">
                 <FormField
                   control={formMethods.control}
                   name={`portions.${index}.portionSize`}
@@ -283,7 +339,7 @@ const AddMenuForm = () => {
                     <FormItem className="flex-1">
                       <FormLabel>Portion Size</FormLabel>
                       <FormControl>
-                        <Input {...field} />
+                        <Input placeholder="e.g., Small" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -294,11 +350,11 @@ const AddMenuForm = () => {
                   name={`portions.${index}.price`}
                   render={({ field }) => (
                     <FormItem className="flex-1">
-                      <FormLabel>Price ($)</FormLabel>
+                      <FormLabel>Price</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
-                          step="0.01"
+                          placeholder="e.g., 9.99"
                           {...field}
                           onChange={(e) =>
                             field.onChange(parseFloat(e.target.value))
@@ -311,7 +367,12 @@ const AddMenuForm = () => {
                 />
                 <Button
                   type="button"
-                  onClick={() => removePortionField(index)}
+                  onClick={() => {
+                    const updatedPortions = formMethods
+                      .getValues("portions")
+                      .filter((_, i) => i !== index);
+                    formMethods.setValue("portions", updatedPortions);
+                  }}
                   className="button-destructive"
                 >
                   Remove
@@ -320,7 +381,12 @@ const AddMenuForm = () => {
             ))}
             <Button
               type="button"
-              onClick={addPortionField}
+              onClick={() => {
+                formMethods.setValue("portions", [
+                  ...formMethods.getValues("portions"),
+                  { portionSize: "", price: 0 },
+                ]);
+              }}
               className="w-full button-accent"
             >
               Add Portion
@@ -328,11 +394,8 @@ const AddMenuForm = () => {
           </div>
 
           {/* Submit Button */}
-          <Button
-            type="submit"
-            className="w-full button-primary"
-          >
-            Add to Menu
+          <Button type="submit" className="w-full button-primary">
+            Update Menu Item
           </Button>
         </form>
       </FormProvider>
@@ -343,4 +406,4 @@ const AddMenuForm = () => {
   );
 };
 
-export default AddMenuForm;
+export default UpdateMenuItem;

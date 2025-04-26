@@ -12,7 +12,7 @@ public class MenuItems {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private Long restaurantId;
+    private String restaurantId;
 
     private String itemName;
 
@@ -39,7 +39,7 @@ public class MenuItems {
     public MenuItems() {}
 
     // Parameterized constructor
-    public MenuItems(String itemName, double offer, String category, Boolean availabilityStatus,
+    public MenuItems(String itemName, double offer, String category,String restaurantId, Boolean availabilityStatus,
                      String description, String imageUrl, String imagePublicId) {
         this.itemName = itemName;
         this.offer = offer;
@@ -48,6 +48,7 @@ public class MenuItems {
         this.description = description;
         this.imageUrl = imageUrl;
         this.imagePublicId = imagePublicId;
+        this.restaurantId = restaurantId;
     }
 
     // Getters and Setters
@@ -60,11 +61,11 @@ public class MenuItems {
         this.id = id;
     }
 
-    public Long getRestaurantId() {
+    public String getRestaurantId() {
         return restaurantId;
     }
 
-    public void setRestaurantId(Long restaurantId) {
+    public void setRestaurantId(String restaurantId) {
         this.restaurantId = restaurantId;
     }
 
