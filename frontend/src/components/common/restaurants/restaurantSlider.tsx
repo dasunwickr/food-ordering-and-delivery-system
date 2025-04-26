@@ -4,42 +4,49 @@ import axios from "axios";
 import Link from "next/link";
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 
-// Define the type for a category
-interface Category {
+// Define the type for a restaurant
+interface Restaurant {
   id: number;
-  name: string;
-  imageUrl: string;
+  restaurantName: string; // Updated to match the database field
+  imageUrl?: string; // Optional Cloudinary image URL
 }
 
-const DisplayCategoriesFood = () => {
-  const [categories, setCategories] = useState<Category[]>([]);
+const RestaurantsSlider = () => {
+  const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Default image URL (replace with your desired default image URL)
+  const defaultImageUrl =
+    "http://res.cloudinary.com/dwi1xi0qp/image/upload/v1745685680/ji3cwtwu7ehlh4b6k5gk.jpg";
 
   // Ref for the container element
   const containerRef = useRef<HTMLDivElement | null>(null);
 
-  // Fetch all categories from the backend
+  // Fetch all restaurants from the backend
   useEffect(() => {
-    const fetchCategories = async () => {
+    const fetchRestaurants = async () => {
       try {
-        const response = await axios.get<Category[]>("http://localhost:8083/categories");
+        const response = await axios.get<Restaurant[]>(
+          "http://localhost:8085/api/users/restaurants"
+        );
         if (response.status === 200) {
-          setCategories(response.data);
+          setRestaurants(response.data); // Assuming the backend returns an array of restaurants
+          console.log(response.data);
         }
       } catch (err) {
-        console.error("Error fetching categories:", err);
-        setError("Failed to load categories. Please try again later.");
+        console.error("Error fetching restaurants:", err);
+        setError("Failed to load restaurants. Please try again later.");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchCategories();
+    fetchRestaurants();
   }, []);
 
   if (loading) {
-    return <div className="text-center text-lg">Loading categories...</div>;
+    return <div className="text-center text-lg">Loading restaurants...</div>;
   }
 
   if (error) {
@@ -74,9 +81,9 @@ const DisplayCategoriesFood = () => {
 
   return (
     <div className="max-w-8xl mx-auto p-6 bg-white overflow-hidden">
-      {/* Ensure no vertical scrollbar */}
-      <h1 className="text-2xl font-bold text-amber-700 mb-6 text-center">
-        Available Categories
+      {/* Removed vertical scrollbar */}
+      <h1 className="text-2xl font-bold text-amber-700 mb-6">
+        Explore Restaurants
       </h1>
 
       {/* Horizontal Slider Container */}
@@ -95,27 +102,27 @@ const DisplayCategoriesFood = () => {
           <ChevronRightIcon size={24} />
         </button>
 
-        {/* Category Cards */}
+        {/* Restaurant Cards */}
         <div
           ref={containerRef}
-          className="flex gap-6 overflow-x-hidden overflow-y-hidden ml-20 mr-20"
+          className="flex gap-6 overflow-x-hidden ml-10 overflow-y-hidden" // Hide both horizontal and vertical scrollbars
         >
-          {categories.map((category) => (
+          {restaurants.map((restaurant) => (
             <Link
-              key={category.id}
-              href={`/categories/${encodeURIComponent(category.name)}`}
+              key={restaurant.id}
+              href={`/restaurant/${restaurant.id}`}
               className="group min-w-[200px] flex-shrink-0 bg-gray-100 rounded-lg shadow-md overflow-hidden transition-transform hover:scale-105 cursor-pointer"
             >
               {/* Image Section */}
               <img
-                src={category.imageUrl}
-                alt={`Category: ${category.name}`}
+                src={restaurant.imageUrl || defaultImageUrl} // Use defaultImageUrl as fallback
+                alt={`Restaurant: ${restaurant.restaurantName}`} // Updated to use restaurantName
                 className="w-full h-32 object-cover group-hover:opacity-90 transition-opacity"
               />
               {/* Name Section */}
               <div className="p-3">
                 <h2 className="text-sm font-semibold text-gray-800 line-clamp-2">
-                  {category.name}
+                  {restaurant.restaurantName} {/* Updated to use restaurantName */}
                 </h2>
               </div>
             </Link>
@@ -126,4 +133,4 @@ const DisplayCategoriesFood = () => {
   );
 };
 
-export default DisplayCategoriesFood;
+export default RestaurantsSlider;
