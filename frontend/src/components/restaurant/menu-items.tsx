@@ -1,6 +1,8 @@
 "use client"; // Mark this file as a client component
-
+import { Button } from "../ui/button";
 import React from "react";
+import { useRouter } from "next/navigation"; // Import useRouter for navigation
+import { FiEdit } from "react-icons/fi"; // Import the Edit icon from react-icons
 
 interface MenuItem {
   id: number;
@@ -24,8 +26,23 @@ interface MenuItemsProps {
 }
 
 const MenuItems = ({ menuItems }: MenuItemsProps) => {
+  const router = useRouter(); // Initialize useRouter
+
+  // Function to handle navigation to the edit page
+  const handleEdit = (itemId: number) => {
+    router.push(`/restaurant/menu/${itemId}`); // Navigate to the edit page with the item ID
+  };
+
   return (
-    <div className="max-w-6xl mx-auto p-6 bg-background shadow-lg rounded-lg">
+    <div className="max-w-8xl mx-auto p-6 bg-background shadow-lg rounded-lg relative">
+      {/* Add Menu Button */}
+      <Button
+        className="absolute top-4 right-4 bg-primary text-white hover:bg-primary/80 transition duration-300"
+        onClick={() => router.push("/menu/add")} // Navigate to the "Add Menu" page
+      >
+        Add Menu
+      </Button>
+
       <h1 className="text-3xl font-bold text-center text-primary mb-6">
         Menu Items
       </h1>
@@ -35,7 +52,7 @@ const MenuItems = ({ menuItems }: MenuItemsProps) => {
         {menuItems.map((item) => (
           <div
             key={item.id}
-            className="bg-card rounded-lg shadow-md overflow-hidden transition duration-300 hover:shadow-lg"
+            className="bg-card rounded-lg shadow-md overflow-hidden transition duration-300 hover:shadow-lg relative"
           >
             {/* Image Section */}
             {item.imageUrl && (
@@ -70,6 +87,15 @@ const MenuItems = ({ menuItems }: MenuItemsProps) => {
                   ))}
               </div>
             </div>
+
+            {/* Edit Icon */}
+            <button
+              onClick={() => handleEdit(item.id)} // Call handleEdit with the item ID
+              className="absolute top-2 right-2 p-2 bg-primary text-white rounded-full hover:bg-primary/80 transition duration-300 cursor-pointer"
+              aria-label={`Edit ${item.itemName}`}
+            >
+              <FiEdit size={20} />
+            </button>
           </div>
         ))}
       </div>
