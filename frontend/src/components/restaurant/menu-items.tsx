@@ -38,7 +38,7 @@ const MenuItems = ({ menuItems }: MenuItemsProps) => {
       {/* Add Menu Button */}
       <Button
         className="absolute top-4 right-4 bg-primary text-white hover:bg-primary/80 transition duration-300"
-        onClick={() => router.push("/menu/add")} // Navigate to the "Add Menu" page
+        onClick={() => router.push("/restaurant/menu/add")} // Navigate to the "Add Menu" page
       >
         Add Menu
       </Button>

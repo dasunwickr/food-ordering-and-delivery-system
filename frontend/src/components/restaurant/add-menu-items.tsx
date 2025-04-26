@@ -1,12 +1,10 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { useRouter,useParams } from "next/navigation"; // Import useRouter for navigation
+import { useRouter } from "next/navigation"; 
 import { useForm, FormProvider } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Button } from "@/components/ui/button";
-
 import {
   FormControl,
   FormField,
@@ -15,16 +13,16 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-
+import { Button } from "../ui/button";
 // Define the schema for form validation using Zod
-const updateMenuSchema = z.object({
+const addMenuSchema = z.object({
   restaurantId: z.string().min(1, "Restaurant ID is required"),
   itemName: z.string().min(1, "Item name is required"),
   description: z.string().min(1, "Description is required"),
   category: z.string().min(1, "Category is required"),
   availabilityStatus: z.boolean(),
   offer: z.number().min(0, "Offer must be non-negative"),
-  image: z.instanceof(File).optional(), // Add image as an optional File type
+  image: z.instanceof(File).optional(),
   portions: z.array(
     z.object({
       portionSize: z.string().min(1, "Portion size is required"),
@@ -34,36 +32,25 @@ const updateMenuSchema = z.object({
 });
 
 // Infer the type from the schema
-type UpdateMenuFormValues = z.infer<typeof updateMenuSchema>;
+type AddMenuFormValues = z.infer<typeof addMenuSchema>;
 
-// Define the MenuItem interface
-interface MenuItem {
+// Define the Category interface
+interface Category {
   id: number;
-  restaurantId: number;
-  itemName: string;
-  description: string;
-  category: string;
-  availabilityStatus: boolean;
-  offer: number;
-  imageUrl?: string;
-  imagePublicId?: string;
-  portions: {
-    id: number;
-    portionSize: string;
-    price: number;
-  }[];
+  name: string;
 }
 
-const UpdateMenuItem = () => {
-  const router = useRouter(); // Initialize useRouter
-  const { id } = useParams(); // Extract the 'id' parameter
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+const AddMenuForm = () => {
   const [preview, setPreview] = useState<string | null>(null);
+  const router = useRouter();
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [portionFields, setPortionFields] = useState<
+    { portionSize: string; price: number }[]
+  >([{ portionSize: "", price: 0 }]);
 
   // Initialize form with react-hook-form and Zod validation
-  const formMethods = useForm<UpdateMenuFormValues>({
-    resolver: zodResolver(updateMenuSchema),
+  const formMethods = useForm<AddMenuFormValues>({
+    resolver: zodResolver(addMenuSchema),
     defaultValues: {
       restaurantId: "",
       itemName: "",
@@ -72,47 +59,25 @@ const UpdateMenuItem = () => {
       availabilityStatus: true,
       offer: 0,
       image: undefined,
-      portions: [],
+      portions: [{ portionSize: "", price: 0 }],
     },
   });
 
-  // Fetch the menu item details
+  // Fetch categories from the backend
   useEffect(() => {
-    const fetchMenuItem = async () => {
+    const fetchCategories = async () => {
       try {
-        const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8083";
-        const response = await axios.get<MenuItem>(`${API_URL}/menu/${id}`);
-        const fetchedMenuItem = response.data;
-
-        if (!fetchedMenuItem) {
-          setError("Menu item data is invalid or missing.");
-          setLoading(false);
-          return;
+        const response = await axios.get<Category[]>("http://localhost:8083/categories");
+        if (response.status === 200) {
+          setCategories(response.data); // Set the fetched categories
         }
-
-        // Set initial form values
-        formMethods.setValue("restaurantId", String(fetchedMenuItem.restaurantId));
-        formMethods.setValue("itemName", fetchedMenuItem.itemName);
-        formMethods.setValue("description", fetchedMenuItem.description);
-        formMethods.setValue("category", fetchedMenuItem.category);
-        formMethods.setValue("availabilityStatus", fetchedMenuItem.availabilityStatus);
-        formMethods.setValue("offer", fetchedMenuItem.offer);
-        formMethods.setValue("portions", fetchedMenuItem.portions);
-
-        if (fetchedMenuItem.imageUrl) {
-          setPreview(fetchedMenuItem.imageUrl); // Set preview for existing image
-        }
-
-        setLoading(false);
       } catch (err) {
-        setError("Failed to fetch menu item details.");
-        setLoading(false);
-        console.error("Error fetching menu item:", err);
+        console.error("Error fetching categories:", err);
       }
     };
 
-    fetchMenuItem();
-  }, [id, formMethods]);
+    fetchCategories();
+  }, []);
 
   // Handle file input changes
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -124,7 +89,7 @@ const UpdateMenuItem = () => {
   };
 
   // Handle form submission
-  const onSubmit = async (values: UpdateMenuFormValues) => {
+  const onSubmit = async (values: AddMenuFormValues) => {
     const formDataToSend = new FormData();
 
     Object.entries(values).forEach(([key, value]) => {
@@ -146,39 +111,46 @@ const UpdateMenuItem = () => {
     });
 
     try {
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8083";
-      const response = await fetch(`${API_URL}/menu/update/${id}`, {
-        method: "PUT",
+      const API_URL = "http://localhost:8083";
+      const response = await fetch(`${API_URL}/menu/add`, {
+        method: "POST",
         body: formDataToSend,
       });
 
       if (response.ok) {
-        alert("Menu item updated successfully!");
-        console.log("Navigating to /restaurant/menu");
-        router.push("/restaurant/menu");// Navigate to /restaurant/menu on success
+        alert("Menu item added successfully!");
+        router.push("/restaurant/menu");
       } else {
-        alert("Failed to update menu item.");
+        alert("Failed to add menu item.");
       }
     } catch (error) {
-      console.error("Error updating menu item:", error);
-      alert("An error occurred while updating the menu item.");
+      console.error("Error adding menu item:", error);
+      alert("An error occurred while adding the menu item.");
     }
   };
 
-  // Render loading state
-  if (loading) {
-    return <p>Loading menu item...</p>;
-  }
+  // Add a portion field
+  const addPortionField = () => {
+    setPortionFields([...portionFields, { portionSize: "", price: 0 }]);
+  };
 
-  // Render error state
-  if (error) {
-    return <p style={{ color: "red" }}>{error}</p>;
-  }
+  // Remove a portion field
+  const removePortionField = (index: number) => {
+    const updatedFields = portionFields.filter((_, i) => i !== index);
+    setPortionFields(updatedFields);
+    formMethods.setValue(
+      "portions",
+      updatedFields.map((field) => ({
+        portionSize: field.portionSize,
+        price: field.price,
+      }))
+    );
+  };
 
   return (
     <div className="max-w-2xl mx-auto p-6 bg-background shadow-lg rounded-lg">
       <h1 className="text-2xl font-bold text-center text-primary mb-6">
-        Update Menu Item
+        Add Menu Item
       </h1>
       <FormProvider {...formMethods}>
         <form
@@ -193,11 +165,7 @@ const UpdateMenuItem = () => {
               <FormItem>
                 <FormLabel>Restaurant ID</FormLabel>
                 <FormControl>
-                  <Input
-                    {...field}
-                    readOnly // Make the restaurantId field uneditable
-                    className="bg-gray-100 cursor-not-allowed"
-                  />
+                  <Input type="number" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -212,7 +180,7 @@ const UpdateMenuItem = () => {
               <FormItem>
                 <FormLabel>Item Name</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter item name" {...field} />
+                  <Input {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -227,7 +195,7 @@ const UpdateMenuItem = () => {
               <FormItem>
                 <FormLabel>Description</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter description" {...field} />
+                  <Input {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -242,7 +210,18 @@ const UpdateMenuItem = () => {
               <FormItem>
                 <FormLabel>Category</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter category" {...field} />
+                  <select
+                    value={field.value}
+                    onChange={(e) => field.onChange(e.target.value)}
+                    className="w-full px-4 py-2 border-2 border-amber-200 rounded-lg focus:ring-amber-500 focus:border-amber-500"
+                  >
+                    <option value="">Select a category</option>
+                    {categories.map((cat) => (
+                      <option key={cat.id} value={cat.name}>
+                        {cat.name}
+                      </option>
+                    ))}
+                  </select>
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -263,7 +242,7 @@ const UpdateMenuItem = () => {
                     className="h-4 w-4 text-primary"
                   />
                 </FormControl>
-                <FormLabel>Available</FormLabel>
+                <FormLabel>Available on menu</FormLabel>
                 <FormMessage />
               </FormItem>
             )}
@@ -281,7 +260,9 @@ const UpdateMenuItem = () => {
                     type="number"
                     placeholder="Enter offer percentage"
                     {...field}
-                    onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                    onChange={(e) =>
+                      field.onChange(parseFloat(e.target.value))
+                    }
                   />
                 </FormControl>
                 <FormMessage />
@@ -330,7 +311,7 @@ const UpdateMenuItem = () => {
           {/* Portions */}
           <div>
             <h3 className="text-lg font-semibold mb-2">Portions</h3>
-            {formMethods.watch("portions").map((portion, index) => (
+            {portionFields.map((portion, index) => (
               <div key={index} className="flex space-x-2 mb-2">
                 <FormField
                   control={formMethods.control}
@@ -367,12 +348,7 @@ const UpdateMenuItem = () => {
                 />
                 <Button
                   type="button"
-                  onClick={() => {
-                    const updatedPortions = formMethods
-                      .getValues("portions")
-                      .filter((_, i) => i !== index);
-                    formMethods.setValue("portions", updatedPortions);
-                  }}
+                  onClick={() => removePortionField(index)}
                   className="button-destructive"
                 >
                   Remove
@@ -381,12 +357,7 @@ const UpdateMenuItem = () => {
             ))}
             <Button
               type="button"
-              onClick={() => {
-                formMethods.setValue("portions", [
-                  ...formMethods.getValues("portions"),
-                  { portionSize: "", price: 0 },
-                ]);
-              }}
+              onClick={addPortionField}
               className="w-full button-accent"
             >
               Add Portion
@@ -395,15 +366,12 @@ const UpdateMenuItem = () => {
 
           {/* Submit Button */}
           <Button type="submit" className="w-full button-primary">
-            Update Menu Item
+            Add Menu Item
           </Button>
         </form>
       </FormProvider>
-      <div className="text-center mt-6 text-muted-foreground text-sm">
-        Restaurant Menu Management System &copy; {new Date().getFullYear()}
-      </div>
     </div>
   );
 };
 
-export default UpdateMenuItem;
+export default AddMenuForm;
