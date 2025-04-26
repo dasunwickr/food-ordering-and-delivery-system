@@ -6,6 +6,7 @@ import com.nomnom.order_service.dto.OrderDTO;
 import com.nomnom.order_service.model.Order;
 import com.nomnom.order_service.repository.OrderRepository;
 import com.nomnom.order_service.request.*;
+import com.nomnom.order_service.shared.enums.PotionSize;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -15,6 +16,8 @@ import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
+
+import static com.nomnom.order_service.shared.enums.PotionSize.*;
 
 @Service
 public class OrderService implements IOrderService {
@@ -35,11 +38,9 @@ public class OrderService implements IOrderService {
         // Fetch cart items from Cart Service
         String cartUrl = cartServiceUrl + "/" + request.getCustomerId() + "/" + request.getRestaurantId();
         ResponseEntity<CartDTO> response = restTemplate.getForEntity(cartUrl, CartDTO.class);
-
         if (response.getBody() == null || response.getBody().getItems().isEmpty()) {
             throw new RuntimeException("Cart is empty");
         }
-
         CartDTO cartDTO = response.getBody();
 
         // Calculate order total
@@ -51,18 +52,22 @@ public class OrderService implements IOrderService {
         Order order = new Order();
         order.setOrderId(UUID.randomUUID().toString());
         order.setCustomerId(request.getCustomerId());
+        order.setRestaurantId(request.getRestaurantId());
         order.setCustomerDetails(new Order.CustomerDetails(
                 request.getCustomerName(),
                 request.getCustomerContact(),
-                request.getDeliveryLocation()
+                request.getLongitude(), // Updated field
+                request.getLatitude()   // Updated field
         ));
         order.setCartItems(cartDTO.getItems().stream()
                 .map(item -> new Order.CartItem(
                         item.getItemId(),
                         item.getItemName(),
                         item.getQuantity(),
+                        mapPotionSize(item.getPotionSize()), // Map PotionSize
                         item.getPrice(),
-                        item.getTotalPrice()
+                        item.getTotalPrice(),
+                        item.getImage()
                 )).toList());
         order.setOrderTotal(orderTotal);
         order.setDeliveryFee(5.0); // Example fixed delivery fee
@@ -78,7 +83,6 @@ public class OrderService implements IOrderService {
                     request.getDriverDetails().getVehicleNumber()
             ));
         }
-
         order.setCreatedAt(new Date());
         order.setUpdatedAt(new Date());
 
@@ -87,22 +91,38 @@ public class OrderService implements IOrderService {
         return mapToOrderDTO(savedOrder);
     }
 
+    private Order.CartItem.PotionSize mapPotionSize(PotionSize potionSize) {
+        // Handle null potionSize by assigning a default value
+        if (potionSize == null) {
+            return Order.CartItem.PotionSize.Small; // Default to "Small"
+        }
+        return switch (potionSize) {
+            case Small -> Order.CartItem.PotionSize.Small;
+            case Medium -> Order.CartItem.PotionSize.Medium;
+            case Large -> Order.CartItem.PotionSize.Large;
+        };
+    }
+
     private OrderDTO mapToOrderDTO(Order order) {
         return new OrderDTO(
                 order.getOrderId(),
                 order.getCustomerId(),
+                order.getRestaurantId(),
                 new OrderDTO.CustomerDetailsDTO(
                         order.getCustomerDetails().getName(),
                         order.getCustomerDetails().getContact(),
-                        order.getCustomerDetails().getLocation()
+                        order.getCustomerDetails().getLongitude(),
+                        order.getCustomerDetails().getLatitude()
                 ),
                 order.getCartItems().stream()
                         .map(item -> new OrderDTO.CartItemDTO(
                                 item.getItemId(),
                                 item.getItemName(),
                                 item.getQuantity(),
+                                mapPotionSizeToDTO(item.getPotionSize()), // Map PotionSize
                                 item.getPrice(),
-                                item.getTotalPrice()
+                                item.getTotalPrice(),
+                                item.getImage()
                         )).toList(),
                 order.getOrderTotal(),
                 order.getDeliveryFee(),
@@ -117,6 +137,18 @@ public class OrderService implements IOrderService {
                 order.getCreatedAt(),
                 order.getUpdatedAt()
         );
+    }
+
+    private OrderDTO.CartItemDTO.PotionSize mapPotionSizeToDTO(Order.CartItem.PotionSize potionSize) {
+        // Handle null potionSize by assigning a default value
+        if (potionSize == null) {
+            return OrderDTO.CartItemDTO.PotionSize.Small; // Default to "Small"
+        }
+        return switch (potionSize) {
+            case Small -> OrderDTO.CartItemDTO.PotionSize.Small;
+            case Medium -> OrderDTO.CartItemDTO.PotionSize.Medium;
+            case Large -> OrderDTO.CartItemDTO.PotionSize.Large;
+        };
     }
 
     @Override
