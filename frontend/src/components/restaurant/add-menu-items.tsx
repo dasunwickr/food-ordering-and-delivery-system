@@ -14,6 +14,11 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "../ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Trash, Plus, Upload } from "lucide-react";
+
 // Define the schema for form validation using Zod
 const addMenuSchema = z.object({
   restaurantId: z.string().min(1, "Restaurant ID is required"),
@@ -148,229 +153,255 @@ const AddMenuForm = () => {
   };
 
   return (
-    <div className="max-w-2xl mx-auto p-6 bg-background shadow-lg rounded-lg">
-      <h1 className="text-2xl font-bold text-center text-primary mb-6">
-        Add Menu Item
-      </h1>
-      <FormProvider {...formMethods}>
-        <form
-          onSubmit={formMethods.handleSubmit(onSubmit)}
-          className="space-y-4"
-        >
-          {/* Restaurant ID */}
-          <FormField
-            control={formMethods.control}
-            name="restaurantId"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Restaurant ID</FormLabel>
-                <FormControl>
-                  <Input type="number" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          {/* Item Name */}
-          <FormField
-            control={formMethods.control}
-            name="itemName"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Item Name</FormLabel>
-                <FormControl>
-                  <Input {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          {/* Description */}
-          <FormField
-            control={formMethods.control}
-            name="description"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Description</FormLabel>
-                <FormControl>
-                  <Input {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          {/* Category */}
-          <FormField
-            control={formMethods.control}
-            name="category"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Category</FormLabel>
-                <FormControl>
-                  <select
-                    value={field.value}
-                    onChange={(e) => field.onChange(e.target.value)}
-                    className="w-full px-4 py-2 border-2 border-amber-200 rounded-lg focus:ring-amber-500 focus:border-amber-500"
-                  >
-                    <option value="">Select a category</option>
-                    {categories.map((cat) => (
-                      <option key={cat.id} value={cat.name}>
-                        {cat.name}
-                      </option>
-                    ))}
-                  </select>
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          {/* Availability Status */}
-          <FormField
-            control={formMethods.control}
-            name="availabilityStatus"
-            render={({ field }) => (
-              <FormItem className="flex items-center space-x-2">
-                <FormControl>
-                  <input
-                    type="checkbox"
-                    checked={field.value}
-                    onChange={(e) => field.onChange(e.target.checked)}
-                    className="h-4 w-4 text-primary"
-                  />
-                </FormControl>
-                <FormLabel>Available on menu</FormLabel>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          {/* Offer */}
-          <FormField
-            control={formMethods.control}
-            name="offer"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Offer (%)</FormLabel>
-                <FormControl>
-                  <Input
-                    type="number"
-                    placeholder="Enter offer percentage"
-                    {...field}
-                    onChange={(e) =>
-                      field.onChange(parseFloat(e.target.value))
-                    }
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          {/* Image Upload */}
-          <FormField
-            control={formMethods.control}
-            name="image"
-            render={() => (
-              <FormItem>
-                <FormLabel>Image</FormLabel>
-                <FormControl>
-                  <>
-                    <label
-                      htmlFor="image-upload"
-                      className="block cursor-pointer text-primary hover:underline"
-                    >
-                      Choose Image
-                    </label>
-                    <input
-                      id="image-upload"
-                      type="file"
-                      accept="image/*"
-                      onChange={handleFileChange}
-                      className="hidden"
-                    />
-                  </>
-                </FormControl>
-                {preview && (
-                  <div className="mt-3">
-                    <img
-                      src={preview}
-                      alt="Food preview"
-                      className="object-cover w-full h-32 rounded-lg"
-                    />
-                  </div>
+    <Card className="max-w-3xl mx-auto shadow-lg">
+      <CardHeader className="bg-muted rounded-t-lg">
+        <CardTitle className="text-2xl font-bold text-center text-primary">
+          Add Menu Item
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="p-6">
+        <FormProvider {...formMethods}>
+          <form
+            onSubmit={formMethods.handleSubmit(onSubmit)}
+            className="space-y-6"
+          >
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Restaurant ID */}
+              <FormField
+                control={formMethods.control}
+                name="restaurantId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="font-medium">Restaurant ID</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="number" 
+                        {...field} 
+                        className="border border-input focus:ring-ring" 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
                 )}
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+              />
 
-          {/* Portions */}
-          <div>
-            <h3 className="text-lg font-semibold mb-2">Portions</h3>
-            {portionFields.map((portion, index) => (
-              <div key={index} className="flex space-x-2 mb-2">
-                <FormField
-                  control={formMethods.control}
-                  name={`portions.${index}.portionSize`}
-                  render={({ field }) => (
-                    <FormItem className="flex-1">
-                      <FormLabel>Portion Size</FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g., Small" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
+              {/* Item Name */}
+              <FormField
+                control={formMethods.control}
+                name="itemName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="font-medium">Item Name</FormLabel>
+                    <FormControl>
+                      <Input 
+                        {...field} 
+                        className="border border-input focus:ring-ring" 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            {/* Description */}
+            <FormField
+              control={formMethods.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="font-medium">Description</FormLabel>
+                  <FormControl>
+                    <textarea
+                      {...field}
+                      rows={3}
+                      className="w-full px-4 py-2 border border-input rounded-lg focus:ring-ring"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Category */}
+              <FormField
+                control={formMethods.control}
+                name="category"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="font-medium">Category</FormLabel>
+                    <FormControl>
+                      <Select
+                        value={field.value}
+                        onValueChange={field.onChange}
+                      >
+                        <SelectTrigger className="border border-input focus:ring-ring">
+                          <SelectValue placeholder="Select a category" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {categories.map((cat) => (
+                            <SelectItem key={cat.id} value={cat.name}>
+                              {cat.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Offer */}
+              <FormField
+                control={formMethods.control}
+                name="offer"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="font-medium">Offer (%)</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        placeholder="Enter offer percentage"
+                        {...field}
+                        onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                        className="border border-input focus:ring-ring"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            {/* Availability Status */}
+            <FormField
+              control={formMethods.control}
+              name="availabilityStatus"
+              render={({ field }) => (
+                <FormItem className="flex items-center space-x-3 rounded-md p-3 bg-muted">
+                  <FormControl>
+                    <Checkbox
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                  <FormLabel className="font-medium cursor-pointer">Available on menu</FormLabel>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Image Upload */}
+            <FormField
+              control={formMethods.control}
+              name="image"
+              render={() => (
+                <FormItem>
+                  <FormLabel className="font-medium">Food Image</FormLabel>
+                  <FormControl>
+                    <div className="border-2 border-dashed border-input rounded-lg p-4 text-center">
+                      <label
+                        htmlFor="image-upload"
+                        className="flex flex-col items-center gap-2 cursor-pointer"
+                      >
+                        <Upload className="h-8 w-8 text-accent" />
+                        <span className="text-foreground font-medium">Choose Image</span>
+                        <span className="text-sm text-muted-foreground">Upload a high-quality image of your dish</span>
+                      </label>
+                      <input
+                        id="image-upload"
+                        type="file"
+                        accept="image/*"
+                        onChange={handleFileChange}
+                        className="hidden"
+                      />
+                    </div>
+                  </FormControl>
+                  {preview && (
+                    <div className="mt-3">
+                      <img
+                        src={preview}
+                        alt="Food preview"
+                        className="object-cover w-full h-48 rounded-lg shadow"
+                      />
+                    </div>
                   )}
-                />
-                <FormField
-                  control={formMethods.control}
-                  name={`portions.${index}.price`}
-                  render={({ field }) => (
-                    <FormItem className="flex-1">
-                      <FormLabel>Price</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          placeholder="e.g., 9.99"
-                          {...field}
-                          onChange={(e) =>
-                            field.onChange(parseFloat(e.target.value))
-                          }
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <Button
-                  type="button"
-                  onClick={() => removePortionField(index)}
-                  className="button-destructive"
-                >
-                  Remove
-                </Button>
-              </div>
-            ))}
-            <Button
-              type="button"
-              onClick={addPortionField}
-              className="w-full button-accent"
-            >
-              Add Portion
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Portions */}
+            <div className="bg-muted p-4 rounded-lg">
+              <h3 className="text-lg font-semibold mb-3">Portions & Pricing</h3>
+              {portionFields.map((portion, index) => (
+                <div key={index} className="flex space-x-3 mb-3 bg-card p-3 rounded-md shadow-sm">
+                  <FormField
+                    control={formMethods.control}
+                    name={`portions.${index}.portionSize`}
+                    render={({ field }) => (
+                      <FormItem className="flex-1">
+                        <FormLabel className="font-medium">Portion Size</FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="e.g., Small" 
+                            {...field} 
+                            className="border border-input focus:ring-ring" 
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={formMethods.control}
+                    name={`portions.${index}.price`}
+                    render={({ field }) => (
+                      <FormItem className="flex-1">
+                        <FormLabel className="font-medium">Price ($)</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            placeholder="e.g., 9.99"
+                            {...field}
+                            onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                            className="border border-input focus:ring-ring"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <div className="flex items-end pb-2">
+                    <Button
+                      type="button"
+                      onClick={() => removePortionField(index)}
+                      className="button-destructive h-10 w-10 p-0 rounded-md"
+                    >
+                      <Trash className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+              <Button
+                type="button"
+                onClick={addPortionField}
+                className="button-accent w-full mt-2"
+              >
+                <Plus className="h-4 w-4 mr-2" /> Add Another Portion
+              </Button>
+            </div>
+
+            {/* Submit Button */}
+            <Button type="submit" className="button-primary w-full py-6">
+              Add Menu Item
             </Button>
-          </div>
-
-          {/* Submit Button */}
-          <Button type="submit" className="w-full button-primary">
-            Add Menu Item
-          </Button>
-        </form>
-      </FormProvider>
-    </div>
+          </form>
+        </FormProvider>
+      </CardContent>
+    </Card>
   );
 };
 
