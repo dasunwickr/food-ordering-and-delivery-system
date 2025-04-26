@@ -13,6 +13,7 @@ import java.util.List;
 public class OrderDTO {
     private String orderId;
     private String customerId;
+    private String restaurantId;
     private CustomerDetailsDTO customerDetails;
     private List<CartItemDTO> cartItems;
     private double orderTotal;

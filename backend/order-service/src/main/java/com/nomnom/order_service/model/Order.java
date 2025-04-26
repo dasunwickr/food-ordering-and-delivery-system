@@ -16,6 +16,7 @@ public class Order {
     @Id
     private String orderId;
     private String customerId;
+    private String restaurantId;
     private CustomerDetails customerDetails;
     private List<CartItem> cartItems;
     private double orderTotal;

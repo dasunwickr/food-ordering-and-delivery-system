@@ -7,6 +7,7 @@ import com.nomnom.cart_service.response.CartResponse;
 import com.nomnom.cart_service.service.ICart;
 import com.nomnom.cart_service.service.CartService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -30,15 +31,24 @@ public class CartController {
             @PathVariable String customerId,
             @PathVariable String restaurantId,
             @RequestBody AddItemToCartRequest request) {
-        CartService.CartItemRequest cartItemRequest = new CartService.CartItemRequest();
-        cartItemRequest.setItemId(request.getItemId());
-        cartItemRequest.setItemName(request.getItemName());
-        cartItemRequest.setQuantity(request.getQuantity());
-        cartItemRequest.setPotionSize(request.getPotionSize());
-        cartItemRequest.setUnitPrice(request.getUnitPrice());
-        cartItemRequest.setImage(request.getImage()); // Map the image URL
+        try {
+            // Validate potion size
+            if (request.getPotionSize() == null) {
+                throw new IllegalArgumentException("Invalid potion size");
+            }
 
-        return ResponseEntity.ok(mapToCartDTO(cartService.addItemToCart(customerId, restaurantId, cartItemRequest)));
+            CartService.CartItemRequest cartItemRequest = new CartService.CartItemRequest();
+            cartItemRequest.setItemId(request.getItemId());
+            cartItemRequest.setItemName(request.getItemName());
+            cartItemRequest.setQuantity(request.getQuantity());
+            cartItemRequest.setPotionSize(request.getPotionSize());
+            cartItemRequest.setUnitPrice(request.getUnitPrice());
+            cartItemRequest.setImage(request.getImage());
+
+            return ResponseEntity.ok(mapToCartDTO(cartService.addItemToCart(customerId, restaurantId, cartItemRequest)));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
     }
 
     @PutMapping("/api/cart/update/{customerId}/{restaurantId}/{itemId}")

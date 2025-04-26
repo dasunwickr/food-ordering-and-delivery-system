@@ -52,6 +52,7 @@ public class OrderService implements IOrderService {
         Order order = new Order();
         order.setOrderId(UUID.randomUUID().toString());
         order.setCustomerId(request.getCustomerId());
+        order.setRestaurantId(request.getRestaurantId());
         order.setCustomerDetails(new Order.CustomerDetails(
                 request.getCustomerName(),
                 request.getCustomerContact(),
@@ -91,6 +92,10 @@ public class OrderService implements IOrderService {
     }
 
     private Order.CartItem.PotionSize mapPotionSize(PotionSize potionSize) {
+        // Handle null potionSize by assigning a default value
+        if (potionSize == null) {
+            return Order.CartItem.PotionSize.Small; // Default to "Small"
+        }
         return switch (potionSize) {
             case Small -> Order.CartItem.PotionSize.Small;
             case Medium -> Order.CartItem.PotionSize.Medium;
@@ -102,6 +107,7 @@ public class OrderService implements IOrderService {
         return new OrderDTO(
                 order.getOrderId(),
                 order.getCustomerId(),
+                order.getRestaurantId(),
                 new OrderDTO.CustomerDetailsDTO(
                         order.getCustomerDetails().getName(),
                         order.getCustomerDetails().getContact(),
@@ -134,6 +140,10 @@ public class OrderService implements IOrderService {
     }
 
     private OrderDTO.CartItemDTO.PotionSize mapPotionSizeToDTO(Order.CartItem.PotionSize potionSize) {
+        // Handle null potionSize by assigning a default value
+        if (potionSize == null) {
+            return OrderDTO.CartItemDTO.PotionSize.Small; // Default to "Small"
+        }
         return switch (potionSize) {
             case Small -> OrderDTO.CartItemDTO.PotionSize.Small;
             case Medium -> OrderDTO.CartItemDTO.PotionSize.Medium;
