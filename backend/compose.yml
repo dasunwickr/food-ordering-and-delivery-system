@@ -18,7 +18,7 @@ services:
       # - payment-service
       # - order-service
       - menu-service
-      # - cart-service
+      - cart-service
       # - delivery-service
       # - notification-service
     restart: unless-stopped
@@ -98,6 +98,20 @@ services:
     networks:
       - nomnom-network
 
+  # Cart Service
+  cart-service:
+    build:
+      context: ./cart-service
+      dockerfile: Dockerfile
+    ports:
+      - "8082:8080"
+    env_file:
+      - ./cart-service/.env
+    restart: unless-stopped
+    networks:
+      - nomnom-network
+
+  
 
 networks:
   nomnom-network:
