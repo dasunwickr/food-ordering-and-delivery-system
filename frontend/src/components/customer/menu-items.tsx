@@ -79,10 +79,10 @@ const MenuItems = ({ menuItems, customerId, restaurantId }: MenuItemsProps) => {
       });
       return;
     }
-
+  
     try {
       setIsLoading(true);
-
+  
       // Find the selected portion details
       const selectedPortion = selectedItem.portions.find(
         (portion) => portion.portionSize === portionSize
@@ -90,7 +90,7 @@ const MenuItems = ({ menuItems, customerId, restaurantId }: MenuItemsProps) => {
       if (!selectedPortion) {
         throw new Error("Invalid portion size");
       }
-
+  
       // Map the portion size to the backend's expected enum format
       let potionSizeEnum;
       if (portionSize.toLowerCase().includes("small")) {
@@ -102,7 +102,10 @@ const MenuItems = ({ menuItems, customerId, restaurantId }: MenuItemsProps) => {
       } else {
         potionSizeEnum = portionSize; // Use as is if it doesn't match
       }
-
+  
+      // Use restaurantId from selectedItem
+      const restaurantIdFromItem = selectedItem.restaurantId;
+  
       // Prepare the request payload
       const payload = {
         itemId: String(selectedItem.id),
@@ -112,21 +115,21 @@ const MenuItems = ({ menuItems, customerId, restaurantId }: MenuItemsProps) => {
         unitPrice: selectedPortion.price,
         image: selectedItem.imageUrl || "/placeholder.svg",
       };
-
+  
       // Call the backend API to add the item to the cart
-      await axios.post(`/api/cart/add/${customerId}/${restaurantId}`, payload);
-
+      await axios.post(`/api/cart/add/${customerId}/${restaurantIdFromItem}`, payload);
+  
       toast({
         title: "Success",
         description: `${selectedItem.itemName} (${portionSize}) added to cart!`,
       });
-
+  
       // Ask if user wants to view cart
       const viewCart = window.confirm("Item added to cart. Do you want to view your cart?");
       if (viewCart) {
-        router.push(`/cart/${customerId}/${restaurantId}`);
+        router.push(`/cart/${customerId}/${restaurantIdFromItem}`);
       }
-
+  
       resetDialog();
     } catch (error) {
       console.error("Error adding item to cart:", error);
