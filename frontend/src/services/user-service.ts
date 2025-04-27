@@ -94,7 +94,6 @@ export const userService = {
   // User login
   login: async (email: string, password: string): Promise<any> => {
     try {
-      // Get device info
       const device = navigator.userAgent;
       
       interface AuthResponse {
@@ -108,22 +107,19 @@ export const userService = {
         email,
         password,
         device,
-        ipAddress: "127.0.0.1" // TODO: Replace with actual IP fetching logic
+        ipAddress: "127.0.0.1"
       });
       
       console.log('Auth response in user-service:', response.data);
-      // Check if we're getting sessionId in the response
       if (response.data.sessionId) {
         console.log('SessionId received:', response.data.sessionId);
       } else {
         console.warn('No sessionId received in response:', response.data);
-        // Check if it exists under a different property name
         console.log('Full response properties:', Object.keys(response.data));
       }
       
       const result = { ...response.data };
       
-      // Get the user type after login
       try {
         interface UserResponse {
           userType: string;
@@ -134,32 +130,18 @@ export const userService = {
         console.log('User response:', userResponse.data);
         
         if (userResponse.data && userResponse.data.userType) {
-          result.userType = userResponse.data.userType;
-          // Store standardized lowercase version
-          const normalizedUserType = userResponse.data.userType.toLowerCase();
-          result.userType = normalizedUserType;
+          result.userType = userResponse.data.userType.toLowerCase();
           
-          // Store authentication data in localStorage for client-side access
           if (typeof window !== 'undefined') {
             localStorage.setItem('authToken', response.data.token);
             localStorage.setItem('userId', response.data.userId);
-            localStorage.setItem('userType', normalizedUserType);
+            localStorage.setItem('userType', result.userType);
             localStorage.setItem('sessionId', response.data.sessionId || '');
           }
           
-          // Also set cookies for server-side auth (middleware)
-          setCookie('authToken', response.data.token, { 
-            maxAge: 30 * 24 * 60 * 60, // 30 days
-            path: '/' 
-          });
-          setCookie('userId', response.data.userId, { 
-            maxAge: 30 * 24 * 60 * 60,
-            path: '/' 
-          });
-          setCookie('userType', normalizedUserType, { 
-            maxAge: 30 * 24 * 60 * 60,
-            path: '/' 
-          });
+          setCookie('authToken', response.data.token, { maxAge: 30 * 24 * 60 * 60, path: '/' });
+          setCookie('userId', response.data.userId, { maxAge: 30 * 24 * 60 * 60, path: '/' });
+          setCookie('userType', result.userType, { maxAge: 30 * 24 * 60 * 60, path: '/' });
         }
       } catch (userError) {
         console.error('Error fetching user details:', userError);
@@ -171,15 +153,12 @@ export const userService = {
       throw error;
     }
   },
-  
-  // Logout function
+
   logout: async (): Promise<void> => {
-    // Call backend to invalidate session
     try {
       await api.post('/session-service/api/sessions/invalidate');
       console.log('Session invalidated');
       
-      // Clear localStorage
       if (typeof window !== 'undefined') {
         localStorage.removeItem('authToken');
         localStorage.removeItem('userId');
@@ -187,7 +166,6 @@ export const userService = {
         localStorage.removeItem('sessionId');
       }
       
-      // Clear cookies
       document.cookie = 'authToken=; Max-Age=0; path=/;';
       document.cookie = 'userId=; Max-Age=0; path=/;';
       document.cookie = 'userType=; Max-Age=0; path=/;';
@@ -196,7 +174,6 @@ export const userService = {
     }
   },
 
-  // Get all cuisine types
   getCuisineTypes: async (): Promise<CuisineType[]> => {
     try {
       const response = await api.get<CuisineType[]>('/user-service/cuisine-types');
@@ -207,13 +184,11 @@ export const userService = {
     }
   },
 
-  // Get all restaurant types
   getRestaurantTypes: async (): Promise<RestaurantType[]> => {
     const response = await api.get<RestaurantType[]>('/user-service/restaurant-types');
     return response.data;
   },
 
-  // Get all vehicle types for drivers
   getVehicleTypes: async (): Promise<VehicleType[]> => {
     try {
       const response = await api.get<VehicleType[]>('/user-service/vehicle-types');
@@ -223,8 +198,7 @@ export const userService = {
       throw error;
     }
   },
-  
-  // Get all admin users
+
   getAdmins: async (): Promise<User[]> => {
     try {
       const response = await api.get<User[]>('/user-service/users/type/ADMIN');
@@ -235,7 +209,6 @@ export const userService = {
     }
   },
 
-  // Get all admin users
   getRestaurants: async (): Promise<User[]> => {
     try {
       const response = await api.get<User[]>('/user-service/users/type/RESTAURANT');
@@ -245,8 +218,7 @@ export const userService = {
       throw error;
     }
   },
-  
-  // Get all driver users
+
   getDrivers: async (): Promise<User[]> => {
     try {
       const response = await api.get<User[]>('/user-service/users/type/DRIVER');
@@ -257,7 +229,6 @@ export const userService = {
     }
   },
 
-  // Get all customer users
   getCustomers: async (): Promise<User[]> => {
     try {
       const response = await api.get<User[]>('/user-service/users/type/CUSTOMER');
@@ -267,10 +238,9 @@ export const userService = {
       throw error;
     }
   },
-  
+
   register: async (data: CustomerRegistrationData | RestaurantRegistrationData | DriverRegistrationData, userType: 'customer' | 'restaurant' | 'driver'): Promise<any> => {
-    // Prepare the registration data for the backend
-    const registrationData = {
+    const registrationData: any = {
       email: data.email,
       password: data.password,
       userType: userType.toUpperCase(),
@@ -281,15 +251,14 @@ export const userService = {
         profilePictureUrl: data.profilePictureUrl || undefined,
       }
     };
-    
-    // Add type-specific data to the profile
+
     if (userType === 'restaurant' && 'restaurantName' in data) {
       Object.assign(registrationData.profile, {
         restaurantName: data.restaurantName,
         restaurantLicenseNumber: data.licenseNumber,
         restaurantTypeId: data.restaurantTypeId,
         cuisineTypeIds: data.cuisineTypeIds,
-        restaurantDocuments: data.documents, 
+        restaurantDocuments: data.documents,
         restaurantAddress: data.location,
         location: data.locationCoordinates,
         openingTime: data.operatingHours.map(hours => ({
@@ -303,7 +272,7 @@ export const userService = {
       Object.assign(registrationData.profile, {
         vehicleTypeId: data.vehicleTypeId,
         vehicleNumber: data.licensePlate,
-        vehicleDocuments: data.documents, 
+        vehicleDocuments: data.documents,
         location: data.locationCoordinates
       });
     } else if (userType === 'customer') {
@@ -313,55 +282,66 @@ export const userService = {
         });
       }
     }
-    
+
     try {
-      // Send registration data to backend
+      try {
+        interface EmailExistsResponse {
+          exists: boolean;
+        }
+        const checkResponse = await api.get<EmailExistsResponse>(`/user-service/users/email/${data.email}/exists`);
+        if (checkResponse.data && checkResponse.data.exists) {
+          throw new Error('This email is already registered. <a href="/sign-in" className="text-blue-600 hover:underline">Sign in instead?</a>');
+        }
+      } catch (checkError: any) {
+        if (checkError.message.includes('This email is already registered')) {
+          throw checkError;
+        }
+      }
+
       const response = await api.post('/auth-service/auth/signup', registrationData);
-      
-      // After successful registration, redirect to sign-in page
+
       if (typeof window !== 'undefined' && window.location) {
-        // Use window.location to redirect
         window.location.href = '/sign-in';
       }
-      
+
       return response.data;
     } catch (error: any) {
       console.error('Registration error:', error.response?.data || error);
-      throw error;
+      const errorMessage = error.response?.data?.error || error.response?.data?.message || error.message || 'Registration failed. Please try again.';
+
+      if (errorMessage.includes('Email already exists') || errorMessage.includes('already in use') || error.response?.status === 409) {
+        throw new Error('This email is already registered. <a href="/sign-in" class="text-blue-600 hover:underline">Sign in instead?</a>');
+      }
+
+      throw new Error(errorMessage);
     }
   },
-  
+
   createUser: async (userData: Partial<User>): Promise<User> => {
     const response = await api.post<User>('/api/users', userData);
     return response.data;
   },
-  
+
   updateUser: async (id: string, userData: Partial<User>): Promise<User> => {
     const response = await api.put<User>(`/api/users/${id}`, userData);
     return response.data;
   },
-  
+
   updateProfileImage: async (userId: string, imageUrl: string): Promise<User> => {
     const response = await api.put<User>(`/api/users/${userId}/profile-picture`, { profilePictureUrl: imageUrl });
     return response.data;
   },
-  
-  // Delete a user
+
   deleteUser: async (userId: string, userType: string): Promise<void> => {
     try {
-      await api.request({
-        method: 'DELETE',
-        url: `/user-service/users/${userId}`,
-        data: { userType: userType.toUpperCase() }
-      });
+      await api.request({ method: 'DELETE', url: `/user-service/users/${userId}`, data: { userType: userType.toUpperCase() } });
     } catch (error) {
       console.error('Error deleting user:', error);
       throw error;
     }
   },
 
-  // Restaurant Types Management
-  createRestaurantType: async (restaurantType: Omit<RestaurantType, "id">): Promise<RestaurantType> => {
+  createRestaurantType: async (restaurantType: Omit<RestaurantType, 'id'>): Promise<RestaurantType> => {
     try {
       const response = await api.post<RestaurantType>('/user-service/restaurant-types', restaurantType);
       return response.data;
@@ -370,20 +350,17 @@ export const userService = {
       throw error;
     }
   },
-  
+
   updateRestaurantType: async (restaurantType: RestaurantType): Promise<RestaurantType> => {
     try {
-      const response = await api.put<RestaurantType>(
-        `/user-service/restaurant-types/${restaurantType.id}`, 
-        { type: restaurantType.type, capacity: restaurantType.capacity }
-      );
+      const response = await api.put<RestaurantType>(`/user-service/restaurant-types/${restaurantType.id}`, { type: restaurantType.type, capacity: restaurantType.capacity });
       return response.data;
     } catch (error) {
       console.error('Error updating restaurant type:', error);
       throw error;
     }
   },
-  
+
   deleteRestaurantType: async (id: string): Promise<void> => {
     try {
       await api.delete(`/user-service/restaurant-types/${id}`);
@@ -393,8 +370,7 @@ export const userService = {
     }
   },
 
-  // Vehicle Types Management
-  createVehicleType: async (vehicleType: Omit<VehicleType, "id">): Promise<VehicleType> => {
+  createVehicleType: async (vehicleType: Omit<VehicleType, 'id'>): Promise<VehicleType> => {
     try {
       const response = await api.post<VehicleType>('/user-service/vehicle-types', vehicleType);
       return response.data;
@@ -403,20 +379,17 @@ export const userService = {
       throw error;
     }
   },
-  
+
   updateVehicleType: async (vehicleType: VehicleType): Promise<VehicleType> => {
     try {
-      const response = await api.put<VehicleType>(
-        `/user-service/vehicle-types/${vehicleType.id}`, 
-        { type: vehicleType.type, capacity: vehicleType.capacity }
-      );
+      const response = await api.put<VehicleType>(`/user-service/vehicle-types/${vehicleType.id}`, { type: vehicleType.type, capacity: vehicleType.capacity });
       return response.data;
     } catch (error) {
       console.error('Error updating vehicle type:', error);
       throw error;
     }
   },
-  
+
   deleteVehicleType: async (id: string): Promise<void> => {
     try {
       await api.delete(`/user-service/vehicle-types/${id}`);
@@ -426,8 +399,7 @@ export const userService = {
     }
   },
 
-  // Cuisine Types Management
-  createCuisineType: async (cuisineType: Omit<CuisineType, "id">): Promise<CuisineType> => {
+  createCuisineType: async (cuisineType: Omit<CuisineType, 'id'>): Promise<CuisineType> => {
     try {
       const response = await api.post<CuisineType>('/user-service/cuisine-types', cuisineType);
       return response.data;
@@ -436,20 +408,17 @@ export const userService = {
       throw error;
     }
   },
-  
+
   updateCuisineType: async (cuisineType: CuisineType): Promise<CuisineType> => {
     try {
-      const response = await api.put<CuisineType>(
-        `/user-service/cuisine-types/${cuisineType.id}`, 
-        { name: cuisineType.name }
-      );
+      const response = await api.put<CuisineType>(`/user-service/cuisine-types/${cuisineType.id}`, { name: cuisineType.name });
       return response.data;
     } catch (error) {
       console.error('Error updating cuisine type:', error);
       throw error;
     }
   },
-  
+
   deleteCuisineType: async (id: string): Promise<void> => {
     try {
       await api.delete(`/user-service/cuisine-types/${id}`);
@@ -457,7 +426,7 @@ export const userService = {
       console.error('Error deleting cuisine type:', error);
       throw error;
     }
-  },
+  }
 };
 
 export default userService;
