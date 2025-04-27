@@ -32,15 +32,25 @@ const PUBLIC_ROUTES = [
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   
+  // Get auth token and user type from cookies - do this early to check session status
+  const token = request.cookies.get('authToken')?.value;
+  const userType = request.cookies.get('userType')?.value?.toLowerCase() as UserType;
+  const userId = request.cookies.get('userId')?.value;
+  
+  // If user has a valid session, redirect to their dashboard when accessing public routes
+  // like sign-in, sign-up, or root path
+  if (token && userType && userId) {
+    if (pathname === '/' || pathname === '/sign-in' || pathname === '/sign-up') {
+      const dashboardUrl = `/${userType}`;
+      console.log(`Valid session detected: Redirecting user to ${dashboardUrl}`);
+      return NextResponse.redirect(new URL(dashboardUrl, request.url));
+    }
+  }
+  
   // Skip middleware on public routes
   if (PUBLIC_ROUTES.some(route => pathname.startsWith(route))) {
     return NextResponse.next();
   }
-  
-  // Get auth token and user type from cookies
-  const token = request.cookies.get('authToken')?.value;
-  const userType = request.cookies.get('userType')?.value?.toLowerCase() as UserType;
-  const userId = request.cookies.get('userId')?.value;
   
   // If no token, user type, or user ID, redirect to sign in
   if (!token || !userType || !userId) {
@@ -56,12 +66,6 @@ export function middleware(request: NextRequest) {
   if (requiredUserType && userType !== requiredUserType) {
     console.log(`Access denied: ${userType} trying to access ${routePrefix} which requires ${requiredUserType}`);
     return NextResponse.redirect(new URL('/unauthorized', request.url));
-  }
-  
-  // If the user is at the root, redirect them to their appropriate dashboard
-  if (pathname === '/') {
-    const dashboardUrl = `/${userType}`;
-    return NextResponse.redirect(new URL(dashboardUrl, request.url));
   }
   
   // Add auth headers to the request for backend services
