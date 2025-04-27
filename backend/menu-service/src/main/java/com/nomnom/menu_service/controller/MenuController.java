@@ -27,7 +27,7 @@ public class MenuController {
     @PostMapping(value = "/add", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<MenuItems> addMenu(
             @RequestParam("itemName") String itemName,
-            @RequestParam("restaurantId") Long restaurantId,
+            @RequestParam("restaurantId") String restaurantId,
             @RequestParam("category") String category,
             @RequestParam("availabilityStatus") Boolean availabilityStatus,
             @RequestParam("description") String description,
@@ -128,7 +128,7 @@ public class MenuController {
      * Get all menu items for a specific restaurant.
      */
     @GetMapping("/restaurant/{restaurantId}")
-    public ResponseEntity<List<MenuItems>> getMenuItemsByRestaurantId(@PathVariable Long restaurantId) {
+    public ResponseEntity<List<MenuItems>> getMenuItemsByRestaurantId(@PathVariable String restaurantId) {
         try {
             List<MenuItems> menuItems = menuService.getMenuItemsByRestaurantId(restaurantId);
 
@@ -141,4 +141,42 @@ public class MenuController {
             return ResponseEntity.status(404).body(null); // Return 404 Not Found if no menu items exist for the restaurant
         }
     }
+
+
+    @GetMapping("/category/{categoryName}")
+    public ResponseEntity<List<MenuItems>> getMenuItemsByCategory(@PathVariable String categoryName) {
+        try {
+            List<MenuItems> menuItems = menuService.getMenuItemsByCategory(categoryName);
+
+            if (menuItems.isEmpty()) {
+                return ResponseEntity.noContent().build(); // Return 204 No Content if no items found
+            }
+
+            return ResponseEntity.ok(menuItems); // Return 200 OK with the list of menu items
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(404).body(null); // Return 404 Not Found if no menu items exist for the category
+        }
+    }
+
+    /**
+     * Get all unique categories.
+     */
+    @GetMapping("/categories")
+    public ResponseEntity<List<String>> getAllCategories() {
+        try {
+            List<String> categories = menuService.getAllCategories();
+
+            if (categories.isEmpty()) {
+                return ResponseEntity.noContent().build(); // Return 204 No Content if no categories found
+            }
+
+            return ResponseEntity.ok(categories); // Return 200 OK with the list of unique categories
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(500).body(null); // Return 500 Internal Server Error if an exception occurs
+        }
+    }
 }
+/**
+ * Get all menu items for a specific category.
+ */
+

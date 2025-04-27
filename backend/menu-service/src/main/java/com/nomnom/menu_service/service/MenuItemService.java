@@ -33,7 +33,7 @@ public class MenuItemService implements MenuItemServiceInterface {
         private Cloudinary cloudinary;
 
         @Override
-        public MenuItems saveItem(String itemName, Long restaurantId, Double offer, String category, Boolean availabilityStatus,
+        public MenuItems saveItem(String itemName, String restaurantId, Double offer, String category, Boolean availabilityStatus,
                                   String description, MultipartFile file, List<MenuItemPortion> portions) throws IOException {
             MenuItems item = new MenuItems();
             item.setRestaurantId(restaurantId);
@@ -136,7 +136,7 @@ public class MenuItemService implements MenuItemServiceInterface {
     }
 
     @Override
-    public List<MenuItems> getMenuItemsByRestaurantId(Long restaurantId) {
+    public List<MenuItems> getMenuItemsByRestaurantId(String restaurantId) {
         List<MenuItems> menuItems = ItemRepository.findByRestaurantIdWithPortions(restaurantId);
 
         if (menuItems.isEmpty()) {
@@ -166,6 +166,29 @@ public class MenuItemService implements MenuItemServiceInterface {
             }
             return false;
         }
+
+
+    @Override
+    public List<MenuItems> getMenuItemsByCategory(String categoryName) {
+        List<MenuItems> menuItems = ItemRepository.findByCategory(categoryName);
+
+        if (menuItems.isEmpty()) {
+            throw new RuntimeException("No menu items found for category: " + categoryName);
+        }
+
+        return menuItems;
+    }
+
+    @Override
+    public List<String> getAllCategories() {
+        List<String> categories = ItemRepository.findDistinctCategories();
+
+        if (categories.isEmpty()) {
+            throw new RuntimeException("No categories found.");
+        }
+
+        return categories;
+    }
 }
 
 
@@ -190,4 +213,5 @@ public class MenuItemService implements MenuItemServiceInterface {
 //        List<MenuItemPortion> portions = portionRepository.findByMenuItemId(menuItemId);
 //        System.out.println("Portions found: " + portions.size());
 //        return portions;
+
 //    }

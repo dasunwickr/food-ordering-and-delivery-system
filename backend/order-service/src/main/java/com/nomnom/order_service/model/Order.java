@@ -16,6 +16,7 @@ public class Order {
     @Id
     private String orderId;
     private String customerId;
+    private String restaurantId;
     private CustomerDetails customerDetails;
     private List<CartItem> cartItems;
     private double orderTotal;
@@ -33,7 +34,8 @@ public class Order {
     public static class CustomerDetails {
         private String name;
         private String contact;
-        private String location;
+        private double longitude; // New field
+        private double latitude;  // New field
     }
 
     @Data
@@ -43,8 +45,20 @@ public class Order {
         private String itemId;
         private String itemName;
         private int quantity;
+        private PotionSize potionSize; // New field
         private double price;
         private double totalPrice;
+        private String image; // New field
+
+        // Enum for PotionSize
+        public enum PotionSize {
+            Small, Medium, Large
+        }
+
+        // Method to recalculate total price
+        public void updateTotalPrice() {
+            this.totalPrice = this.price * this.quantity;
+        }
     }
 
     @Data

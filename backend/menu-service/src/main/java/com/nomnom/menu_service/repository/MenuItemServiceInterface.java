@@ -9,11 +9,14 @@ import java.util.List;
 
 public interface MenuItemServiceInterface {
 
-    MenuItems saveItem(String itemName,Long restaurantId,Double offer, String category, Boolean availabilityStatus,
+    MenuItems saveItem(String itemName,String restaurantId,Double offer, String category, Boolean availabilityStatus,
                        String description, MultipartFile file,List<MenuItemPortion> portions) throws IOException;
 
     List<MenuItems> getAllMenuItems();
 
+    List<MenuItems> getMenuItemsByCategory(String categoryName);
+
+    List<String> getAllCategories();
 
     MenuItems getMenuItemById(Long id);
 
@@ -22,7 +25,7 @@ public interface MenuItemServiceInterface {
 
     List<MenuItemPortion> getPortionsForMenuItem(Long menuItemId);
 
-    List<MenuItems> getMenuItemsByRestaurantId(Long restaurantId);
+    List<MenuItems> getMenuItemsByRestaurantId(String restaurantId);
 
 
 
