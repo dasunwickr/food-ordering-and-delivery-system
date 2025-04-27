@@ -46,4 +46,5 @@ public abstract class User {
     private String status;
     
     private String profilePicture;
+
 }

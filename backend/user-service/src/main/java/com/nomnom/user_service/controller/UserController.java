@@ -99,5 +99,10 @@ public class UserController {
     public ResponseEntity<User> updateProfilePicture(@PathVariable String id, @RequestParam String profilePictureUrl) {
         return ResponseEntity.ok(userService.updateProfilePicture(id, profilePictureUrl));
     }
+    @GetMapping("/restaurants")
+    public ResponseEntity<List<Restaurant>> getAllRestaurants() {
+        List<Restaurant> restaurants = userService.getAllRestaurants();
+        return ResponseEntity.ok(restaurants);
+    }
 
 }

@@ -160,4 +160,12 @@ public class UserService {
         }
         throw new IllegalArgumentException("User not found or invalid ID");
     }
+
+    public List<Restaurant> getAllRestaurants() {
+        List<User> users = getUsersByType(UserType.RESTAURANT.name());
+        return users.stream()
+                .filter(user -> user instanceof Restaurant)
+                .map(user -> (Restaurant) user)
+                .toList();
+    }
 }
