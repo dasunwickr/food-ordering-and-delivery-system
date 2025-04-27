@@ -34,18 +34,22 @@ const MenuItems = ({ menuItems }: MenuItemsProps) => {
       {/* Grid Layout for Menu Items */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {menuItems.map((item) => (
-          <Link
+          <div
             key={item.id}
-            href={`/customer/restaurant/menuItem/${item.id}`} // Navigate to the menu item details page
             className="bg-card rounded-lg shadow-md overflow-hidden transition duration-300 hover:shadow-lg relative block"
           >
-            {/* Image Section */}
+            {/* Image Section with Link */}
             {item.imageUrl && (
-              <img
-                src={item.imageUrl}
-                alt={item.itemName}
-                className="w-full h-48 object-cover"
-              />
+              <Link
+                href={`/customer/restaurant/menuItem/${item.id}`} // Navigate to the menu item details page
+                className="block"
+              >
+                <img
+                  src={item.imageUrl}
+                  alt={item.itemName}
+                  className="w-full h-48 object-cover cursor-pointer"
+                />
+              </Link>
             )}
 
             {/* Details Section */}
@@ -80,7 +84,7 @@ const MenuItems = ({ menuItems }: MenuItemsProps) => {
             >
               <BsCartPlus size={20} />
             </button>
-          </Link>
+          </div>
         ))}
       </div>
 
