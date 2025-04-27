@@ -178,5 +178,4 @@ public class UserService {
                 .map(user -> (Restaurant) user)
                 .toList();
     }
-
 }
