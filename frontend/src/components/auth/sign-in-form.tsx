@@ -8,6 +8,7 @@ import { motion } from "framer-motion"
 import { ArrowRight, Mail, Loader2, AlertCircle } from "lucide-react"
 import api from "@/lib/axios"
 
+
 import { Button } from "@/components/ui/button"
 import { FormInput } from "./form-input"
 import { PasswordInput } from "./password-input"
@@ -149,6 +150,7 @@ export function SignInForm({ onSubmit, isLoading = false }: SignInFormProps) {
           onChange={setEmail}
           error={errors.email}
           icon={checkingEmail ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+
           disabled={isLoading}
         />
         {errors.email === "No account found with this email" && (
