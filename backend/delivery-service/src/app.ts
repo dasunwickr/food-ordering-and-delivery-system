@@ -15,6 +15,6 @@ app.use(cors());
 // Database Connection
 connectToDatabase();
 
-app.use("/api/v1/deliveries", deliveryRoutes);
+app.use("/api", deliveryRoutes);
 
 export default app;
