@@ -48,4 +48,5 @@ public abstract class User {
     private UserStatus userStatus = UserStatus.OFFLINE;
     
     private String profilePictureUrl;
+
 }
