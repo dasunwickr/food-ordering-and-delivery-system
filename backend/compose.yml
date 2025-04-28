@@ -104,13 +104,27 @@ services:
       context: ./cart-service
       dockerfile: Dockerfile
     ports:
-      - "8082:8080"
+      - "8080:8080"
     env_file:
       - ./cart-service/.env
     restart: unless-stopped
     networks:
       - nomnom-network
+  
+  # Notification Service
+  
 
+  notification-service:
+    build:
+      context: ./notification-service
+      dockerfile: Dockerfile
+    ports:
+      - "5005:5005"
+    env_file:
+      - ./notification-service/.env
+    restart: unless-stopped
+    networks:
+      - nomnom-network
   
 
 networks:
