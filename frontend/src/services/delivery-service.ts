@@ -38,7 +38,7 @@ export interface OrderDetails {
  */
 export const getAllDeliveries = async (): Promise<IDelivery[]> => {
   try {
-    const response = await api.get<IDelivery[]>('/delivery-service/', {
+    const response = await api.get<IDelivery[]>('/api/delivery-service/', {
       withCredentials: true
     });
     return response.data;
@@ -53,7 +53,7 @@ export const getAllDeliveries = async (): Promise<IDelivery[]> => {
  */
 export const getDeliveriesByCustomerId = async (customerId: string): Promise<IDelivery[]> => {
   try {
-    const response = await api.get<IDelivery[]>(`/delivery-service/customer/${customerId}`, {
+    const response = await api.get<IDelivery[]>(`/api/delivery-service/customer/${customerId}`, {
       withCredentials: true
     });
     return response.data;
@@ -68,7 +68,7 @@ export const getDeliveriesByCustomerId = async (customerId: string): Promise<IDe
  */
 export const getDeliveriesByDriverId = async (driverId: string): Promise<IDelivery[]> => {
   try {
-    const response = await api.get<IDelivery[]>(`/delivery-service/driver/${driverId}`, {
+    const response = await api.get<IDelivery[]>(`/api/delivery-service/driver/${driverId}`, {
       withCredentials: true
     });
     return response.data;
@@ -84,7 +84,7 @@ export const getDeliveriesByDriverId = async (driverId: string): Promise<IDelive
 export const getDeliveriesByRestaurantId = async (restaurantId: string): Promise<IDelivery[]> => {
   try {
     console.log(`Fetching deliveries for restaurant ID: ${restaurantId}`);
-    const apiUrl = `/delivery-service/restaurant/${restaurantId}`;
+    const apiUrl = `/api/delivery-service/restaurant/${restaurantId}`;
     
     // Log axios configuration for debugging
     console.log('Axios config:', {
@@ -133,7 +133,7 @@ export const getDeliveriesByRestaurantId = async (restaurantId: string): Promise
  */
 export const getDeliveryById = async (deliveryId: string): Promise<IDelivery> => {
   try {
-    const response = await api.get<IDelivery>(`/delivery-service/${deliveryId}`);
+    const response = await api.get<IDelivery>(`/api/delivery-service/${deliveryId}`);
     return response.data;
   } catch (error) {
     console.error('Failed to fetch delivery:', error);
@@ -146,7 +146,7 @@ export const getDeliveryById = async (deliveryId: string): Promise<IDelivery> =>
  */
 export const getDeliveryWithOrderDetails = async (deliveryId: string): Promise<{ delivery: IDelivery; order: OrderDetails }> => {
   try {
-    const response = await api.get<{ delivery: IDelivery; order: OrderDetails }>(`/delivery-service/${deliveryId}/with-order`);
+    const response = await api.get<{ delivery: IDelivery; order: OrderDetails }>(`/api/delivery-service/${deliveryId}/with-order`);
     return response.data;
   } catch (error) {
     console.error('Failed to fetch delivery with order details:', error);
@@ -159,7 +159,7 @@ export const getDeliveryWithOrderDetails = async (deliveryId: string): Promise<{
  */
 export const createDelivery = async (deliveryData: Partial<IDelivery>): Promise<IDelivery> => {
   try {
-    const response = await api.post<IDelivery>('/delivery-service/', deliveryData);
+    const response = await api.post<IDelivery>('/api/delivery-service/', deliveryData);
     return response.data;
   } catch (error) {
     console.error('Failed to create delivery:', error);
@@ -175,7 +175,7 @@ export const updateDelivery = async (
   updateData: Partial<IDelivery>
 ): Promise<IDelivery> => {
   try {
-    const response = await api.put<IDelivery>(`/delivery-service/${deliveryId}`, updateData);
+    const response = await api.put<IDelivery>(`/api/delivery-service/${deliveryId}`, updateData);
     return response.data;
   } catch (error) {
     console.error('Failed to update delivery:', error);
@@ -188,9 +188,9 @@ export const updateDelivery = async (
  */
 export const deleteDelivery = async (deliveryId: string): Promise<void> => {
   try {
-    await api.delete(`/delivery-service/${deliveryId}`);
+    await api.delete(`/api/delivery-service/${deliveryId}`);
   } catch (error) {
     console.error('Failed to delete delivery:', error);
     throw new Error('Failed to delete delivery');
   }
-}; 
+};

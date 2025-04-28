@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ProfileImageUploader } from "@/components/shared/profile-image-uploader"
 import { ResetPasswordModal } from "@/components/user-service/profile/reset-password"
+import { getLocalStorageItem } from "@/utils/storage"
 
 // Sample driver data
 const DRIVER_DATA = {
@@ -32,6 +33,31 @@ export default function DriverProfilePage() {
     contactNumber: driver.contactNumber,
   })
   const [resetPasswordModalOpen, setResetPasswordModalOpen] = useState(false)
+
+  useEffect(() => {
+    // Get user profile from localStorage if available
+    const userProfile = getLocalStorageItem<any>('userProfile')
+    if (userProfile) {
+      setDriver({
+        ...driver,
+        id: userProfile.id || driver.id,
+        firstName: userProfile.firstName || driver.firstName,
+        lastName: userProfile.lastName || driver.lastName,
+        email: userProfile.email || driver.email,
+        contactNumber: userProfile.contactNumber || userProfile.phone || driver.contactNumber,
+        profilePicture: userProfile.profilePictureUrl || driver.profilePicture,
+        vehicleType: userProfile.vehicleType?.type || driver.vehicleType,
+        vehicleNumber: userProfile.vehicleNumber || driver.vehicleNumber,
+      })
+      
+      setFormData({
+        firstName: userProfile.firstName || driver.firstName,
+        lastName: userProfile.lastName || driver.lastName,
+        email: userProfile.email || driver.email,
+        contactNumber: userProfile.contactNumber || userProfile.phone || driver.contactNumber,
+      })
+    }
+  }, [])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target

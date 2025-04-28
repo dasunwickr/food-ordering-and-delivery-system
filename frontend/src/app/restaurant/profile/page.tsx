@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
 import { ProfileImageUploader } from "@/components/shared/profile-image-uploader"
 import { ResetPasswordModal } from "@/components/user-service/profile/reset-password"
+import { getLocalStorageItem } from "@/utils/storage"
 
 // Sample restaurant data
 const RESTAURANT_DATA = {
@@ -33,6 +34,31 @@ export default function RestaurantProfilePage() {
     description: restaurant.description,
   })
   const [resetPasswordModalOpen, setResetPasswordModalOpen] = useState(false)
+
+  useEffect(() => {
+    // Get user profile from localStorage if available
+    const userProfile = getLocalStorageItem<any>('userProfile')
+    if (userProfile) {
+      setRestaurant({
+        ...restaurant,
+        id: userProfile.id || restaurant.id,
+        name: userProfile.restaurantName || restaurant.name,
+        email: userProfile.email || restaurant.email,
+        contactNumber: userProfile.contactNumber || userProfile.phone || restaurant.contactNumber,
+        address: userProfile.address || userProfile.restaurantAddress || restaurant.address,
+        description: userProfile.description || restaurant.description,
+        profilePicture: userProfile.profilePictureUrl || restaurant.profilePicture,
+      })
+      
+      setFormData({
+        name: userProfile.restaurantName || restaurant.name,
+        email: userProfile.email || restaurant.email,
+        contactNumber: userProfile.contactNumber || userProfile.phone || restaurant.contactNumber,
+        address: userProfile.address || userProfile.restaurantAddress || restaurant.address,
+        description: userProfile.description || restaurant.description,
+      })
+    }
+  }, [])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
