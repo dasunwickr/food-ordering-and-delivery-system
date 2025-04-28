@@ -16,11 +16,11 @@ services:
       - session-service
       - user-service
       # - payment-service
-      # - order-service
+      - order-service
       - menu-service
       - cart-service
       # - delivery-service
-      # - notification-service
+      - notification-service
     restart: unless-stopped
     networks:
       - nomnom-network
@@ -60,6 +60,19 @@ services:
       - "8085:8085"
     env_file:
       - ./user-service/.env
+    restart: unless-stopped
+    networks:
+      - nomnom-network
+
+  # Order Service
+  order-service:
+    build:
+      context: ./order-service
+      dockerfile: Dockerfile
+    ports:
+      - "8081:8081"
+    env_file:
+      - ./order-service/.env
     restart: unless-stopped
     networks:
       - nomnom-network
@@ -112,8 +125,6 @@ services:
       - nomnom-network
   
   # Notification Service
-  
-
   notification-service:
     build:
       context: ./notification-service
@@ -133,3 +144,4 @@ networks:
 
 volumes:
   menu-db-data:
+  order-db-data:
