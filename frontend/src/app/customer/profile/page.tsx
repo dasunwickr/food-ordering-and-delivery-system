@@ -214,8 +214,14 @@ export default function CustomerProfilePage() {
   // Initialize map with current location when opening the modal
   const handleOpenLocationModal = () => {
     // Set the location atom to the current customer location
-    if (customer.location) {
-      setLocation(customer.location)
+    if (customer.location && customer.location.lat && customer.location.lng) {
+      // Make sure to set a complete location object with all required fields
+      setLocation({
+        lat: customer.location.lat,
+        lng: customer.location.lng,
+        address: customer.location.address || ''
+      })
+      console.log("Setting location in atom:", customer.location)
     }
     setShowLocationModal(true)
   }
@@ -351,9 +357,19 @@ export default function CustomerProfilePage() {
       <ResetPasswordModal
         open={resetPasswordModalOpen}
         onClose={() => setResetPasswordModalOpen(false)}
-        onSubmit={() => {
-          // In a real app, you would handle password reset here
-          setResetPasswordModalOpen(false)
+        onSubmit={async (data) => {
+          try {
+            // Call our reset password service function
+            await userService.resetPassword(
+              customer.id, 
+              data.currentPassword, 
+              data.newPassword
+            );
+            toast.success("Password reset successful");
+            setResetPasswordModalOpen(false);
+          } catch (error: any) {
+            toast.error(error.message || "Password reset failed. Please try again.");
+          }
         }}
       />
 

@@ -1,6 +1,6 @@
 import api from '@/lib/axios';
 import { setCookie } from 'cookies-next';
-import { AUTH_API, USER_URL } from '@/services/index';
+import { API_URL, AUTH_API, USER_URL } from '@/services/index';
 import { getClientIdentifier } from '@/utils/ip-address';
 
 // Types
@@ -85,6 +85,12 @@ export interface CustomerRegistrationData extends RegisterCommonData {
   };
 }
 
+// Extended user type with location for internal use
+export interface ExtendedUserData extends Partial<User> {
+  location?: { lat: number; lng: number; address?: string };
+  locationCoordinates?: { lat: number; lng: number; address?: string };
+  [key: string]: any;
+}
 
 // User related API calls
 export const userService = {
@@ -479,9 +485,53 @@ export const userService = {
     return response.data;
   },
 
-  updateUser: async (id: string, userData: Partial<User>): Promise<User> => {
-    const response = await api.put<User>(`${USER_URL}/users/${id}`, userData);
-    return response.data;
+  updateUser: async (id: string, userData: Partial<User> | ExtendedUserData): Promise<User> => {
+    console.log('Updating user with data:', userData);
+    
+    try {
+      // First, get the existing user to ensure we have the complete object
+      const currentUser = await api.get<User>(`${USER_URL}/users/${id}`);
+      console.log('Current user data:', currentUser.data);
+      
+      // Create a merged object with current data plus updates
+      const mergedUserData = { ...currentUser.data };
+      
+      // Update the merged object with the new data
+      Object.keys(userData).forEach(key => {
+        if (key !== 'location') {
+          (mergedUserData as any)[key] = (userData as any)[key];
+        }
+      });
+      
+      // Special handling for location data
+      if ('location' in userData && userData.location) {
+        console.log('Location data detected in update:', userData.location);
+        
+        // Customer location in Spring Data expects a Point object format
+        if (mergedUserData.userType?.toUpperCase() === 'CUSTOMER') {
+          (mergedUserData as any).location = {
+            x: userData.location.lng,
+            y: userData.location.lat
+          };
+          
+          // Store the address in a separate field for UI display
+          if ('address' in userData.location) {
+            (mergedUserData as any).locationAddress = userData.location.address;
+          }
+        }
+      }
+      
+      console.log('Sending updated user data to backend:', mergedUserData);
+      const response = await api.put<User>(`${USER_URL}/users/${id}`, mergedUserData);
+      console.log('User update successful:', response.data);
+      return response.data;
+    } catch (error: any) {
+      console.error('Error updating user:', error);
+      if (error.response?.data) {
+        console.error('Error details:', error.response.data);
+      }
+      throw error;
+    }
   },
 
   updateProfileImage: async (userId: string, imageUrl: string): Promise<User> => {
@@ -524,6 +574,114 @@ export const userService = {
     } catch (error) {
       console.error('Error deleting restaurant type:', error);
       throw error;
+    }
+  },
+
+  resetPassword: async (userId: string, currentPassword: string, newPassword: string): Promise<void> => {
+    try {
+      // Get device info and IP address for security logging
+      const clientInfo = await getClientIdentifier();
+
+      // First, get the user's email
+      const user = await userService.getCurrentUser();
+      if (!user || !user.email) {
+        throw new Error('Unable to retrieve current user information');
+      }
+      
+      // Verify current password by attempting a login (but don't store the new tokens)
+      try {
+        await api.post(`${AUTH_API}/auth/signin`, {
+          email: user.email,
+          password: currentPassword,
+          device: clientInfo.userAgent,
+          ipAddress: clientInfo.ip
+        });
+        // If we get here, password was correct
+      } catch (error: any) {
+        // If login fails, the current password is incorrect
+        console.error('Password verification failed:', error);
+        throw new Error('Current password is incorrect');
+      }
+      
+      // For an authenticated user changing their own password
+      // We need to use a different approach than the OTP-based reset-password
+      // Since we don't have a specific endpoint for authenticated password changes,
+      // we'll need to directly update the user in the auth service
+      
+      try {
+        // Call custom endpoint for authenticated user password change
+        await api.post(`${AUTH_API}/auth/change-password`, {
+          userId,
+          currentPassword,
+          newPassword,
+          device: clientInfo.userAgent,
+          ipAddress: clientInfo.ip
+        });
+      } catch (error: any) {
+        console.error('Error changing password:', error);
+        
+        // If this specific endpoint doesn't exist, we need to create it on the backend
+        // For now, show a more helpful error message
+        throw new Error('Password change functionality is not properly configured on the server. Please contact administrator.');
+      }
+      
+      console.log('Password reset successful');
+      
+      // Invalidate other sessions for security
+      try {
+        const sessionId = localStorage.getItem('sessionId');
+        if (sessionId) {
+          try {
+            await api.post(`${AUTH_API}/auth/invalidate-other-sessions`, { 
+              userId, 
+              sessionId,
+              ipAddress: clientInfo.ip
+            });
+            console.log('Other sessions invalidated for security');
+          } catch (otherError) {
+            // Try alternative endpoint
+            await api.post(`${API_URL}/session-service/sessions/invalidate/other`, {
+              userId,
+              ipAddress: clientInfo.ip
+            });
+            console.log('Other sessions invalidated for security (alternative endpoint)');
+          }
+        }
+      } catch (sessionError) {
+        console.error('Error invalidating other sessions:', sessionError);
+        // Continue even if session invalidation fails
+      }
+    } catch (error: any) {
+      console.error('Error resetting password:', error);
+      if (error.response?.status === 401) {
+        throw new Error('Current password is incorrect');
+      }
+      throw new Error(error.response?.data?.message || error.response?.data?.error || 'Password reset failed. Please try again.');
+    }
+  },
+
+  // Change password for authenticated users
+  changePassword: async (userId: string, currentPassword: string, newPassword: string): Promise<void> => {
+    try {
+      // Get device info and IP address for security logging
+      const clientInfo = await getClientIdentifier();
+
+      // Call the backend endpoint for changing the password
+      await api.post(`${AUTH_API}/auth/change-password`, {
+        userId,
+        currentPassword,
+        newPassword,
+        device: clientInfo.userAgent,
+        ipAddress: clientInfo.ip
+      });
+
+      console.log('Password change successful');
+    } catch (error: any) {
+      console.error('Error changing password:', error);
+      if (error.response?.status === 401) {
+        throw new Error('Current password is incorrect');
+      }
+      throw new Error(error.response?.data?.message || error.response?.data?.error || 'Password change failed. Please try again.');
     }
   },
 

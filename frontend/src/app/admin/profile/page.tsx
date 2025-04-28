@@ -12,6 +12,7 @@ import { ProfileImageUploader } from "@/components/user-service/profile/profile-
 import { ResetPasswordModal } from "@/components/user-service/profile/reset-password"
 import { getLocalStorageItem } from "@/utils/storage"
 import userService from "@/services/user-service"
+import { toast } from "sonner"
 
 // Sample admin data
 const ADMIN_DATA = {
@@ -168,9 +169,19 @@ export default function ProfilePage() {
       <ResetPasswordModal
         open={resetPasswordModalOpen}
         onClose={() => setResetPasswordModalOpen(false)}
-        onSubmit={(data) => {
-          // In a real app, you would handle password reset here
-          setResetPasswordModalOpen(false)
+        onSubmit={async (data) => {
+          try {
+            // Call our reset password service function
+            await userService.resetPassword(
+              admin.id, 
+              data.currentPassword, 
+              data.newPassword
+            );
+            toast.success("Password reset successful");
+            setResetPasswordModalOpen(false);
+          } catch (error: any) {
+            toast.error(error.message || "Password reset failed. Please try again.");
+          }
         }}
       />
     </div>

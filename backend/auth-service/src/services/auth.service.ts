@@ -20,54 +20,43 @@ export const registerUser = async (
   // Hash password
   const hashedPassword = await hashPassword(password);
 
-  // Create local user for auth purposes
-  const localUser = new UserModel({
+  // Create user in the User Service with all profile details
+  const fullUserData = {
+    ...profile,
     email,
-    password: hashedPassword,
     userType
-  });
-  
+  };
+
   try {
+    // Save in User Service
+    const { data: createdUser } = await axios.post(USER_SERVICE_URL, fullUserData);
+    console.log('User created in User Service:', createdUser);
+
+    // Create local user for auth purposes with userId from User Service
+    const localUser = new UserModel({
+      email,
+      password: hashedPassword,
+      userType,
+      userId: createdUser.id
+    });
+
     await localUser.save();
     console.log('Local auth user created:', localUser._id);
-    
-    // Create user in the User Service with all profile details
-    const fullUserData = {
-      ...profile,
-      email,
-      userType
+
+    return { 
+      userId: createdUser.id
     };
-
-    // Log what we're sending to the user service
-    console.log('Sending user data to User Service:', JSON.stringify(fullUserData, null, 2));
-
-    // Save in User Service
-    try {
-      const { data: createdUser } = await axios.post(USER_SERVICE_URL, fullUserData);
-      console.log('User created in User Service:', createdUser);
-
-      return { 
-        userId: createdUser.id || localUser._id.toString()
-      };
-    } catch (userServiceError: any) {
-      // If the user service fails, we need to roll back the local user creation
-      await UserModel.deleteOne({ _id: localUser._id });
-      
-      // Specific error handling for debugging
-      if (userServiceError.response) {
-        console.error('User service error response:', {
-          status: userServiceError.response.status,
-          data: userServiceError.response.data
-        });
-        throw new Error(`User registration failed: ${userServiceError.response.data.error || userServiceError.message}`);
-      }
-      
-      throw new Error(`User registration failed: ${userServiceError.message}`);
+  } catch (userServiceError: any) {
+    // Specific error handling for debugging
+    if (userServiceError.response) {
+      console.error('User service error response:', {
+        status: userServiceError.response.status,
+        data: userServiceError.response.data
+      });
+      throw new Error(`User registration failed: ${userServiceError.response.data.error || userServiceError.message}`);
     }
-  } catch (error: any) {
-    // Handle any other errors with local user creation
-    console.error('User registration error:', error);
-    throw error;
+
+    throw new Error(`User registration failed: ${userServiceError.message}`);
   }
 };
 
@@ -89,7 +78,7 @@ export const loginUser = async (
     
     return { 
       userId: user._id.toString(),
-      sessionId: sessionResult.sessionId, // Direct access without optional chaining
+      sessionId: sessionResult.sessionId, 
       sessionToken: sessionResult.token,
       userType: user.userType
     };
@@ -106,7 +95,7 @@ export const forgotPassword = async (email: string) => {
   // Generate a 6-digit OTP
   const otp = generateOtp();
   const expiresAt = new Date();
-  expiresAt.setMinutes(expiresAt.getMinutes() + 15); // OTP expires in 15 minutes
+  expiresAt.setMinutes(expiresAt.getMinutes() + 15); 
 
   // Save OTP in database
   await OtpModel.findOneAndUpdate(
@@ -170,5 +159,21 @@ export const resetPassword = async (email: string, newPassword: string, ip: stri
   await OtpModel.deleteOne({ email });
 
   // Return basic success message
+  return { success: true };
+};
+
+export const changePassword = async (userId: string, currentPassword: string, newPassword: string) => {
+  const user = await UserModel.findById(userId);
+  if (!user) throw new Error('User not found');
+
+  // Verify the current password
+  const isPasswordValid = await comparePassword(currentPassword, user.password);
+  if (!isPasswordValid) throw new Error('Current password is incorrect');
+
+  // Hash the new password
+  const hashedPassword = await hashPassword(newPassword);
+  user.password = hashedPassword;
+  await user.save();
+
   return { success: true };
 };

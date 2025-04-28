@@ -12,6 +12,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { ProfileImageUploader } from "@/components/shared/profile-image-uploader"
 import { ResetPasswordModal } from "@/components/user-service/profile/reset-password"
 import { getLocalStorageItem } from "@/utils/storage"
+import { userService } from "@/services/user-service"
+import { toast } from "react-toastify"
 
 // Sample restaurant data
 const RESTAURANT_DATA = {
@@ -211,9 +213,19 @@ export default function RestaurantProfilePage() {
       <ResetPasswordModal
         open={resetPasswordModalOpen}
         onClose={() => setResetPasswordModalOpen(false)}
-        onSubmit={(data) => {
-          // In a real app, you would handle password reset here
-          setResetPasswordModalOpen(false)
+        onSubmit={async (data) => {
+          try {
+            // Call our reset password service function
+            await userService.resetPassword(
+              restaurant.id, 
+              data.currentPassword, 
+              data.newPassword
+            );
+            toast.success("Password reset successful");
+            setResetPasswordModalOpen(false);
+          } catch (error: any) {
+            toast.error(error.message || "Password reset failed. Please try again.");
+          }
         }}
       />
     </div>

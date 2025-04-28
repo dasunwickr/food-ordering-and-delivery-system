@@ -12,6 +12,7 @@ router.post('/signin', AuthController.signIn as RequestHandler);
 router.post('/forgot-password', AuthController.forgotPassword as RequestHandler);
 router.post('/verify-otp', AuthController.verifyOtp as RequestHandler);
 router.post('/reset-password', AuthController.resetPassword as RequestHandler);
+router.post('/change-password', AuthController.changePassword as RequestHandler); // TODO: Reset Password
 
 // Email sending route
 router.post('/send-email', AuthController.sendCustomEmail as RequestHandler);

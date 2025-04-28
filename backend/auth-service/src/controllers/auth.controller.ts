@@ -110,3 +110,22 @@ export const sendCustomEmail = async (req: Request, res: Response) => {
     });
   }
 };
+
+export const changePassword = async (req: Request, res: Response) => {
+  try {
+    const { userId, currentPassword, newPassword } = req.body;
+
+    // Validate required fields
+    if (!userId || !currentPassword || !newPassword) {
+      return res.status(400).json({ error: 'Missing required fields: userId, currentPassword, newPassword' });
+    }
+
+    // Call the service to change the password
+    const result = await AuthService.changePassword(userId, currentPassword, newPassword);
+
+    res.status(200).json({ message: 'Password changed successfully', ...result });
+  } catch (err: any) {
+    console.error('Error changing password:', err);
+    res.status(400).json({ error: err.message });
+  }
+};
