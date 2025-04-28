@@ -15,7 +15,7 @@ services:
       - auth-service
       - session-service
       - user-service
-      # - payment-service
+      - payment-service
       - order-service
       - menu-service
       - cart-service
@@ -136,7 +136,20 @@ services:
     restart: unless-stopped
     networks:
       - nomnom-network
-  
+
+  # Payment Service
+  payment-service:
+    build:
+      context: ./payment-service
+      dockerfile: Dockerfile
+    ports:
+      - "4242:4242"
+    env_file:
+      - ./payment-service/.env
+    restart: unless-stopped
+    networks:
+      - nomnom-network
+
 
 networks:
   nomnom-network:
@@ -144,4 +157,3 @@ networks:
 
 volumes:
   menu-db-data:
-  order-db-data:
