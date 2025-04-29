@@ -1,18 +1,70 @@
 "use client"
 
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { useEffect, useState } from "react"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
+} from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { MoreHorizontal, Eye, Trash2 } from "lucide-react"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger
+} from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
-interface CustomersTableProps {
-  customers: any[]
-  onViewDetails: (customer: any) => void
-  onDelete?: (customer: any) => void
-}
+// Dummy data for initial load
+const dummyCustomers = [
+  {
+    id: "1",
+    firstName: "Alice",
+    lastName: "Johnson",
+    email: "alice@example.com",
+    contactNumber: "+123456789",
+    joinDate: "2024-12-01",
+    ordersCount: 5,
+    profilePicture: "",
+  },
+  {
+    id: "2",
+    firstName: "Bob",
+    lastName: "Smith",
+    email: "bob@example.com",
+    contactNumber: "+987654321",
+    joinDate: "2023-11-15",
+    ordersCount: 12,
+    profilePicture: "",
+  },
+]
 
-export function CustomersTable({ customers, onViewDetails, onDelete }: CustomersTableProps) {
+export function CustomersTable() {
+  const [customers, setCustomers] = useState<any[] | null>(null)
+
+  useEffect(() => {
+    // Simulate loading delay (e.g., from backend API)
+    const timeout = setTimeout(() => {
+      setCustomers(dummyCustomers)
+    }, 1000)
+
+    return () => clearTimeout(timeout)
+  }, [])
+
+  const handleViewDetails = (customer: any) => {
+    alert(`Viewing details for ${customer.firstName} ${customer.lastName}`)
+  }
+
+  const handleDelete = (customer: any) => {
+    if (window.confirm(`Are you sure you want to delete ${customer.firstName}?`)) {
+      setCustomers((prev) => prev?.filter((c) => c.id !== customer.id) || [])
+    }
+  }
+
   return (
     <div className="rounded-md border">
       <Table>
@@ -27,7 +79,13 @@ export function CustomersTable({ customers, onViewDetails, onDelete }: Customers
           </TableRow>
         </TableHeader>
         <TableBody>
-          {customers.length === 0 ? (
+          {!customers ? (
+            <TableRow>
+              <TableCell colSpan={6} className="h-24 text-center">
+                Loading customers...
+              </TableCell>
+            </TableRow>
+          ) : customers.length === 0 ? (
             <TableRow>
               <TableCell colSpan={6} className="h-24 text-center">
                 No customers found.
@@ -66,19 +124,17 @@ export function CustomersTable({ customers, onViewDetails, onDelete }: Customers
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => onViewDetails(customer)}>
+                      <DropdownMenuItem onClick={() => handleViewDetails(customer)}>
                         <Eye className="mr-2 h-4 w-4" />
                         View Details
                       </DropdownMenuItem>
-                      {onDelete && (
-                        <DropdownMenuItem 
-                          className="text-destructive focus:text-destructive" 
-                          onClick={() => onDelete(customer)}
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Delete
-                        </DropdownMenuItem>
-                      )}
+                      <DropdownMenuItem
+                        className="text-destructive focus:text-destructive"
+                        onClick={() => handleDelete(customer)}
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete
+                      </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </TableCell>

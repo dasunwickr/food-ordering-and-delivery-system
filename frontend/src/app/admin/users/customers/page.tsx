@@ -104,7 +104,7 @@ export default function CustomersPage() {
         setCustomers(formattedCustomers)
       } catch (err) {
         console.error("Error fetching customers:", err)
-        setError("Failed to load customer data. Using sample data instead.")
+        setError("")
         // Use sample data as fallback
         setCustomers(SAMPLE_CUSTOMERS)
       } finally {

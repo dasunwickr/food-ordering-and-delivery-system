@@ -1,36 +1,62 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+Food Ordering & Delivery System Deployment Guide
+This guide provides instructions for deploying the Food Ordering & Delivery System using Docker and Kubernetes with kind.
 
-## Getting Started
+Deployment with Docker
+Prerequisites
+Docker installed on your system.
+Docker Compose installed.
+Steps
+Navigate to the backend directory:
 
-First, run the development server:
+Start the services using Docker Compose:
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+Verify that all services are running:
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Access the application via the API Gateway at http://localhost.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Deployment with Kubernetes (kind)
+Prerequisites
+kind installed on your system.
+kubectl CLI installed and configured.
+Steps
+Create a kind cluster:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Load Docker images into the kind cluster:
 
-## Learn More
+Navigate to the kubernetes directory:
 
-To learn more about Next.js, take a look at the following resources:
+Deploy the application:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Monitor the deployment:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Access the application via the API Gateway:
 
-## Deploy on Vercel
+Run the following command to get the service details:
+If using kind, you may need to forward the port:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Using kind for Kubernetes Deployment
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+If you are using `kind` (Kubernetes in Docker) for your Kubernetes deployment, follow these additional steps:
+
+1. **Create a kind cluster**:
+   ```bash
+   kind create cluster --name nomnom-system
+   ```
+
+2. **Load Docker images into the kind cluster**:
+   ```bash
+   kind load docker-image <image-name> --name nomnom-system
+   ```
+
+3. **Port-forward the API Gateway service**:
+   After deploying the application, forward the API Gateway port to access the application locally:
+   ```bash
+   kubectl port-forward service/api-gateway 8080:80 -n nomnom-system
+   ```
+
+4. **Access the application**:
+   Open your browser and navigate to `http://localhost:8080` to access the Food Ordering & Delivery System.
+
+Notes
+Ensure all .env files are properly configured before deployment.
+For production, consider using a managed Kubernetes service and secure sensitive data using Kubernetes Secrets.
