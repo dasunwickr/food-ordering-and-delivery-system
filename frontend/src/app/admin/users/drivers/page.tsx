@@ -118,7 +118,7 @@ export default function DriversPage() {
         setDrivers(formattedDrivers)
       } catch (err) {
         console.error("Error fetching drivers:", err)
-        setError("Failed to load driver data. Using sample data instead.")
+        // setError("Failed to load driver data. Using sample data instead.")
         // Use sample data as fallback
         setDrivers(SAMPLE_DRIVERS)
       } finally {

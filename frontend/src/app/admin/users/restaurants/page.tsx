@@ -146,7 +146,7 @@ export default function RestaurantsPage() {
         setRestaurants(formattedRestaurants)
       } catch (err) {
         console.error("Error fetching restaurants:", err)
-        setError("Failed to load restaurant data. Using sample data instead.")
+        // setError("Failed to load restaurant data. Using sample data instead.")
         // Use sample data as fallback
         setRestaurants(SAMPLE_RESTAURANTS)
       } finally {
