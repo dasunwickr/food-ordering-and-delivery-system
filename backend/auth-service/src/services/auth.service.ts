@@ -13,6 +13,8 @@ export const registerUser = async (
   userType: string,
   profile: Record<string, any>
 ) => {
+  console.log('RegisterUser Input:', { email, password, userType, profile }); // Debugging log
+
   // Check if user already exists
   const existing = await UserModel.findOne({ email });
   if (existing) throw new Error('Email already exists');
@@ -30,23 +32,25 @@ export const registerUser = async (
   try {
     // Save in User Service
     const { data: createdUser } = await axios.post(USER_SERVICE_URL, fullUserData);
-    console.log('User created in User Service:', createdUser);
+    console.log('RegisterUser Created User:', createdUser); // Debugging log
 
-    // Create local user for auth purposes with userId from User Service
+    // Ensure userType and userId are saved in the local auth database
     const localUser = new UserModel({
       email,
       password: hashedPassword,
-      userType,
-      userId: createdUser.id
+      userType, // Save userType explicitly
+      userId: createdUser.id // Save userId explicitly
     });
 
     await localUser.save();
-    console.log('Local auth user created:', localUser._id);
+    console.log('Local auth user created with userType and userId:', localUser._id);
 
     return { 
       userId: createdUser.id
     };
   } catch (userServiceError: any) {
+    console.error('RegisterUser Error:', userServiceError); // Debugging log
+
     // Specific error handling for debugging
     if (userServiceError.response) {
       console.error('User service error response:', {
@@ -66,24 +70,31 @@ export const loginUser = async (
   device: string,
   ipAddress: string
 ) => {
+  console.log('LoginUser Input:', { email, password, device, ipAddress }); // Debugging log
+
   const user = await UserModel.findOne({ email });
+  console.log('LoginUser Found User:', user); // Debugging log
+
   if (!user) throw new Error('User not found');
 
   const valid = await comparePassword(password, user.password);
+  console.log('LoginUser Password Valid:', valid); // Debugging log
+
   if (!valid) throw new Error('Invalid credentials');
   
   // Create a session for the user
   try {
     const sessionResult = await createSession(user._id.toString(), ipAddress, device);
+    console.log('LoginUser Session Result:', sessionResult); // Debugging log
     
     return { 
       userId: user._id.toString(),
       sessionId: sessionResult.sessionId, 
       sessionToken: sessionResult.token,
-      userType: user.userType
+      userType: user.userType // Make sure to return the userType
     };
   } catch (error: any) {
-    console.error('Session creation error:', error);
+    console.error('LoginUser Error:', error); // Debugging log
     throw new Error('Failed to create session');
   }
 };

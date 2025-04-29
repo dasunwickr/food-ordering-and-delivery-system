@@ -161,7 +161,6 @@ export const userService = {
   // User login
   login: async (email: string, password: string): Promise<any> => {
     try {
-      // Get device info and IP address
       const clientInfo = await getClientIdentifier();
 
       interface AuthResponse {
@@ -172,14 +171,6 @@ export const userService = {
         userType?: string;
       }
 
-      // Debug the request payload
-      console.log('Login request payload:', {
-        email,
-        password: '***hidden***',
-        device: clientInfo.userAgent.substring(0, 50) + '...',
-        ipAddress: clientInfo.ip
-      });
-
       const response = await api.post<AuthResponse>(`${AUTH_API}/auth/signin`, {
         email,
         password,
@@ -189,110 +180,54 @@ export const userService = {
 
       console.log('Auth response in user-service:', response.data);
 
-      // Extract token properly (backend sends as either token or sessionToken)
       const token = response.data.token || response.data.sessionToken;
       const sessionId = response.data.sessionId;
-      // Get the ID from auth service (might need to be replaced with user service ID)
       const authServiceUserId = response.data.userId;
+      const userType = response.data.userType?.toLowerCase();
 
-      if (sessionId) {
-        console.log('SessionId received:', sessionId);
-      } else {
-        console.warn('No sessionId received in response:', response.data);
-        console.log('Full response properties:', Object.keys(response.data));
+      if (!token || !authServiceUserId) {
+        throw new Error('Invalid authentication response');
       }
 
-      const result = { 
-        ...response.data,
-        token: token // Ensure token is consistently available
-      };
-
-      try {
-        interface UserResponse {
-          id: string; // Ensure we capture the user service's ID
-          userType: string;
-          [key: string]: any;
-        }
-
-        // Get user profile from user service
-        const userResponse = await api.get<UserResponse>(`${USER_URL}/users/email/${email}`);
-        console.log('User response:', userResponse.data);
-
-        if (userResponse.data) {
-          // Store the user service user ID (the correct one to use for subsequent requests)
-          const userServiceUserId = userResponse.data.id;
-          
-          console.log('User IDs comparison:', {
-            authServiceId: authServiceUserId,
-            userServiceId: userServiceUserId
-          });
-          
-          // Use the user service ID, not the auth service ID
-          result.userId = userServiceUserId;
-
-          if (userResponse.data.userType) {
-            result.userType = userResponse.data.userType.toLowerCase();
-          }
-
-          if (typeof window !== 'undefined') {
-            // Store auth data in localStorage - IMPORTANT: Use the user service ID, not auth ID
-            localStorage.setItem('authToken', token || '');
-            localStorage.setItem('userId', userServiceUserId); // Use ID from user service
-            localStorage.setItem('userType', result.userType || '');
-
-            // Store sessionId if available
-            if (sessionId) {
-              localStorage.setItem('sessionId', sessionId);
-            }
-
-            // Store complete user profile data in localStorage
-            localStorage.setItem('userProfile', JSON.stringify(userResponse.data));
-          }
-
-          // Set cookies for server-side access - use user service ID
-          setCookie('authToken', token, { maxAge: 30 * 24 * 60 * 60, path: '/' });
-          setCookie('userId', userServiceUserId, { maxAge: 30 * 24 * 60 * 60, path: '/' });
-          setCookie('userType', result.userType || '', { maxAge: 30 * 24 * 60 * 60, path: '/' });
-
-          if (sessionId) {
-            setCookie('sessionId', sessionId, { maxAge: 30 * 24 * 60 * 60, path: '/' });
-          }
-        }
-      } catch (userError) {
-        console.error('Error fetching user details:', userError);
-        
-        // Fallback to auth service ID if user service call fails
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('authToken', token || '');
-          localStorage.setItem('userId', authServiceUserId);
-          if (result.userType) {
-            localStorage.setItem('userType', result.userType);
-          }
-          if (sessionId) {
-            localStorage.setItem('sessionId', sessionId);
-          }
-        }
-        
-        setCookie('authToken', token, { maxAge: 30 * 24 * 60 * 60, path: '/' });
-        setCookie('userId', authServiceUserId, { maxAge: 30 * 24 * 60 * 60, path: '/' });
-        if (result.userType) {
-          setCookie('userType', result.userType, { maxAge: 30 * 24 * 60 * 60, path: '/' });
+      // Store in localStorage
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('authToken', token);
+        localStorage.setItem('userId', authServiceUserId);
+        if (userType) {
+          localStorage.setItem('userType', userType);
         }
         if (sessionId) {
-          setCookie('sessionId', sessionId, { maxAge: 30 * 24 * 60 * 60, path: '/' });
+          localStorage.setItem('sessionId', sessionId);
         }
       }
 
-      return result;
-    } catch (error: any) {
-      console.error('Login failed:', error);
-
-      // More detailed error logging
-      if (error.response) {
-        console.error('Error response data:', error.response.data);
-        console.error('Error response status:', error.response.status);
+      // Set cookies
+      setCookie('authToken', token, { maxAge: 30 * 24 * 60 * 60, path: '/' });
+      setCookie('userId', authServiceUserId, { maxAge: 30 * 24 * 60 * 60, path: '/' });
+      if (userType) {
+        setCookie('userType', userType, { maxAge: 30 * 24 * 60 * 60, path: '/' });
+      }
+      if (sessionId) {
+        setCookie('sessionId', sessionId, { maxAge: 30 * 24 * 60 * 60, path: '/' });
       }
 
+      // Fetch user profile for additional data but don't overwrite critical auth info
+      try {
+        const userResponse = await api.get(`${USER_URL}/users/email/${email}`);
+        if (userResponse.data) {
+          localStorage.setItem('userProfile', JSON.stringify(userResponse.data));
+        }
+      } catch (profileError) {
+        console.error('Error fetching user profile:', profileError);
+        // Continue even if profile fetch fails - we have the essential auth data
+      }
+
+      return {
+        ...response.data,
+        userType: userType // Ensure we return the normalized userType
+      };
+    } catch (error: any) {
+      console.error('Login failed:', error);
       throw error;
     }
   },
