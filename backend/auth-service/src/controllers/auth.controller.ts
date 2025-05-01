@@ -17,9 +17,20 @@ export const signUp = async (req: Request, res: Response) => {
     }
     
     const { email, password, userType, profile } = validationResult.data;
-    
+
+    console.log('SignUp Request Data:', { email, password, userType, profile }); // Debugging log
+
+    // Register the user and get the result containing userId
     const result = await AuthService.registerUser(email, password, userType, profile);
-    res.status(201).json({ message: 'User registered', ...result });
+
+    console.log('SignUp Result:', result); // Debugging log
+
+    // Save userId and userType explicitly in the auth database (if not already handled)
+    res.status(201).json({ 
+      message: 'User registered', 
+      userId: result.userId, 
+      userType: userType 
+    });
   } catch (err: any) {
     console.error('Signup error:', err);
     // Check for specific error types to provide better messages
@@ -33,14 +44,22 @@ export const signUp = async (req: Request, res: Response) => {
 export const signIn = async (req: Request, res: Response) => {
   try {
     const { email, password, device, ipAddress } = SignInSchema.parse(req.body);
+
+    console.log('SignIn Request Data:', { email, password, device, ipAddress }); // Debugging log
+
     const result = await AuthService.loginUser(email, password, device, ipAddress);
+
+    console.log('SignIn Result:', result); // Debugging log
+
     res.status(200).json({ 
       message: 'Logged in successfully', 
       userId: result.userId,
       sessionId: result.sessionId,
-      token: result.sessionToken
+      token: result.sessionToken,
+      userType: result.userType 
     });
   } catch (err: any) {
+    console.error('SignIn error:', err); // Debugging log
     res.status(400).json({ error: err.message });
   }
 };
@@ -108,5 +127,24 @@ export const sendCustomEmail = async (req: Request, res: Response) => {
       success: false, 
       error: `Failed to send email: ${error.message}` 
     });
+  }
+};
+
+export const changePassword = async (req: Request, res: Response) => {
+  try {
+    const { userId, currentPassword, newPassword } = req.body;
+
+    // Validate required fields
+    if (!userId || !currentPassword || !newPassword) {
+      return res.status(400).json({ error: 'Missing required fields: userId, currentPassword, newPassword' });
+    }
+
+    // Call the service to change the password
+    const result = await AuthService.changePassword(userId, currentPassword, newPassword);
+
+    res.status(200).json({ message: 'Password changed successfully', ...result });
+  } catch (err: any) {
+    console.error('Error changing password:', err);
+    res.status(400).json({ error: err.message });
   }
 };

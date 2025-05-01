@@ -123,6 +123,19 @@ services:
     restart: unless-stopped
     networks:
       - nomnom-network
+
+  # Delivery Service
+  delivery-service:
+    build:
+      context: ./delivery-service
+      dockerfile: Dockerfile
+    ports:
+      - "5003:5003"
+    env_file:
+      - ./delivery-service/.env
+    restart: unless-stopped
+    networks:
+      - nomnom-network
   
   # Notification Service
   notification-service:

@@ -13,6 +13,8 @@ export const registerUser = async (
   userType: string,
   profile: Record<string, any>
 ) => {
+  console.log('RegisterUser Input:', { email, password, userType, profile }); // Debugging log
+
   // Check if user already exists
   const existing = await UserModel.findOne({ email });
   if (existing) throw new Error('Email already exists');
@@ -20,54 +22,45 @@ export const registerUser = async (
   // Hash password
   const hashedPassword = await hashPassword(password);
 
-  // Create local user for auth purposes
-  const localUser = new UserModel({
+  // Create user in the User Service with all profile details
+  const fullUserData = {
+    ...profile,
     email,
-    password: hashedPassword,
     userType
-  });
-  
+  };
+
   try {
-    await localUser.save();
-    console.log('Local auth user created:', localUser._id);
-    
-    // Create user in the User Service with all profile details
-    const fullUserData = {
-      ...profile,
-      email,
-      userType
-    };
-
-    // Log what we're sending to the user service
-    console.log('Sending user data to User Service:', JSON.stringify(fullUserData, null, 2));
-
     // Save in User Service
-    try {
-      const { data: createdUser } = await axios.post(USER_SERVICE_URL, fullUserData);
-      console.log('User created in User Service:', createdUser);
+    const { data: createdUser } = await axios.post(USER_SERVICE_URL, fullUserData);
+    console.log('RegisterUser Created User:', createdUser); // Debugging log
 
-      return { 
-        userId: createdUser.id || localUser._id.toString()
-      };
-    } catch (userServiceError: any) {
-      // If the user service fails, we need to roll back the local user creation
-      await UserModel.deleteOne({ _id: localUser._id });
-      
-      // Specific error handling for debugging
-      if (userServiceError.response) {
-        console.error('User service error response:', {
-          status: userServiceError.response.status,
-          data: userServiceError.response.data
-        });
-        throw new Error(`User registration failed: ${userServiceError.response.data.error || userServiceError.message}`);
-      }
-      
-      throw new Error(`User registration failed: ${userServiceError.message}`);
+    // Ensure userType and userId are saved in the local auth database
+    const localUser = new UserModel({
+      email,
+      password: hashedPassword,
+      userType, // Save userType explicitly
+      userId: createdUser.id // Save userId explicitly
+    });
+
+    await localUser.save();
+    console.log('Local auth user created with userType and userId:', localUser._id);
+
+    return { 
+      userId: createdUser.id
+    };
+  } catch (userServiceError: any) {
+    console.error('RegisterUser Error:', userServiceError); // Debugging log
+
+    // Specific error handling for debugging
+    if (userServiceError.response) {
+      console.error('User service error response:', {
+        status: userServiceError.response.status,
+        data: userServiceError.response.data
+      });
+      throw new Error(`User registration failed: ${userServiceError.response.data.error || userServiceError.message}`);
     }
-  } catch (error: any) {
-    // Handle any other errors with local user creation
-    console.error('User registration error:', error);
-    throw error;
+
+    throw new Error(`User registration failed: ${userServiceError.message}`);
   }
 };
 
@@ -77,24 +70,31 @@ export const loginUser = async (
   device: string,
   ipAddress: string
 ) => {
+  console.log('LoginUser Input:', { email, password, device, ipAddress }); // Debugging log
+
   const user = await UserModel.findOne({ email });
+  console.log('LoginUser Found User:', user); // Debugging log
+
   if (!user) throw new Error('User not found');
 
   const valid = await comparePassword(password, user.password);
+  console.log('LoginUser Password Valid:', valid); // Debugging log
+
   if (!valid) throw new Error('Invalid credentials');
   
   // Create a session for the user
   try {
     const sessionResult = await createSession(user._id.toString(), ipAddress, device);
+    console.log('LoginUser Session Result:', sessionResult); // Debugging log
     
     return { 
       userId: user._id.toString(),
-      sessionId: sessionResult.sessionId, // Direct access without optional chaining
+      sessionId: sessionResult.sessionId, 
       sessionToken: sessionResult.token,
-      userType: user.userType
+      userType: user.userType // Make sure to return the userType
     };
   } catch (error: any) {
-    console.error('Session creation error:', error);
+    console.error('LoginUser Error:', error); // Debugging log
     throw new Error('Failed to create session');
   }
 };
@@ -106,7 +106,7 @@ export const forgotPassword = async (email: string) => {
   // Generate a 6-digit OTP
   const otp = generateOtp();
   const expiresAt = new Date();
-  expiresAt.setMinutes(expiresAt.getMinutes() + 15); // OTP expires in 15 minutes
+  expiresAt.setMinutes(expiresAt.getMinutes() + 15); 
 
   // Save OTP in database
   await OtpModel.findOneAndUpdate(
@@ -170,5 +170,21 @@ export const resetPassword = async (email: string, newPassword: string, ip: stri
   await OtpModel.deleteOne({ email });
 
   // Return basic success message
+  return { success: true };
+};
+
+export const changePassword = async (userId: string, currentPassword: string, newPassword: string) => {
+  const user = await UserModel.findById(userId);
+  if (!user) throw new Error('User not found');
+
+  // Verify the current password
+  const isPasswordValid = await comparePassword(currentPassword, user.password);
+  if (!isPasswordValid) throw new Error('Current password is incorrect');
+
+  // Hash the new password
+  const hashedPassword = await hashPassword(newPassword);
+  user.password = hashedPassword;
+  await user.save();
+
   return { success: true };
 };
