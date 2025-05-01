@@ -31,6 +31,44 @@ export interface User {
   userType: 'admin' | 'customer' | 'restaurant' | 'driver';
 }
 
+// Extended user interfaces for specific user types
+export interface RestaurantUser extends User {
+  restaurantName?: string;
+  restaurantAddress?: string;
+  restaurantLicenseNumber?: string;
+  restaurantType?: { id: string; type: string; capacity: number };
+  restaurantTypeId?: string;
+  cuisineTypes?: Array<{ id: string; name: string }>;
+  cuisineTypeIds?: string[];
+  restaurantDocuments?: Array<{ name: string; url: string }>;
+  location?: { lat: number; lng: number; } | { x: number; y: number; };
+  openingTime?: Array<{ 
+    day: string; 
+    openingTime: string; 
+    closingTime: string; 
+    isOpen: boolean; 
+  }>;
+  contactNumber?: string;
+  status?: string;
+  isActive?: boolean;
+}
+
+export interface DriverUser extends User {
+  vehicleTypeId?: string;
+  vehicleType?: { id: string; type: string; capacity: number } | string;
+  vehicleNumber?: string;
+  vehicleDocuments?: Array<{ name: string; url: string }>;
+  location?: { lat: number; lng: number } | { x: number; y: number };
+  driverStatus?: string;
+  isActive?: boolean;
+  contactNumber?: string;
+}
+
+export interface CustomerUser extends User {
+  location?: { lat: number; lng: number } | { x: number; y: number };
+  contactNumber?: string;
+}
+
 // Registration types
 export interface RegisterCommonData {
   email: string;
@@ -85,14 +123,12 @@ export interface CustomerRegistrationData extends RegisterCommonData {
   };
 }
 
-// Extended user type with location for internal use
 export interface ExtendedUserData extends Partial<User> {
   location?: { lat: number; lng: number; address?: string };
   locationCoordinates?: { lat: number; lng: number; address?: string };
   [key: string]: any;
 }
 
-// User related API calls
 export const userService = {
   // Get the current user profile
   getCurrentUser: async (): Promise<User | null> => {
@@ -138,8 +174,6 @@ export const userService = {
         console.error('User not found or user service unavailable');
         // Clear potentially invalid user ID
         if (typeof window !== 'undefined') {
-          // Don't automatically clear - this could be a temporary service outage
-          // localStorage.removeItem('userId');
         }
       }
       
@@ -147,7 +181,7 @@ export const userService = {
     }
   },
 
-  // Get user by ID
+ 
   getUserById: async (id: string): Promise<User | null> => {
     try {
       const response = await api.get<User>(`${USER_URL}/users/${id}`);
@@ -158,9 +192,114 @@ export const userService = {
     }
   },
 
-  // User login
+  // Get driver's current location 
+  getDriverCurrentLocation: async (driverId: string): Promise<{lat: number, lng: number} | null> => {
+    try {
+      const driver = await userService.getUserById(driverId);
+      if (driver && 'location' in driver) {
+        // Check if we have location data in the expected format
+        const location = driver.location as any; // Type assertion to avoid type errors
+        if (location) {
+          // The location structure in the database may be {x, y} coordinates 
+          // or {lat, lng} based on the service implementation
+          if (location.lat !== undefined && location.lng !== undefined) {
+            return {
+              lat: Number(location.lat),
+              lng: Number(location.lng)
+            };
+          } else if (location.x !== undefined && location.y !== undefined) {
+            // Convert from {x, y} to {lat, lng} format
+            return {
+              lat: Number(location.y), // y coordinate maps to latitude
+              lng: Number(location.x)  // x coordinate maps to longitude
+            };
+          }
+        }
+      }
+      return null;
+    } catch (error) {
+      console.error(`Error fetching driver location for ID ${driverId}:`, error);
+      return null;
+    }
+  },
+  // Get vehicle details for a driver
+  getDriverVehicleDetails: async (driverId: string): Promise<{type?: string, vehicleNumber?: string} | null> => {
+    try {
+      const driver = await userService.getUserById(driverId);
+      if (driver) {
+        // The driver object may have these properties directly, or they might be nested
+        const vehicleDetails: {type?: string, vehicleNumber?: string} = {};
+        const driverData = driver as any; // Type assertion to handle the dynamic properties
+        
+        if ('vehicleTypeId' in driverData && driverData.vehicleTypeId && typeof driverData.vehicleTypeId === 'string') {
+          try {
+            // Try to get the vehicle type from the vehicleTypeId
+            const vehicleType = await userService.getVehicleTypeById(driverData.vehicleTypeId);
+            if (vehicleType) {
+              vehicleDetails.type = vehicleType.type;
+            }
+          } catch (vehicleTypeError) {
+            console.error('Error fetching vehicle type:', vehicleTypeError);
+          }
+        }
+        
+        // Also look for direct vehicleType property
+        if ('vehicleType' in driverData && driverData.vehicleType) {
+          if (typeof driverData.vehicleType === 'string') {
+            vehicleDetails.type = driverData.vehicleType;
+          } else if (typeof driverData.vehicleType === 'object' && driverData.vehicleType !== null) {
+            // It might be a reference to the VehicleType object
+            const vehicleType = driverData.vehicleType as any;
+            if ('type' in vehicleType) {
+              vehicleDetails.type = String(vehicleType.type);
+            }
+          }
+        }
+        
+        // Get the vehicle number (license plate)
+        if ('vehicleNumber' in driverData && driverData.vehicleNumber) {
+          vehicleDetails.vehicleNumber = String(driverData.vehicleNumber);
+        }
+        
+        return Object.keys(vehicleDetails).length > 0 ? vehicleDetails : null;
+      }
+      return null;
+    } catch (error) {
+      console.error(`Error fetching vehicle details for driver ID ${driverId}:`, error);
+      return null;
+    }
+  },
+  
+  // Get a specific vehicle type by ID
+  getVehicleTypeById: async (vehicleTypeId: string): Promise<VehicleType | null> => {
+    try {
+      const response = await api.get<VehicleType>(`${USER_URL}/vehicle-types/${vehicleTypeId}`);
+      return response.data;
+    } catch (error) {
+      console.error(`Error fetching vehicle type with ID ${vehicleTypeId}:`, error);
+      return null;
+    }
+  },
+
+ 
   login: async (email: string, password: string): Promise<any> => {
     try {
+      try {
+        console.log(`Checking if email exists before login: ${email}`);
+        // Use only the auth-service endpoint for email existence check
+        const emailCheckResponse = await api.get<{ exists: boolean }>(`${AUTH_API}/auth/email/${email}/exists`);
+        if (!emailCheckResponse.data.exists) {
+          // If email doesn't exist, throw a specific error that the UI can handle nicely
+          throw new Error('No account found with this email. Please create an account first.');
+        }
+      } catch (checkError: any) {
+        // Only throw if it's specifically a "no account found" error
+        if (checkError.message && checkError.message.includes('No account found')) {
+          throw checkError;
+        }
+        // Otherwise continue with login attempt - this handles cases where the email check endpoint fails
+      }
+
       const clientInfo = await getClientIdentifier();
 
       interface AuthResponse {
@@ -228,6 +367,15 @@ export const userService = {
       };
     } catch (error: any) {
       console.error('Login failed:', error);
+      
+      // Handle specific error cases for better user experience
+      if (error.message && error.message.includes('No account found')) {
+        throw new Error('No account found with this email. Please sign up first.');
+      } else if (error.response?.status === 401 || 
+                (error.response?.data?.error && error.response?.data?.error.includes('Invalid credentials'))) {
+        throw new Error('Invalid email or password. Please check your credentials.');
+      }
+      
       throw error;
     }
   },
@@ -381,21 +529,19 @@ export const userService = {
     }
 
     try {
+      // Check if email already exists before registration - use only auth-service endpoint
       try {
-        interface EmailExistsResponse {
-          exists: boolean;
-        }
-        const checkResponse = await api.get<EmailExistsResponse>(`${USER_URL}/users/email/${data.email}/exists`);
-        if (checkResponse.data && checkResponse.data.exists) {
-          throw new Error('This email is already registered. <a href="/sign-in" className="text-blue-600 hover:underline">Sign in instead?</a>');
+        console.log(`Checking if email exists before registration: ${data.email}`);
+        const authCheckResponse = await api.get<{ exists: boolean }>(`${AUTH_API}/auth/email/${data.email}/exists`);
+        if (authCheckResponse.data && authCheckResponse.data.exists) {
+          throw new Error('This email is already registered.');
         }
       } catch (checkError: any) {
-        if (checkError.message.includes('This email is already registered')) {
+        if (checkError.message && checkError.message.includes('This email is already registered')) {
           throw checkError;
         }
       }
 
-      // Fix: Update the signup endpoint to use the correct API path
       const response = await api.post(`${AUTH_API}/auth/signup`, registrationData);
 
       if (typeof window !== 'undefined' && window.location) {
@@ -407,8 +553,8 @@ export const userService = {
       console.error('Registration error:', error.response?.data || error);
       const errorMessage = error.response?.data?.error || error.response?.data?.message || error.message || 'Registration failed. Please try again.';
 
-      if (errorMessage.includes('Email already exists') || errorMessage.includes('already in use') || error.response?.status === 409) {
-        throw new Error('This email is already registered. <a href="/sign-in" class="text-blue-600 hover:underline">Sign in instead?</a>');
+      if (errorMessage.includes('Email already exists') || errorMessage.includes('already in use') || errorMessage.includes('already registered') || error.response?.status === 409) {
+        throw new Error('This email is already registered.');
       }
 
       throw new Error(errorMessage);
@@ -424,35 +570,54 @@ export const userService = {
     console.log('Updating user with data:', userData);
     
     try {
-      // First, get the existing user to ensure we have the complete object
       const currentUser = await api.get<User>(`${USER_URL}/users/${id}`);
       console.log('Current user data:', currentUser.data);
       
-      // Create a merged object with current data plus updates
-      const mergedUserData = { ...currentUser.data };
+      // Create a properly formatted user data object that matches the backend expectations
+      const mergedUserData: any = { ...currentUser.data };
       
-      // Update the merged object with the new data
+      // Get userType from localStorage if available
+      const userType = typeof window !== 'undefined' ? localStorage.getItem('userType') : null;
+      if (userType) {
+        mergedUserData.userType = userType.toUpperCase();
+        console.log('Adding userType from localStorage:', userType.toUpperCase());
+      }
+      
+      // Map standard user fields
       Object.keys(userData).forEach(key => {
-        if (key !== 'location') {
-          (mergedUserData as any)[key] = (userData as any)[key];
+        if (key !== 'location' && key !== 'locationCoordinates') {
+          mergedUserData[key] = (userData as any)[key];
         }
       });
       
-      // Special handling for location data
+      // Handle phone/contactNumber mapping
+      if ('phone' in userData) {
+        mergedUserData.contactNumber = userData.phone;
+      }
+      
+      // Handle location data properly according to backend format
       if ('location' in userData && userData.location) {
         console.log('Location data detected in update:', userData.location);
         
-        // Customer location in Spring Data expects a Point object format
-        if (mergedUserData.userType?.toUpperCase() === 'CUSTOMER') {
-          (mergedUserData as any).location = {
-            x: userData.location.lng,
-            y: userData.location.lat
-          };
-          
-          // Store the address in a separate field for UI display
-          if ('address' in userData.location) {
-            (mergedUserData as any).locationAddress = userData.location.address;
-          }
+        // For CUSTOMER user type, format location as {x, y} instead of {lng, lat}
+        mergedUserData.location = {
+          x: userData.location.lng,
+          y: userData.location.lat 
+        };
+        
+        // If an address is provided, add it to the location data
+        if ('address' in userData.location) {
+          mergedUserData.locationAddress = userData.location.address;
+        }
+      } else if ('locationCoordinates' in userData && userData.locationCoordinates) {
+        // Alternative location format handling
+        mergedUserData.location = {
+          x: userData.locationCoordinates.lng,
+          y: userData.locationCoordinates.lat
+        };
+        
+        if ('address' in userData.locationCoordinates) {
+          mergedUserData.locationAddress = userData.locationCoordinates.address;
         }
       }
       
@@ -470,13 +635,68 @@ export const userService = {
   },
 
   updateProfileImage: async (userId: string, imageUrl: string): Promise<User> => {
-    const response = await api.put<User>(`${USER_URL}/users/${userId}/profile-picture`, { profilePictureUrl: imageUrl });
-    return response.data;
+    try {
+      console.log('Updating profile image for user:', userId);
+      console.log('New image URL:', imageUrl);
+      
+      // Get userType from localStorage if available
+      const userType = typeof window !== 'undefined' ? localStorage.getItem('userType') : null;
+      
+      // Construct URL with query parameter instead of sending a JSON request body
+      const url = `${USER_URL}/users/${userId}/profile-picture?profilePictureUrl=${encodeURIComponent(imageUrl)}`;
+      
+      if (userType) {
+        console.log('Including userType in request:', userType.toUpperCase());
+      }
+      
+      console.log('Sending profile image update request to:', url);
+      const response = await api.put<User>(url);
+      console.log('Profile image update successful:', response.data);
+      
+      // Update the cached profile data in localStorage
+      if (response.data && typeof window !== 'undefined') {
+        try {
+          const userProfile = localStorage.getItem('userProfile');
+          if (userProfile) {
+            const profile = JSON.parse(userProfile);
+            profile.profilePicture = imageUrl;
+            profile.profilePictureUrl = imageUrl;
+            profile.profileImage = imageUrl;
+            localStorage.setItem('userProfile', JSON.stringify(profile));
+            console.log('Updated profile image in localStorage');
+          }
+        } catch (e) {
+          console.error('Error updating profile image in localStorage:', e);
+        }
+      }
+      
+      return response.data;
+    } catch (error: any) {
+      console.error('Error updating profile image:', error);
+      if (error.response?.data) {
+        console.error('Error details:', error.response.data);
+      }
+      throw error;
+    }
   },
 
   deleteUser: async (userId: string, userType: string): Promise<void> => {
     try {
       await api.request({ method: 'DELETE', url: `${USER_URL}/users/${userId}`, data: { userType: userType.toUpperCase() } });
+      
+      try {
+        await api.delete(`${AUTH_API}/auth/users/${userId}`);
+        console.log('Auth details also deleted for user:', userId);
+      } catch (authError) {
+        console.error('Error deleting auth details:', authError);
+      }
+      
+      try {
+        await api.post(`${API_URL}/session-service/sessions/invalidate/user/${userId}`);
+        console.log('User sessions invalidated for deleted user:', userId);
+      } catch (sessionError) {
+        console.error('Error invalidating sessions for deleted user:', sessionError);
+      }
     } catch (error) {
       console.error('Error deleting user:', error);
       throw error;
@@ -514,16 +734,13 @@ export const userService = {
 
   resetPassword: async (userId: string, currentPassword: string, newPassword: string): Promise<void> => {
     try {
-      // Get device info and IP address for security logging
       const clientInfo = await getClientIdentifier();
 
-      // First, get the user's email
       const user = await userService.getCurrentUser();
       if (!user || !user.email) {
         throw new Error('Unable to retrieve current user information');
       }
       
-      // Verify current password by attempting a login (but don't store the new tokens)
       try {
         await api.post(`${AUTH_API}/auth/signin`, {
           email: user.email,
@@ -531,20 +748,13 @@ export const userService = {
           device: clientInfo.userAgent,
           ipAddress: clientInfo.ip
         });
-        // If we get here, password was correct
       } catch (error: any) {
-        // If login fails, the current password is incorrect
         console.error('Password verification failed:', error);
         throw new Error('Current password is incorrect');
       }
       
-      // For an authenticated user changing their own password
-      // We need to use a different approach than the OTP-based reset-password
-      // Since we don't have a specific endpoint for authenticated password changes,
-      // we'll need to directly update the user in the auth service
       
       try {
-        // Call custom endpoint for authenticated user password change
         await api.post(`${AUTH_API}/auth/change-password`, {
           userId,
           currentPassword,
@@ -555,14 +765,11 @@ export const userService = {
       } catch (error: any) {
         console.error('Error changing password:', error);
         
-        // If this specific endpoint doesn't exist, we need to create it on the backend
-        // For now, show a more helpful error message
         throw new Error('Password change functionality is not properly configured on the server. Please contact administrator.');
       }
       
       console.log('Password reset successful');
       
-      // Invalidate other sessions for security
       try {
         const sessionId = localStorage.getItem('sessionId');
         if (sessionId) {
@@ -675,6 +882,22 @@ export const userService = {
     } catch (error) {
       console.error('Error deleting cuisine type:', error);
       throw error;
+    }
+  },
+
+  // Check if email exists
+  checkEmailExists: async (email: string): Promise<boolean> => {
+    console.log(`Checking if email exists: ${email}`);
+    try {
+      // Use only the auth-service endpoint with properly encoded email
+      const encodedEmail = encodeURIComponent(email.trim());
+      const authResponse = await api.get<{ exists: boolean }>(`${AUTH_API}/auth/email/${encodedEmail}/exists`);
+      return authResponse.data.exists;
+    } catch (error) {
+      console.error('Error checking email existence with auth-service:', error);
+      // If the check fails, return false to allow the operation to continue
+      // The server-side validation will catch any conflicts
+      return false;
     }
   }
 };

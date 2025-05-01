@@ -148,3 +148,61 @@ export const changePassword = async (req: Request, res: Response) => {
     res.status(400).json({ error: err.message });
   }
 };
+
+/**
+ * Check if an email exists in the system
+ * Used by signup and signin forms to validate emails
+ */
+export const checkEmailExists = async (req: Request, res: Response) => {
+  try {
+    const { email } = req.params;
+    
+    if (!email) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Email parameter is required' 
+      });
+    }
+    
+    const exists = await AuthService.checkEmailExists(email);
+    
+    res.status(200).json({ exists });
+  } catch (error: any) {
+    console.error('Error checking email existence:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: `Failed to check email: ${error.message}` 
+    });
+  }
+};
+
+/**
+ * Delete a user's authentication details
+ * This endpoint is called when a user is deleted from the user service
+ */
+export const deleteUser = async (req: Request, res: Response) => {
+  try {
+    const { userId } = req.params;
+    
+    if (!userId) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'UserId parameter is required' 
+      });
+    }
+    
+    const result = await AuthService.deleteUser(userId);
+    
+    if (result.success) {
+      return res.status(200).json(result);
+    } else {
+      return res.status(404).json(result);
+    }
+  } catch (error: any) {
+    console.error('Error deleting user auth details:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: `Failed to delete user: ${error.message}` 
+    });
+  }
+};

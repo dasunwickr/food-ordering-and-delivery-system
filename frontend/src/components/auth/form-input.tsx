@@ -17,6 +17,7 @@ interface FormInputProps {
   suffix?: ReactNode
   className?: string
   disabled?: boolean
+  hasError?: boolean
 }
 
 export function FormInput({
@@ -31,19 +32,20 @@ export function FormInput({
   suffix,
   className,
   disabled,
+  hasError = false,
 }: FormInputProps) {
   return (
     <div className="space-y-2">
-      <Label htmlFor={id} className="text-sm font-medium">
+      <Label htmlFor={id} className={`text-sm font-medium ${hasError ? 'text-red-500' : ''}`}>
         {label}
       </Label>
       <div className="relative">
-        {icon && <div className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground">{icon}</div>}
+        {icon && <div className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ${hasError ? 'text-red-500' : 'text-muted-foreground'}`}>{icon}</div>}
         <Input
           id={id}
           type={type}
           placeholder={placeholder}
-          className={`${icon ? "pl-10" : ""} ${error ? "border-red-500" : ""} ${className || ""}`}
+          className={`${icon ? "pl-10" : ""} ${error || hasError ? "border-red-500 focus-visible:ring-red-300" : ""} ${className || ""}`}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           disabled={disabled}

@@ -1,12 +1,12 @@
 import express from 'express';
 import Stripe from 'stripe';
 import mongoose from 'mongoose';
-import { config } from 'dotenv';
+import dotenv  from 'dotenv'; 
 import UserRestaurantPayment from './models/UserRestaurantPayment.js';
 import DriverPayment from './models/DriverPayment.js';
 import cors from 'cors';
 
-config();
+dotenv.config();
 
 const app = express();
 app.use(express.json());
