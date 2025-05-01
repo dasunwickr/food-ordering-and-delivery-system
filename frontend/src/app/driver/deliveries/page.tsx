@@ -2,15 +2,15 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-// import { DriverLayout } from "@/components/driver/driver-layout"
 import { DeliveryCard } from "@/components/ui/delivery-card"
-// import { DeliveryMap } from "@/components/ui/delivery-map"
 import { DeliveryRequestModal } from "@/components/ui/delivery-request-modal"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { DeliveryStatus } from "@/components/ui/status-badge"
 import { Button } from "@/components/ui/button"
 import { Loader2 } from "lucide-react"
 import { DeliveryMap } from "@/components/ui/delivery-map"
+import { DriverLocationSharing } from "@/components/ui/driver-location-sharing"
+import { getCookie } from "cookies-next"
 
 // Sample data
 const SAMPLE_DELIVERIES = [
@@ -113,6 +113,17 @@ export default function DriverDeliveriesPage() {
   const [showRequestModal, setShowRequestModal] = useState(false)
   const [loading, setLoading] = useState(true)
   const [simulateNewRequest, setSimulateNewRequest] = useState(false)
+  const [driverId, setDriverId] = useState<string | null>(null)
+
+  useEffect(() => {
+    // Get driver ID from cookie or localStorage
+    const cookieDriverId = getCookie('userId')?.toString();
+    const localStorageDriverId = typeof window !== 'undefined' 
+      ? localStorage.getItem('userId')
+      : null;
+    
+    setDriverId(cookieDriverId || localStorageDriverId || "driver-001"); // Use a default ID if none found
+  }, []);
 
   useEffect(() => {
     // Simulate loading
@@ -236,6 +247,9 @@ export default function DriverDeliveriesPage() {
                   icon: "customer",
                 }}
                 className="h-[400px]"
+                // Enable live updates for the driver's own position
+                driverId={driverId || undefined}
+                enableLiveTracking={true}
               />
 
               <div className="flex flex-wrap gap-2">
@@ -264,6 +278,14 @@ export default function DriverDeliveriesPage() {
                   Back to List
                 </Button>
               </div>
+              
+              {/* Add driver location sharing component */}
+              {driverId && ["ACCEPTED", "IN_PROGRESS"].includes(activeDeliveryData.status) && (
+                <DriverLocationSharing 
+                  driverId={driverId}
+                  deliveryId={activeDeliveryData.id}
+                />
+              )}
             </div>
 
             <div>
