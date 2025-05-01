@@ -1,4 +1,5 @@
 import api from '@/lib/axios';
+import { userService } from './user-service';
 
 export interface DeliveryStatus {
   PENDING: 'PENDING';
@@ -151,6 +152,57 @@ export const getDeliveryWithOrderDetails = async (deliveryId: string): Promise<{
   } catch (error) {
     console.error('Failed to fetch delivery with order details:', error);
     throw new Error('Failed to fetch delivery with order details');
+  }
+};
+
+/**
+ * Enhanced get delivery with order details including real-time driver data
+ */
+export const getDeliveryWithOrderDetailsAndDriverInfo = async (deliveryId: string): Promise<{ 
+  delivery: IDelivery; 
+  order: OrderDetails;
+  driverLocation?: { lat: number; lng: number };
+  vehicleDetails?: { type?: string; vehicleNumber?: string };
+}> => {
+  try {
+    // First get the basic delivery and order details
+    const deliveryData = await getDeliveryWithOrderDetails(deliveryId);
+    
+    // Default response without driver info
+    const response: { 
+      delivery: IDelivery; 
+      order: OrderDetails;
+      driverLocation?: { lat: number; lng: number };
+      vehicleDetails?: { type?: string; vehicleNumber?: string };
+    } = {
+      delivery: deliveryData.delivery,
+      order: deliveryData.order
+    };
+
+    // If we have a driver assigned, fetch their current location and vehicle details
+    if (deliveryData.delivery.driverId) {
+      try {
+        // Get the driver's current location
+        const driverLocation = await userService.getDriverCurrentLocation(deliveryData.delivery.driverId);
+        if (driverLocation) {
+          response.driverLocation = driverLocation;
+        }
+        
+        // Get the driver's vehicle details
+        const vehicleDetails = await userService.getDriverVehicleDetails(deliveryData.delivery.driverId);
+        if (vehicleDetails) {
+          response.vehicleDetails = vehicleDetails;
+        }
+      } catch (driverInfoError) {
+        console.error('Error fetching driver information:', driverInfoError);
+        // Continue without driver info if fetching fails
+      }
+    }
+    
+    return response;
+  } catch (error) {
+    console.error('Failed to fetch delivery with enhanced driver details:', error);
+    throw new Error('Failed to fetch delivery with enhanced driver details');
   }
 };
 

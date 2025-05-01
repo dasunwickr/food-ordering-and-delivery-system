@@ -146,22 +146,27 @@ export default function CustomerProfilePage() {
         throw new Error("User ID not found")
       }
       
+      console.log("Updating profile image with URL:", imageUrl)
+      
       // Call API to update profile image
-      await userService.updateProfileImage(userId, imageUrl)
+      const updatedUser = await userService.updateProfileImage(userId, imageUrl)
+      console.log("Profile image update response:", updatedUser)
 
-      // Update local state
+      // Update local state - use the profileImage property from the response if available
       setCustomer(prevState => ({
         ...prevState,
         profilePicture: imageUrl,
+        profileImage: imageUrl // Add this property as well to ensure compatibility
       }))
 
-      // Update localStorage
+      // Update localStorage with both property names to ensure compatibility
       const userProfile = getLocalStorageItem<any>('userProfile')
       if (userProfile) {
         const updatedProfile = {
           ...userProfile,
           profilePicture: imageUrl,
-          profilePictureUrl: imageUrl
+          profilePictureUrl: imageUrl,
+          profileImage: imageUrl // Add this property as well to ensure compatibility
         }
         setLocalStorageItem('userProfile', updatedProfile)
       }

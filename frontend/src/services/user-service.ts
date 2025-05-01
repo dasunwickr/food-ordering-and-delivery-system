@@ -31,6 +31,44 @@ export interface User {
   userType: 'admin' | 'customer' | 'restaurant' | 'driver';
 }
 
+// Extended user interfaces for specific user types
+export interface RestaurantUser extends User {
+  restaurantName?: string;
+  restaurantAddress?: string;
+  restaurantLicenseNumber?: string;
+  restaurantType?: { id: string; type: string; capacity: number };
+  restaurantTypeId?: string;
+  cuisineTypes?: Array<{ id: string; name: string }>;
+  cuisineTypeIds?: string[];
+  restaurantDocuments?: Array<{ name: string; url: string }>;
+  location?: { lat: number; lng: number; } | { x: number; y: number; };
+  openingTime?: Array<{ 
+    day: string; 
+    openingTime: string; 
+    closingTime: string; 
+    isOpen: boolean; 
+  }>;
+  contactNumber?: string;
+  status?: string;
+  isActive?: boolean;
+}
+
+export interface DriverUser extends User {
+  vehicleTypeId?: string;
+  vehicleType?: { id: string; type: string; capacity: number } | string;
+  vehicleNumber?: string;
+  vehicleDocuments?: Array<{ name: string; url: string }>;
+  location?: { lat: number; lng: number } | { x: number; y: number };
+  driverStatus?: string;
+  isActive?: boolean;
+  contactNumber?: string;
+}
+
+export interface CustomerUser extends User {
+  location?: { lat: number; lng: number } | { x: number; y: number };
+  contactNumber?: string;
+}
+
 // Registration types
 export interface RegisterCommonData {
   email: string;
@@ -84,7 +122,6 @@ export interface CustomerRegistrationData extends RegisterCommonData {
     lng: number;
   };
 }
-
 
 export interface ExtendedUserData extends Partial<User> {
   location?: { lat: number; lng: number; address?: string };
@@ -151,6 +188,95 @@ export const userService = {
       return response.data;
     } catch (error: any) {
       console.error(`Error fetching user with ID ${id}:`, error);
+      return null;
+    }
+  },
+
+  // Get driver's current location 
+  getDriverCurrentLocation: async (driverId: string): Promise<{lat: number, lng: number} | null> => {
+    try {
+      const driver = await userService.getUserById(driverId);
+      if (driver && 'location' in driver) {
+        // Check if we have location data in the expected format
+        const location = driver.location as any; // Type assertion to avoid type errors
+        if (location) {
+          // The location structure in the database may be {x, y} coordinates 
+          // or {lat, lng} based on the service implementation
+          if (location.lat !== undefined && location.lng !== undefined) {
+            return {
+              lat: Number(location.lat),
+              lng: Number(location.lng)
+            };
+          } else if (location.x !== undefined && location.y !== undefined) {
+            // Convert from {x, y} to {lat, lng} format
+            return {
+              lat: Number(location.y), // y coordinate maps to latitude
+              lng: Number(location.x)  // x coordinate maps to longitude
+            };
+          }
+        }
+      }
+      return null;
+    } catch (error) {
+      console.error(`Error fetching driver location for ID ${driverId}:`, error);
+      return null;
+    }
+  },
+  // Get vehicle details for a driver
+  getDriverVehicleDetails: async (driverId: string): Promise<{type?: string, vehicleNumber?: string} | null> => {
+    try {
+      const driver = await userService.getUserById(driverId);
+      if (driver) {
+        // The driver object may have these properties directly, or they might be nested
+        const vehicleDetails: {type?: string, vehicleNumber?: string} = {};
+        const driverData = driver as any; // Type assertion to handle the dynamic properties
+        
+        if ('vehicleTypeId' in driverData && driverData.vehicleTypeId && typeof driverData.vehicleTypeId === 'string') {
+          try {
+            // Try to get the vehicle type from the vehicleTypeId
+            const vehicleType = await userService.getVehicleTypeById(driverData.vehicleTypeId);
+            if (vehicleType) {
+              vehicleDetails.type = vehicleType.type;
+            }
+          } catch (vehicleTypeError) {
+            console.error('Error fetching vehicle type:', vehicleTypeError);
+          }
+        }
+        
+        // Also look for direct vehicleType property
+        if ('vehicleType' in driverData && driverData.vehicleType) {
+          if (typeof driverData.vehicleType === 'string') {
+            vehicleDetails.type = driverData.vehicleType;
+          } else if (typeof driverData.vehicleType === 'object' && driverData.vehicleType !== null) {
+            // It might be a reference to the VehicleType object
+            const vehicleType = driverData.vehicleType as any;
+            if ('type' in vehicleType) {
+              vehicleDetails.type = String(vehicleType.type);
+            }
+          }
+        }
+        
+        // Get the vehicle number (license plate)
+        if ('vehicleNumber' in driverData && driverData.vehicleNumber) {
+          vehicleDetails.vehicleNumber = String(driverData.vehicleNumber);
+        }
+        
+        return Object.keys(vehicleDetails).length > 0 ? vehicleDetails : null;
+      }
+      return null;
+    } catch (error) {
+      console.error(`Error fetching vehicle details for driver ID ${driverId}:`, error);
+      return null;
+    }
+  },
+  
+  // Get a specific vehicle type by ID
+  getVehicleTypeById: async (vehicleTypeId: string): Promise<VehicleType | null> => {
+    try {
+      const response = await api.get<VehicleType>(`${USER_URL}/vehicle-types/${vehicleTypeId}`);
+      return response.data;
+    } catch (error) {
+      console.error(`Error fetching vehicle type with ID ${vehicleTypeId}:`, error);
       return null;
     }
   },
@@ -509,8 +635,49 @@ export const userService = {
   },
 
   updateProfileImage: async (userId: string, imageUrl: string): Promise<User> => {
-    const response = await api.put<User>(`${USER_URL}/users/${userId}/profile-picture`, { profilePictureUrl: imageUrl });
-    return response.data;
+    try {
+      console.log('Updating profile image for user:', userId);
+      console.log('New image URL:', imageUrl);
+      
+      // Get userType from localStorage if available
+      const userType = typeof window !== 'undefined' ? localStorage.getItem('userType') : null;
+      
+      // Construct URL with query parameter instead of sending a JSON request body
+      const url = `${USER_URL}/users/${userId}/profile-picture?profilePictureUrl=${encodeURIComponent(imageUrl)}`;
+      
+      if (userType) {
+        console.log('Including userType in request:', userType.toUpperCase());
+      }
+      
+      console.log('Sending profile image update request to:', url);
+      const response = await api.put<User>(url);
+      console.log('Profile image update successful:', response.data);
+      
+      // Update the cached profile data in localStorage
+      if (response.data && typeof window !== 'undefined') {
+        try {
+          const userProfile = localStorage.getItem('userProfile');
+          if (userProfile) {
+            const profile = JSON.parse(userProfile);
+            profile.profilePicture = imageUrl;
+            profile.profilePictureUrl = imageUrl;
+            profile.profileImage = imageUrl;
+            localStorage.setItem('userProfile', JSON.stringify(profile));
+            console.log('Updated profile image in localStorage');
+          }
+        } catch (e) {
+          console.error('Error updating profile image in localStorage:', e);
+        }
+      }
+      
+      return response.data;
+    } catch (error: any) {
+      console.error('Error updating profile image:', error);
+      if (error.response?.data) {
+        console.error('Error details:', error.response.data);
+      }
+      throw error;
+    }
   },
 
   deleteUser: async (userId: string, userType: string): Promise<void> => {
