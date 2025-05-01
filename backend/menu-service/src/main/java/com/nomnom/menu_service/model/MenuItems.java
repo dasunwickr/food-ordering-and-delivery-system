@@ -1,7 +1,8 @@
 package com.nomnom.menu_service.model;
 
-
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
+import java.util.List;
 
 @Entity
 @Table(name = "menu_items")
@@ -11,50 +12,46 @@ public class MenuItems {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    private String restaurantId;
+
     private String itemName;
+
     private String description;
-    private double price;
+
     private String category;
+
     private Boolean availabilityStatus;
 
-    @Lob  // Large Object - used to store binary data
-    @Column(columnDefinition = "LONGBLOB") // Specify BLOB type for MySQL
-    private byte[] image;
+    @Column(nullable = true)
+    private double offer;
 
+    @Column(nullable = true)
+    private String imageUrl; // Stores the Cloudinary public URL
+
+    @Column(nullable = true)
+    private String imagePublicId; // Stores the Cloudinary public ID for future reference
+
+    @OneToMany(mappedBy = "menuItem", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference
+    private List<MenuItemPortion> portions;
+
+    // Default constructor
     public MenuItems() {}
 
-    public MenuItems(String itemName,double price,String category,Boolean availabilityStatus, String description, byte[] image) {
+    // Parameterized constructor
+    public MenuItems(String itemName, double offer, String category,String restaurantId, Boolean availabilityStatus,
+                     String description, String imageUrl, String imagePublicId) {
         this.itemName = itemName;
+        this.offer = offer;
         this.category = category;
         this.availabilityStatus = availabilityStatus;
-        this.price = price;
         this.description = description;
-        this.image = image;
+        this.imageUrl = imageUrl;
+        this.imagePublicId = imagePublicId;
+        this.restaurantId = restaurantId;
     }
 
-    public String getCategory() {
-        return category;
-    }
-
-    public void setCategory(String category) {
-        this.category = category;
-    }
-
-    public Boolean getAvailabilityStatus() {
-        return availabilityStatus;
-    }
-
-    public void setAvailabilityStatus(Boolean availabilityStatus) {
-        this.availabilityStatus = availabilityStatus;
-    }
-
-    public double getPrice() {
-        return price;
-    }
-
-    public void setPrice(double price) {
-        this.price = price;
-    }
+    // Getters and Setters
 
     public Long getId() {
         return id;
@@ -62,6 +59,14 @@ public class MenuItems {
 
     public void setId(Long id) {
         this.id = id;
+    }
+
+    public String getRestaurantId() {
+        return restaurantId;
+    }
+
+    public void setRestaurantId(String restaurantId) {
+        this.restaurantId = restaurantId;
     }
 
     public String getItemName() {
@@ -80,11 +85,51 @@ public class MenuItems {
         this.description = description;
     }
 
-    public byte[] getImage() {
-        return image;
+    public String getCategory() {
+        return category;
     }
 
-    public void setImage(byte[] image) {
-        this.image = image;
+    public void setCategory(String category) {
+        this.category = category;
+    }
+
+    public Boolean getAvailabilityStatus() {
+        return availabilityStatus;
+    }
+
+    public void setAvailabilityStatus(Boolean availabilityStatus) {
+        this.availabilityStatus = availabilityStatus;
+    }
+
+    public double getOffer() {
+        return offer;
+    }
+
+    public void setOffer(double offer) {
+        this.offer = offer;
+    }
+
+    public String getImageUrl() {
+        return imageUrl;
+    }
+
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
+    }
+
+    public String getImagePublicId() {
+        return imagePublicId;
+    }
+
+    public void setImagePublicId(String imagePublicId) {
+        this.imagePublicId = imagePublicId;
+    }
+
+    public List<MenuItemPortion> getPortions() {
+        return portions;
+    }
+
+    public void setPortions(List<MenuItemPortion> portions) {
+        this.portions = portions;
     }
 }

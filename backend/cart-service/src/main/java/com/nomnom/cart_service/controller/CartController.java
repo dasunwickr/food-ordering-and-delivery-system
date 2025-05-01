@@ -1,18 +1,22 @@
 package com.nomnom.cart_service.controller;
 
 import com.nomnom.cart_service.dto.CartDTO;
+import com.nomnom.cart_service.model.Cart;
+import com.nomnom.cart_service.request.AddItemToCartRequest;
 import com.nomnom.cart_service.response.CartResponse;
 import com.nomnom.cart_service.service.ICart;
 import com.nomnom.cart_service.service.CartService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/cart")
+@RequestMapping("/cart")
 public class CartController {
 
     private final ICart cartService;
@@ -26,17 +30,37 @@ public class CartController {
     public ResponseEntity<CartDTO> addItemToCart(
             @PathVariable String customerId,
             @PathVariable String restaurantId,
-            @RequestBody CartService.CartItemRequest request) {
-        return ResponseEntity.ok(mapToCartDTO(cartService.addItemToCart(customerId, restaurantId, request)));
+            @RequestBody AddItemToCartRequest request) {
+        try {
+            // Validate potion size
+            if (request.getPotionSize() == null) {
+                throw new IllegalArgumentException("Invalid potion size");
+            }
+
+            CartService.CartItemRequest cartItemRequest = new CartService.CartItemRequest();
+            cartItemRequest.setItemId(request.getItemId());
+            cartItemRequest.setItemName(request.getItemName());
+            cartItemRequest.setQuantity(request.getQuantity());
+            cartItemRequest.setPotionSize(request.getPotionSize());
+            cartItemRequest.setUnitPrice(request.getUnitPrice());
+            cartItemRequest.setImage(request.getImage());
+
+            return ResponseEntity.ok(mapToCartDTO(cartService.addItemToCart(customerId, restaurantId, cartItemRequest)));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
     }
 
     @PutMapping("/update/{customerId}/{restaurantId}/{itemId}")
-    public ResponseEntity<CartDTO> updateCartItemQuantity(
+    public ResponseEntity<Cart> updateCartItemQuantity(
             @PathVariable String customerId,
             @PathVariable String restaurantId,
             @PathVariable String itemId,
-            @RequestParam int newQuantity) {
-        return ResponseEntity.ok(mapToCartDTO(cartService.updateCartItemQuantity(customerId, restaurantId, itemId, newQuantity)));
+            @RequestBody Map<String, Integer> requestBody
+    ) {
+        int newQuantity = requestBody.get("newQuantity");
+        Cart updatedCart = cartService.updateCartItemQuantity(customerId, restaurantId, itemId, newQuantity);
+        return ResponseEntity.ok(updatedCart);
     }
 
     @DeleteMapping("/remove/{customerId}/{restaurantId}/{itemId}")
@@ -72,8 +96,10 @@ public class CartController {
                         item.getItemId(),
                         item.getItemName(),
                         item.getQuantity(),
+                        item.getPotionSize() != null ? CartDTO.CartItemDTO.PotionSize.valueOf(item.getPotionSize().name()) : null, // Map potion size
                         item.getPrice(),
-                        item.getTotalPrice()
+                        item.getTotalPrice(),
+                        item.getImage()
                 )).toList(),
                 cart.getTotalPrice(),
                 cart.getCreatedAt(),

@@ -1,54 +1,62 @@
-# React + TypeScript + Vite
+Food Ordering & Delivery System Deployment Guide
+This guide provides instructions for deploying the Food Ordering & Delivery System using Docker and Kubernetes with kind.
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Deployment with Docker
+Prerequisites
+Docker installed on your system.
+Docker Compose installed.
+Steps
+Navigate to the backend directory:
 
-Currently, two official plugins are available:
+Start the services using Docker Compose:
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+Verify that all services are running:
 
-## Expanding the ESLint configuration
+Access the application via the API Gateway at http://localhost.
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+Deployment with Kubernetes (kind)
+Prerequisites
+kind installed on your system.
+kubectl CLI installed and configured.
+Steps
+Create a kind cluster:
 
-```js
-export default tseslint.config({
-  extends: [
-    // Remove ...tseslint.configs.recommended and replace with this
-    ...tseslint.configs.recommendedTypeChecked,
-    // Alternatively, use this for stricter rules
-    ...tseslint.configs.strictTypeChecked,
-    // Optionally, add this for stylistic rules
-    ...tseslint.configs.stylisticTypeChecked,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
-```
+Load Docker images into the kind cluster:
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Navigate to the kubernetes directory:
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+Deploy the application:
 
-export default tseslint.config({
-  plugins: {
-    // Add the react-x and react-dom plugins
-    'react-x': reactX,
-    'react-dom': reactDom,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended typescript rules
-    ...reactX.configs['recommended-typescript'].rules,
-    ...reactDom.configs.recommended.rules,
-  },
-})
-```
+Monitor the deployment:
+
+Access the application via the API Gateway:
+
+Run the following command to get the service details:
+If using kind, you may need to forward the port:
+
+### Using kind for Kubernetes Deployment
+
+If you are using `kind` (Kubernetes in Docker) for your Kubernetes deployment, follow these additional steps:
+
+1. **Create a kind cluster**:
+   ```bash
+   kind create cluster --name nomnom-system
+   ```
+
+2. **Load Docker images into the kind cluster**:
+   ```bash
+   kind load docker-image <image-name> --name nomnom-system
+   ```
+
+3. **Port-forward the API Gateway service**:
+   After deploying the application, forward the API Gateway port to access the application locally:
+   ```bash
+   kubectl port-forward service/api-gateway 8080:80 -n nomnom-system
+   ```
+
+4. **Access the application**:
+   Open your browser and navigate to `http://localhost:8080` to access the Food Ordering & Delivery System.
+
+Notes
+Ensure all .env files are properly configured before deployment.
+For production, consider using a managed Kubernetes service and secure sensitive data using Kubernetes Secrets.

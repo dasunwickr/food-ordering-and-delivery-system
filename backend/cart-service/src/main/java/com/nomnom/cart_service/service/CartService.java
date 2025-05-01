@@ -41,14 +41,16 @@ public class CartService implements ICart {
             CartItem cartItem = existingItem.get();
             cartItem.setQuantity(cartItem.getQuantity() + item.getQuantity());
             cartItem.setPrice(item.getUnitPrice()); // Use the provided unit price
+            cartItem.setPotionSize(item.getPotionSize()); // Set the potion size
             cartItem.updateTotalPrice();
         } else {
             CartItem newItem = new CartItem(
                     item.getItemId(),
                     item.getItemName(),
                     item.getQuantity(),
-                    item.getUnitPrice(), // Use the provided unit price
-                    0
+                    item.getPotionSize(), // Pass the potion size
+                    item.getUnitPrice(),  // Use the provided unit price
+                    item.getImage()
             );
             newItem.updateTotalPrice();
             cart.getItems().add(newItem);
@@ -63,7 +65,6 @@ public class CartService implements ICart {
         Optional<CartItem> optionalCartItem = cart.getItems().stream()
                 .filter(i -> i.getItemId().equals(itemId))
                 .findFirst();
-
         if (optionalCartItem.isPresent()) {
             CartItem cartItem = optionalCartItem.get();
             if (newQuantity <= 0) {
@@ -73,8 +74,8 @@ public class CartService implements ICart {
                 cartItem.updateTotalPrice(); // Recalculate total price using existing unit price
             }
         }
-        cart.recalculateTotalPrice();
-        return cartRepository.save(cart);
+        cart.recalculateTotalPrice(); // Recalculate the total price of the cart
+        return cartRepository.save(cart); // Save the updated cart
     }
 
     @Override
@@ -111,7 +112,9 @@ public class CartService implements ICart {
         private String itemId;
         private String itemName;
         private int quantity;
-        private double unitPrice; // Added field for unit price
+        private CartItem.PotionSize potionSize;
+        private double unitPrice;// Added field for unit price
+        private String image;
 
         public String getItemId() {
             return itemId;
@@ -137,12 +140,24 @@ public class CartService implements ICart {
             this.quantity = quantity;
         }
 
+        public CartItem.PotionSize getPotionSize() { return potionSize; }
+
+        public void setPotionSize(CartItem.PotionSize potionSize) { this.potionSize = potionSize; }
+
         public double getUnitPrice() {
             return unitPrice;
         }
 
         public void setUnitPrice(double unitPrice) {
             this.unitPrice = unitPrice;
+        }
+
+        public String getImage() {
+            return image;
+        }
+
+        public void setImage(String image) {
+            this.image = image;
         }
     }
 }

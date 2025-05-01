@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import path from 'path';
 import fs from 'fs';
 import { sendEmailsFromTemplate } from '../services/notificationService';
+import { Notification } from '../models/notificationModel'; // Import the Notification model
 
 // Broadcast emails using a predefined template
 export const broadcastEmailsWithTemplateController = async (req: Request, res: Response): Promise<void> => {
@@ -28,8 +29,33 @@ export const broadcastEmailsWithTemplateController = async (req: Request, res: R
       return;
     }
 
-    // Send emails using the notification service
-    await sendEmailsFromTemplate(template, emails);
+    // Send emails and store each email in the database
+    for (const email of emails) {
+      try {
+        // Send the email using the notification service
+        await sendEmailsFromTemplate(template, [email]);
+
+        // Store the email notification in the database
+        const emailNotification = new Notification({
+          title: `Broadcast Email - Template ID: ${templateId}`,
+          message: template.text, // Use the plain text version of the email content
+          email,
+          status: 'send',
+        });
+        await emailNotification.save();
+      } catch (error) {
+        console.error(`Failed to send or store email for ${email}:`, error);
+
+        // Optionally, you can log failed notifications in the database with a "could not send" status
+        const failedNotification = new Notification({
+          title: `Broadcast Email - Template ID: ${templateId}`,
+          message: template.text,
+          email,
+          status: 'could not send',
+        });
+        await failedNotification.save();
+      }
+    }
 
     res.status(200).json({ success: true, message: `Emails sent successfully using template: ${templateId}` });
   } catch (error) {

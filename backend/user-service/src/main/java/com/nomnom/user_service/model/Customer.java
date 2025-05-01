@@ -1,9 +1,9 @@
 package com.nomnom.user_service.model;
 
 import lombok.*;
+import org.springframework.data.annotation.TypeAlias;
+import org.springframework.data.geo.Point;
 import org.springframework.data.mongodb.core.mapping.Document;
-
-import java.util.List;
 
 @Document(collection = "users")
 @Data
@@ -12,6 +12,7 @@ import java.util.List;
 @Setter
 @AllArgsConstructor
 @EqualsAndHashCode(callSuper = true)
+@TypeAlias("CUSTOMER")
 public class Customer extends User {
-    private List<String> orderHistory;
+    Point location;
 }
