@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Bell, Menu, ShoppingCart } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
+import { getLocalStorageItem } from "@/utils/storage"
 
 interface CustomerTopNavbarProps {
   onMenuClick: () => void
@@ -20,6 +21,28 @@ interface CustomerTopNavbarProps {
 export function CustomerTopNavbar({ onMenuClick }: CustomerTopNavbarProps) {
   const [notificationCount, setNotificationCount] = useState(2)
   const [cartItemCount, setCartItemCount] = useState(3)
+  const [profileData, setProfileData] = useState({
+    firstName: "User",
+    lastName: "",
+    email: "user@example.com",
+    profilePicture: "/placeholder.svg?height=32&width=32"
+  })
+
+  useEffect(() => {
+    // Get user profile from localStorage if available
+    const userProfile = getLocalStorageItem<any>('userProfile')
+    if (userProfile) {
+      // Use the correct property for profile picture (different APIs might use different property names)
+      const profilePictureUrl = userProfile.profilePictureUrl || userProfile.profilePicture || profileData.profilePicture
+      
+      setProfileData({
+        firstName: userProfile.firstName || profileData.firstName,
+        lastName: userProfile.lastName || profileData.lastName,
+        email: userProfile.email || profileData.email,
+        profilePicture: profilePictureUrl
+      })
+    }
+  }, [])
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background px-4 md:px-6">
@@ -90,9 +113,10 @@ export function CustomerTopNavbar({ onMenuClick }: CustomerTopNavbarProps) {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="relative h-8 w-8 rounded-full">
               <img
-                src="/placeholder.svg?height=32&width=32"
-                alt="Customer"
+                src={profileData.profilePicture}
+                alt={profileData.firstName}
                 className="h-8 w-8 rounded-full object-cover"
+                key={profileData.profilePicture} // Force re-render when image URL changes
               />
               <span className="sr-only">Profile</span>
             </Button>
@@ -100,8 +124,8 @@ export function CustomerTopNavbar({ onMenuClick }: CustomerTopNavbarProps) {
           <DropdownMenuContent align="end">
             <div className="flex items-center gap-2 p-2">
               <div className="flex flex-col space-y-1 leading-none">
-                <p className="font-medium">Emily Davis</p>
-                <p className="text-xs text-muted-foreground">emily.d@example.com</p>
+                <p className="font-medium">{profileData.firstName} {profileData.lastName}</p>
+                <p className="text-xs text-muted-foreground">{profileData.email}</p>
               </div>
             </div>
             <DropdownMenuSeparator />

@@ -1,0 +1,460 @@
+name: Build and Deploy Food Ordering System
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+        - kind-local
+        - staging
+        - production
+
+env:
+  REGISTRY: ghcr.io
+  REGISTRY_USERNAME: ${{ github.actor }}
+  REGISTRY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+  NAMESPACE: nomnom-system
+
+jobs:
+  build-and-push:
+    name: Build and Push Images
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        service:
+          - {name: auth-service, path: backend/auth-service}
+          - {name: session-service, path: backend/session-service}
+          - {name: user-service, path: backend/user-service}
+          - {name: order-service, path: backend/order-service}
+          - {name: menu-service, path: backend/menu-service}
+          - {name: cart-service, path: backend/cart-service}
+          - {name: notification-service, path: backend/notification-service}
+          - {name: payment-service, path: backend/payment-service}
+          - {name: delivery-service, path: backend/delivery-service}
+          - {name: ratings-and-reviews-service, path: backend/ratings-and-reviews-service}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Login to container registry
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ env.REGISTRY_USERNAME }}
+          password: ${{ env.REGISTRY_PASSWORD }}
+
+      - name: Extract metadata for Docker
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          images: ${{ env.REGISTRY }}/${{ github.repository }}/${{ matrix.service.name }}
+          tags: |
+            type=sha,format=short
+            type=ref,event=branch
+            type=raw,value=latest,enable=${{ github.ref == format('refs/heads/{0}', 'main') }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: ./${{ matrix.service.path }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  build-frontend:
+    name: Build and Push Frontend
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Login to container registry
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ env.REGISTRY_USERNAME }}
+          password: ${{ env.REGISTRY_PASSWORD }}
+
+      - name: Extract metadata for Docker
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          images: ${{ env.REGISTRY }}/${{ github.repository }}/frontend
+          tags: |
+            type=sha,format=short
+            type=ref,event=branch
+            type=raw,value=latest,enable=${{ github.ref == format('refs/heads/{0}', 'main') }}
+
+      - name: Build and push Frontend Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: ./frontend
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          
+  create-k8s-configs:
+    name: Update Kubernetes Manifests
+    needs: [build-and-push, build-frontend]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        
+      - name: Set image tags in Kubernetes manifests
+        run: |
+          # Get short SHA of the commit
+          SHA_SHORT=$(echo ${{ github.sha }} | cut -c1-7)
+          
+          # Update image tags in Kubernetes manifests
+          sed -i "s|image: dasunwickr/auth-service:latest|image: ${{ env.REGISTRY }}/${{ github.repository }}/auth-service:sha-$SHA_SHORT|g" kubernetes/03-auth-service.yaml
+          sed -i "s|image: dasunwickr/session-service:latest|image: ${{ env.REGISTRY }}/${{ github.repository }}/session-service:sha-$SHA_SHORT|g" kubernetes/04-session-service.yaml
+          sed -i "s|image: dasunwickr/user-service:latest|image: ${{ env.REGISTRY }}/${{ github.repository }}/user-service:sha-$SHA_SHORT|g" kubernetes/05-user-service.yaml
+          sed -i "s|image: dasunwickr/order-service:latest|image: ${{ env.REGISTRY }}/${{ github.repository }}/order-service:sha-$SHA_SHORT|g" kubernetes/06-order-service.yaml
+          sed -i "s|image: dasunwickr/menu-service:latest|image: ${{ env.REGISTRY }}/${{ github.repository }}/menu-service:sha-$SHA_SHORT|g" kubernetes/07-menu-service.yaml
+          sed -i "s|image: dasunwickr/cart-service:latest|image: ${{ env.REGISTRY }}/${{ github.repository }}/cart-service:sha-$SHA_SHORT|g" kubernetes/08-cart-service.yaml
+          sed -i "s|image: dasunwickr/notification-service:latest|image: ${{ env.REGISTRY }}/${{ github.repository }}/notification-service:sha-$SHA_SHORT|g" kubernetes/09-notification-service.yaml
+          sed -i "s|image: dasunwickr/payment-service:latest|image: ${{ env.REGISTRY }}/${{ github.repository }}/payment-service:sha-$SHA_SHORT|g" kubernetes/10-payment-service.yaml
+          
+          # Check if delivery service and ratings-reviews service yaml files exist and update them
+          if [ -f "kubernetes/11-delivery-service.yaml" ]; then
+            sed -i "s|image: dasunwickr/delivery-service:latest|image: ${{ env.REGISTRY }}/${{ github.repository }}/delivery-service:sha-$SHA_SHORT|g" kubernetes/11-delivery-service.yaml
+          fi
+          
+          if [ -f "kubernetes/12-ratings-reviews-service.yaml" ]; then
+            sed -i "s|image: dasunwickr/ratings-reviews-service:latest|image: ${{ env.REGISTRY }}/${{ github.repository }}/ratings-and-reviews-service:sha-$SHA_SHORT|g" kubernetes/12-ratings-reviews-service.yaml
+          fi
+      
+      - name: Upload Kubernetes manifests
+        uses: actions/upload-artifact@v3
+        with:
+          name: kubernetes-manifests
+          path: kubernetes/
+          retention-days: 1
+
+  deploy-to-kind:
+    name: Deploy to Kind (Local)
+    if: ${{ github.event.inputs.environment == 'kind-local' }}
+    needs: create-k8s-configs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Kubernetes manifests
+        uses: actions/download-artifact@v3
+        with:
+          name: kubernetes-manifests
+          path: kubernetes/
+          
+      - name: Set up Kind
+        uses: engineerd/setup-kind@v0.5.0
+        with:
+          version: "v0.20.0"
+          name: "food-ordering-system"
+          config: |
+            kind: Cluster
+            apiVersion: kind.x-k8s.io/v1alpha4
+            nodes:
+            - role: control-plane
+              kubeadmConfigPatches:
+              - |
+                kind: InitConfiguration
+                nodeRegistration:
+                  kubeletExtraArgs:
+                    node-labels: "ingress-ready=true"
+              extraPortMappings:
+              - containerPort: 80
+                hostPort: 80
+              - containerPort: 443
+                hostPort: 443
+          
+      - name: Set up local registry
+        run: |
+          # Create registry container
+          docker run -d --restart=always -p 5000:5000 --name local-registry registry:2
+          
+          # Connect the registry to the kind network
+          docker network connect "kind" local-registry
+          
+          # Configure kind to use local registry
+          kubectl apply -f - <<EOF
+          apiVersion: v1
+          kind: ConfigMap
+          metadata:
+            name: local-registry-hosting
+            namespace: kube-public
+          data:
+            localRegistryHosting.v1: |
+              host: "localhost:5000"
+              help: "https://kind.sigs.k8s.io/docs/user/local-registry/"
+          EOF
+      
+      - name: Install NGINX Ingress Controller
+        run: |
+          kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml
+          kubectl wait --namespace ingress-nginx \
+            --for=condition=ready pod \
+            --selector=app.kubernetes.io/component=controller \
+            --timeout=90s
+      
+      - name: Update image references for Kind
+        run: |
+          # Get short SHA of the commit
+          SHA_SHORT=$(echo ${{ github.sha }} | cut -c1-7)
+          
+          mkdir -p temp_k8s
+          # Copy non-service YAML files
+          cp kubernetes/00-namespace.yaml temp_k8s/
+          cp kubernetes/01-api-gateway-configmaps.yaml temp_k8s/
+          cp kubernetes/02-api-gateway.yaml temp_k8s/
+          
+          # Update service YAML files for local registry
+          for f in kubernetes/0{3..9}-*-service.yaml kubernetes/10-payment-service.yaml; do
+            filename=$(basename $f)
+            sed "s|image: ${{ env.REGISTRY }}/${{ github.repository }}/|image: localhost:5000/|g" $f > temp_k8s/$filename
+          done
+          
+          # Update additional services if they exist
+          for f in kubernetes/1{1,2}-*-service.yaml; do
+            if [ -f "$f" ]; then
+              filename=$(basename $f)
+              sed "s|image: ${{ env.REGISTRY }}/${{ github.repository }}/|image: localhost:5000/|g" $f > temp_k8s/$filename
+            fi
+          done
+      
+      - name: Create test secrets
+        run: |
+          # Create namespace
+          kubectl create namespace ${{ env.NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
+          
+          # Create dummy secrets for each service
+          for service in auth-service session-service user-service order-service menu-service cart-service notification-service payment-service; do
+            kubectl create secret generic "$service-secrets" \
+              --namespace ${{ env.NAMESPACE }} \
+              --from-literal=DUMMY_VAR="test-value" \
+              --dry-run=client -o yaml | kubectl apply -f -
+          done
+          
+          # Create menu-db secrets
+          kubectl create secret generic "menu-db-secrets" \
+            --namespace ${{ env.NAMESPACE }} \
+            --from-literal=MYSQL_DATABASE="menudb" \
+            --from-literal=MYSQL_USER="menuuser" \
+            --from-literal=MYSQL_PASSWORD="menupassword" \
+            --from-literal=MYSQL_ROOT_PASSWORD="rootpassword" \
+            --dry-run=client -o yaml | kubectl apply -f -
+      
+      - name: Deploy to Kind
+        run: |
+          # Apply Kubernetes manifests in the right order
+          kubectl apply -f temp_k8s/00-namespace.yaml
+          kubectl apply -f temp_k8s/01-api-gateway-configmaps.yaml
+          kubectl apply -f temp_k8s/02-api-gateway.yaml
+          kubectl apply -f temp_k8s/03-auth-service.yaml
+          kubectl apply -f temp_k8s/04-session-service.yaml
+          kubectl apply -f temp_k8s/05-user-service.yaml
+          kubectl apply -f temp_k8s/06-order-service.yaml
+          kubectl apply -f temp_k8s/07-menu-service.yaml
+          kubectl apply -f temp_k8s/08-cart-service.yaml
+          kubectl apply -f temp_k8s/09-notification-service.yaml
+          kubectl apply -f temp_k8s/10-payment-service.yaml
+          
+          # Apply delivery and ratings services if they exist
+          if [ -f "temp_k8s/11-delivery-service.yaml" ]; then
+            kubectl apply -f temp_k8s/11-delivery-service.yaml
+          fi
+          
+          if [ -f "temp_k8s/12-ratings-reviews-service.yaml" ]; then
+            kubectl apply -f temp_k8s/12-ratings-reviews-service.yaml
+          fi
+          
+          # Create an ingress for the API Gateway
+          cat << EOF | kubectl apply -f -
+          apiVersion: networking.k8s.io/v1
+          kind: Ingress
+          metadata:
+            name: food-ordering-ingress
+            namespace: nomnom-system
+            annotations:
+              kubernetes.io/ingress.class: nginx
+          spec:
+            rules:
+            - http:
+                paths:
+                - path: /
+                  pathType: Prefix
+                  backend:
+                    service:
+                      name: api-gateway
+                      port:
+                        number: 80
+          EOF
+          
+          # Verify deployment
+          sleep 10
+          kubectl get pods -n ${{ env.NAMESPACE }}
+          kubectl get services -n ${{ env.NAMESPACE }}
+          kubectl get ingress -n ${{ env.NAMESPACE }}
+      
+      - name: Display access information
+        run: |
+          echo "======== Local Kind Deployment Information ========"
+          echo "Your application is deployed to Kind and is accessible at:"
+          echo "  http://localhost/"
+          echo
+          echo "To test the application in the Actions runner environment, wait for all pods to be ready:"
+          kubectl wait --namespace ${{ env.NAMESPACE }} --for=condition=ready pod --all --timeout=120s || echo "Some pods are not ready yet"
+          echo
+          echo "Current pod status:"
+          kubectl get pods -n ${{ env.NAMESPACE }}
+
+  deploy-to-cloud:
+    name: Deploy to Kubernetes
+    if: ${{ github.event.inputs.environment != 'kind-local' }}
+    needs: create-k8s-configs
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment || 'staging' }}
+    steps:
+      - name: Download Kubernetes manifests
+        uses: actions/download-artifact@v3
+        with:
+          name: kubernetes-manifests
+          path: kubernetes/
+      
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
+      
+      # For Azure Kubernetes Service (AKS)
+      - name: Set up Azure credentials
+        if: ${{ vars.CLOUD_PROVIDER == 'azure' }}
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          
+      - name: Get AKS credentials
+        if: ${{ vars.CLOUD_PROVIDER == 'azure' }}
+        run: |
+          az aks get-credentials --resource-group ${{ secrets.AKS_RESOURCE_GROUP }} --name ${{ secrets.AKS_CLUSTER_NAME }}
+      
+      # For Amazon EKS
+      - name: Configure AWS credentials
+        if: ${{ vars.CLOUD_PROVIDER == 'aws' }}
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+      
+      - name: Update kubeconfig for EKS
+        if: ${{ vars.CLOUD_PROVIDER == 'aws' }}
+        run: |
+          aws eks update-kubeconfig --name ${{ secrets.EKS_CLUSTER_NAME }} --region ${{ secrets.AWS_REGION }}
+      
+      # For Google GKE
+      - name: Set up Google Cloud SDK
+        if: ${{ vars.CLOUD_PROVIDER == 'gcp' }}
+        uses: google-github-actions/setup-gcloud@v1
+        with:
+          service_account_key: ${{ secrets.GCP_SA_KEY }}
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+      
+      - name: Get GKE credentials
+        if: ${{ vars.CLOUD_PROVIDER == 'gcp' }}
+        run: |
+          gcloud container clusters get-credentials ${{ secrets.GKE_CLUSTER_NAME }} --region ${{ secrets.GKE_REGION }}
+
+      - name: Create secrets from environment variables
+        run: |
+          chmod +x kubernetes/create-secrets-from-env.sh
+          # Create empty .env files as placeholders if they don't exist in the repo
+          mkdir -p temp_env
+          for service in auth-service session-service user-service order-service menu-service cart-service notification-service payment-service; do
+            touch temp_env/$service.env
+            # Populate env files from GitHub secrets if they exist
+            secret_name="${service^^}_ENV" # Convert to uppercase
+            secret_name="${secret_name//-/_}" # Replace hyphens with underscores
+            if [[ -n "${!secret_name}" ]]; then
+              echo "${!secret_name}" > temp_env/$service.env
+            fi
+          done
+          # Run with modified env file paths
+          ./kubernetes/create-secrets-from-env.sh
+        env:
+          # These would be stored in GitHub secrets and accessed here
+          AUTH_SERVICE_ENV: ${{ secrets.AUTH_SERVICE_ENV }}
+          SESSION_SERVICE_ENV: ${{ secrets.SESSION_SERVICE_ENV }}
+          USER_SERVICE_ENV: ${{ secrets.USER_SERVICE_ENV }}
+          ORDER_SERVICE_ENV: ${{ secrets.ORDER_SERVICE_ENV }}
+          MENU_SERVICE_ENV: ${{ secrets.MENU_SERVICE_ENV }}
+          CART_SERVICE_ENV: ${{ secrets.CART_SERVICE_ENV }}
+          NOTIFICATION_SERVICE_ENV: ${{ secrets.NOTIFICATION_SERVICE_ENV }}
+          PAYMENT_SERVICE_ENV: ${{ secrets.PAYMENT_SERVICE_ENV }}
+
+      - name: Deploy to Kubernetes
+        run: |
+          # Create namespace if it doesn't exist
+          kubectl create namespace ${{ env.NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
+          
+          # Apply Kubernetes manifests in the right order
+          kubectl apply -f kubernetes/00-namespace.yaml
+          kubectl apply -f kubernetes/01-api-gateway-configmaps.yaml
+          kubectl apply -f kubernetes/02-api-gateway.yaml
+          kubectl apply -f kubernetes/03-auth-service.yaml
+          kubectl apply -f kubernetes/04-session-service.yaml
+          kubectl apply -f kubernetes/05-user-service.yaml
+          kubectl apply -f kubernetes/06-order-service.yaml
+          kubectl apply -f kubernetes/07-menu-service.yaml
+          kubectl apply -f kubernetes/08-cart-service.yaml
+          kubectl apply -f kubernetes/09-notification-service.yaml
+          kubectl apply -f kubernetes/10-payment-service.yaml
+          
+          # Apply delivery and ratings services if they exist
+          if [ -f "kubernetes/11-delivery-service.yaml" ]; then
+            kubectl apply -f kubernetes/11-delivery-service.yaml
+          fi
+          
+          if [ -f "kubernetes/12-ratings-reviews-service.yaml" ]; then
+            kubectl apply -f kubernetes/12-ratings-reviews-service.yaml
+          fi
+          
+          # Verify deployment
+          sleep 10
+          kubectl get pods -n ${{ env.NAMESPACE }}
+          kubectl get services -n ${{ env.NAMESPACE }}
+        
+      - name: Display API Gateway Information
+        run: |
+          echo "======== API Gateway Service Information ========"
+          kubectl get service api-gateway -n ${{ env.NAMESPACE }}
+          
+          # Display instructions based on cloud provider
+          if [ "${{ vars.CLOUD_PROVIDER }}" == "azure" ]; then
+            echo "Your application will be accessible at the EXTERNAL-IP address shown above"
+          elif [ "${{ vars.CLOUD_PROVIDER }}" == "aws" ]; then
+            echo "Your application will be accessible at the EXTERNAL-IP address shown above (may be a load balancer DNS name)"
+          elif [ "${{ vars.CLOUD_PROVIDER }}" == "gcp" ]; then
+            echo "Your application will be accessible at the EXTERNAL-IP address shown above"
+          else
+            echo "Once an external IP is assigned, your application will be accessible at that address"
+          fi

@@ -1,88 +1,57 @@
 /**
- * Utility functions for handling client IP addresses
- * Uses server-side request-ip library through a dedicated endpoint
+ * IP address utility functions for client-side usage
+ * 
+ * This file contains utility functions for working with IP addresses
+ * in the browser context. It helps with determining client IP addresses
+ * for authentication and tracking purposes.
  */
-
-// Default fallback IP for situations where we can't determine the real IP
-const DEFAULT_IP = '127.0.0.1';
-
-// Cache mechanism to avoid repeated API calls
-let cachedClientIp: string | null = null;
-let cacheTimestamp: number = 0;
-const CACHE_DURATION = 60 * 60 * 1000; // 1 hour in milliseconds
 
 /**
- * Gets the client's IP address from our backend API that uses request-ip
- * @param forceRefresh Whether to bypass the cache and force a new API call
- * @returns A Promise that resolves to the client's IP address string
+ * Get the client's IP address using a free public API
+ * Note: This is a fallback approach for client-side only as the most accurate way
+ * to get a user's IP address is from the server
  */
-export async function getClientIp(forceRefresh = false): Promise<string> {
+export async function getClientIpAddress(): Promise<string> {
   try {
-    // Return cached IP if available and not expired
-    const now = Date.now();
-    if (!forceRefresh && cachedClientIp && (now - cacheTimestamp) < CACHE_DURATION) {
-      return cachedClientIp;
-    }
-
-    // Call our backend API that uses request-ip
-    const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api';
-    const response = await fetch(`${API_URL}/client/info`, {
-      credentials: 'include',
-      headers: {
-        'Accept': 'application/json'
-      }
-    });
-    
-    if (response.ok) {
+    // Try a few public APIs to get the client IP address
+    // Option 1: ipify
+    try {
+      const response = await fetch('https://api.ipify.org?format=json');
       const data = await response.json();
       if (data && data.ip) {
-        // Update cache
-        cachedClientIp = data.ip;
-        cacheTimestamp = now;
         return data.ip;
       }
+    } catch (error) {
+      console.log('Failed to get IP from ipify, trying alternative service');
     }
     
-    // Fallback 1: Try auth-service endpoint if available
+    // Option 2: ip-api (fallback)
     try {
-      const authResponse = await fetch(`${API_URL}/auth-service/auth/client-ip`, {
-        credentials: 'include'
-      });
-      
-      if (authResponse.ok) {
-        const authData = await authResponse.json();
-        if (authData && authData.ip) {
-          cachedClientIp = authData.ip;
-          cacheTimestamp = now;
-          return authData.ip;
-        }
+      const response = await fetch('https://api64.ipify.org?format=json');
+      const data = await response.json();
+      if (data && data.ip) {
+        return data.ip;
       }
     } catch (error) {
-      console.log('Alternative IP endpoint failed');
+      console.log('Failed to get IP from alternative service');
     }
     
-    // Fallback 2: Return cached IP if available (even if expired)
-    if (cachedClientIp) {
-      return cachedClientIp;
-    }
-    
-    // Final fallback: return default IP
-    return DEFAULT_IP;
+    // Fallback to localhost if unable to determine IP
+    return '127.0.0.1';
   } catch (error) {
-    console.error('Failed to get client IP:', error);
-    
-    // Return cached IP if available, otherwise default
-    return cachedClientIp || DEFAULT_IP;
+    console.error('Error determining client IP address:', error);
+    return '127.0.0.1';
   }
 }
 
 /**
- * Gets basic client device information that can be useful for authentication
- * @returns Device information string (typically the user agent)
+ * Get a client identifier that combines IP address with other browser fingerprinting
+ * attributes for better client identification
  */
-export function getDeviceInfo(): string {
-  if (typeof window !== 'undefined') {
-    return navigator.userAgent;
-  }
-  return 'Unknown Device';
+export async function getClientIdentifier(): Promise<{ip: string, userAgent: string}> {
+  const ip = await getClientIpAddress();
+  return {
+    ip,
+    userAgent: navigator.userAgent
+  };
 }

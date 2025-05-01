@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Loader2, MapPin } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -82,40 +82,53 @@ function LocationMarkerComponent({ location, onLocationChange }: {
   }, []);
   
   useEffect(() => {
-    if (!map || !location?.lat || !location?.lng) return;
+    if (!map) return;
     
-    // Create a marker using the default icon
-    const marker = L.marker([location.lat, location.lng], { 
-      // Use the default icon (which we've configured above)
-      draggable: true
-    }).addTo(map);
+    // Log location for debugging
+    console.log("LocationMarkerComponent received location:", location);
     
-    // Add popup
-    if (location.address) {
-      marker.bindPopup(location.address).openPopup();
-    }
-    
-    // Handle drag events to update location
-    marker.on('dragend', async function(e) {
-      const position = marker.getLatLng();
-      const address = await reverseGeocode(position.lat, position.lng);
-      onLocationChange({
-        lat: position.lat,
-        lng: position.lng,
-        address
-      });
+    // Remove existing markers first to avoid duplicates
+    map.eachLayer((layer) => {
+      if (layer instanceof L.Marker) {
+        map.removeLayer(layer);
+      }
     });
     
-    // Center map on marker
-    map.setView([location.lat, location.lng], map.getZoom());
+    // Only add marker if we have valid coordinates
+    if (location?.lat && location?.lng) {
+      // Create a marker using the default icon
+      const marker = L.marker([location.lat, location.lng], { 
+        draggable: true
+      }).addTo(map);
+      
+      // Add popup
+      if (location.address) {
+        marker.bindPopup(location.address).openPopup();
+      }
+      
+      // Handle drag events to update location
+      marker.on('dragend', async function(e) {
+        const position = marker.getLatLng();
+        const address = await reverseGeocode(position.lat, position.lng);
+        onLocationChange({
+          lat: position.lat,
+          lng: position.lng,
+          address
+        });
+      });
+      
+      // Center map on marker with animation and appropriate zoom level
+      map.setView([location.lat, location.lng], 15, {
+        animate: true,
+        duration: 1
+      });
+    }
     
-    // Return a cleanup function
     return () => {
-      map.removeLayer(marker);
+      // Clean up will happen when component is unmounted or location changes
     };
   }, [map, location, onLocationChange]);
   
-  // We don't use the react-leaflet Marker component
   return null;
 }
 
@@ -179,6 +192,40 @@ export function MapComponent({ location, onLocationChange, height }: MapComponen
   const [showSuggestions, setShowSuggestions] = useState(false);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
+  const [initialLocationSet, setInitialLocationSet] = useState(false);
+  
+  // Set initial search query based on location address if available
+  useEffect(() => {
+    if (location?.address && !initialLocationSet) {
+      setSearchQuery(location.address);
+      setInitialLocationSet(true);
+      
+      // Display a brief notification about using saved location
+      if (location.lat && location.lng) {
+        const notification = document.createElement('div');
+        notification.className = 'fixed top-4 right-4 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded z-50';
+        notification.style.zIndex = '9999';
+        notification.innerHTML = `
+          <div class="flex">
+            <div class="py-1"><svg class="fill-current h-6 w-6 text-green-500 mr-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M2.93 17.07A10 10 0 1 1 17.07 2.93 10 10 0 0 1 2.93 17.07zm12.73-1.41A8 8 0 1 0 4.34 4.34a8 8 0 0 0 11.32 11.32zM9 11V9h2v6H9v-4zm0-6h2v2H9V5z"/></svg></div>
+            <div>
+              <p class="font-bold">Using your saved location</p>
+              <p class="text-sm">The map is centered on your previously saved delivery location.</p>
+            </div>
+          </div>
+        `;
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+          notification.style.opacity = '0';
+          notification.style.transition = 'opacity 0.5s ease-in-out';
+          setTimeout(() => {
+            document.body.removeChild(notification);
+          }, 500);
+        }, 3000);
+      }
+    }
+  }, [location, initialLocationSet]);
   
   // Add CSS for the custom marker
   useEffect(() => {
@@ -287,9 +334,14 @@ export function MapComponent({ location, onLocationChange, height }: MapComponen
     };
   }, [searchQuery]);
   
-  const initialLocation = location && location.lat && location.lng 
-    ? [location.lat, location.lng] 
-    : [6.9271, 79.8612]; // Default to Colombo, Sri Lanka
+  // Make sure we have a valid initial location with proper fallback
+  const initialLocation = useMemo(() => {
+    console.log("Setting initial map location with:", location);
+    if (location && typeof location.lat === 'number' && typeof location.lng === 'number') {
+      return [location.lat, location.lng];
+    }
+    return [6.9271, 79.8612]; // Default to Colombo, Sri Lanka
+  }, [location]);
   
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
