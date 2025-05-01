@@ -7,8 +7,8 @@ type UserType = 'admin' | 'customer' | 'restaurant' | 'driver';
 // Map of routes to the user types that can access them
 const PROTECTED_ROUTES: Record<string, UserType> = {
   '/admin': 'admin',
-  '/customer': 'customer',
-  '/restaurant': 'restaurant',
+  // '/customer': 'customer',
+  // '/restaurant': 'restaurant',
   '/driver': 'driver',
 };
 
@@ -20,6 +20,8 @@ const PUBLIC_ROUTES = [
   '/reset-password',
   '/',
   '/about',
+  '/customer',
+  '/restaurant',
   '/contact',
   '/api',
   '/browse',

@@ -36,7 +36,7 @@ const CategoryMenuPage = () => {
         }
 
         const response = await axios.get<MenuItem[]>(
-          `http://localhost:8083/menu/category/${id}`
+          `http://localhost/api/menu-service/menu/category/${id}`
         );
 
         if (!response.data || !Array.isArray(response.data)) {

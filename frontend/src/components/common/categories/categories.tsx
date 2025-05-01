@@ -75,9 +75,7 @@ const DisplayCategoriesFood = () => {
   return (
     <div className="max-w-8xl mx-auto p-6 bg-white overflow-hidden">
       {/* Ensure no vertical scrollbar */}
-      <h1 className="text-2xl font-bold text-amber-700 mb-6">
-        Available Categories
-      </h1>
+      
 
       {/* Horizontal Slider Container */}
       <div className="relative overflow-hidden">
