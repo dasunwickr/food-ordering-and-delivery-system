@@ -2,22 +2,16 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import Link from "next/link"
 import { motion } from "framer-motion"
 import { ArrowRight, Mail, Loader2, AlertCircle } from "lucide-react"
-import api from "@/lib/axios"
-
 
 import { Button } from "@/components/ui/button"
 import { FormInput } from "./form-input"
 import { PasswordInput } from "./password-input"
 import { SocialSignIn } from "./sign-up/social-sign-in"
-
-// Interface for the email existence check API response
-interface EmailExistsResponse {
-  exists: boolean;
-}
+import { Alert, AlertDescription } from "@/components/ui/alert"
 
 interface SignInFormProps {
   onSubmit: (email: string, password: string) => void
@@ -28,58 +22,7 @@ export function SignInForm({ onSubmit, isLoading = false }: SignInFormProps) {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({})
-  const [checkingEmail, setCheckingEmail] = useState(false)
-  const [emailTimer, setEmailTimer] = useState<NodeJS.Timeout | null>(null)
-  const [emailExists, setEmailExists] = useState<boolean | null>(null)
-
-  // Check if email exists when email changes
-  useEffect(() => {
-    // Reset email existence state when email changes
-    if (email) {
-      setEmailExists(null);
-    }
-    
-    // Clear previous timer
-    if (emailTimer) {
-      clearTimeout(emailTimer);
-    }
-
-    // Don't check if email is empty or invalid format
-    if (!email || !/\S+@\S+\.\S+/.test(email) || isLoading) {
-      return;
-    }
-
-    // Set a timer to prevent checking on every keystroke
-    const timer = setTimeout(async () => {
-      setCheckingEmail(true);
-      try {
-        // Try to check if email exists via the users API endpoint
-        const response = await api.get<EmailExistsResponse>(`/user-service/users/email/${email}/exists`);
-        setEmailExists(response.data.exists);
-        
-        if (!response.data.exists) {
-          setErrors(prev => ({ ...prev, email: "No account found with this email" }));
-        } else {
-          setErrors(prev => ({ ...prev, email: undefined }));
-        }
-      } catch (error: any) {
-        // If the endpoint returns 404, the email doesn't exist
-        if (error.response?.status === 404) {
-          setEmailExists(false);
-          setErrors(prev => ({ ...prev, email: "No account found with this email" }));
-        }
-      } finally {
-        setCheckingEmail(false);
-      }
-    }, 500); // 500ms debounce
-    
-    setEmailTimer(timer);
-    
-    // Cleanup timer on component unmount
-    return () => {
-      if (timer) clearTimeout(timer);
-    };
-  }, [email, isLoading]);
+  const [serviceError, setServiceError] = useState<string | null>(null)
 
   const validateForm = () => {
     const newErrors: { email?: string; password?: string } = {}
@@ -88,8 +31,6 @@ export function SignInForm({ onSubmit, isLoading = false }: SignInFormProps) {
       newErrors.email = "Email is required"
     } else if (!/\S+@\S+\.\S+/.test(email)) {
       newErrors.email = "Email is invalid"
-    } else if (emailExists === false) {
-      newErrors.email = "No account found with this email"
     }
 
     if (!password) {
@@ -102,10 +43,21 @@ export function SignInForm({ onSubmit, isLoading = false }: SignInFormProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    // Clear any previous service errors
+    setServiceError(null)
+    
     if (validateForm()) {
-      // Call the provided onSubmit function with email and password
-      await onSubmit(email, password)
-      // Redirection is now handled in the parent component
+      try {
+        // Call the provided onSubmit function with email and password
+        await onSubmit(email, password)
+        // Redirection is now handled in the parent component
+      } catch (error: any) {
+        // Handle login errors more gracefully
+        console.error("Login error:", error)
+        const errorMessage = error?.message || "Unable to sign in. Please check your credentials or try again later."
+        setServiceError(errorMessage)
+        // Continue showing the form with error message
+      }
     }
   }
 
@@ -140,6 +92,15 @@ export function SignInForm({ onSubmit, isLoading = false }: SignInFormProps) {
       initial="hidden"
       animate="visible"
     >
+      {serviceError && (
+        <motion.div variants={itemVariants}>
+          <Alert variant="destructive" className="mb-6">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription className="ml-2">{serviceError}</AlertDescription>
+          </Alert>
+        </motion.div>
+      )}
+      
       <motion.div variants={itemVariants}>
         <FormInput
           id="email"
@@ -149,16 +110,9 @@ export function SignInForm({ onSubmit, isLoading = false }: SignInFormProps) {
           value={email}
           onChange={setEmail}
           error={errors.email}
-          icon={checkingEmail ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
-
+          icon={<Mail className="h-4 w-4" />}
           disabled={isLoading}
         />
-        {errors.email === "No account found with this email" && (
-          <div className="mt-2 flex items-center text-sm text-destructive">
-            <AlertCircle className="mr-1 h-4 w-4" />
-            <span>No account found. <Link href="/sign-up" className="underline">Create an account</Link> instead?</span>
-          </div>
-        )}
       </motion.div>
 
       <motion.div variants={itemVariants}>
@@ -186,7 +140,7 @@ export function SignInForm({ onSubmit, isLoading = false }: SignInFormProps) {
         <Button 
           type="submit" 
           className="w-full" 
-          disabled={isLoading || checkingEmail || emailExists === false}
+          disabled={isLoading}
         >
           {isLoading ? (
             <>

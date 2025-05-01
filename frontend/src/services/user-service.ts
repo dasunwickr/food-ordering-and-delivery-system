@@ -85,14 +85,13 @@ export interface CustomerRegistrationData extends RegisterCommonData {
   };
 }
 
-// Extended user type with location for internal use
+
 export interface ExtendedUserData extends Partial<User> {
   location?: { lat: number; lng: number; address?: string };
   locationCoordinates?: { lat: number; lng: number; address?: string };
   [key: string]: any;
 }
 
-// User related API calls
 export const userService = {
   // Get the current user profile
   getCurrentUser: async (): Promise<User | null> => {
@@ -138,8 +137,6 @@ export const userService = {
         console.error('User not found or user service unavailable');
         // Clear potentially invalid user ID
         if (typeof window !== 'undefined') {
-          // Don't automatically clear - this could be a temporary service outage
-          // localStorage.removeItem('userId');
         }
       }
       
@@ -147,7 +144,7 @@ export const userService = {
     }
   },
 
-  // Get user by ID
+ 
   getUserById: async (id: string): Promise<User | null> => {
     try {
       const response = await api.get<User>(`${USER_URL}/users/${id}`);
@@ -158,9 +155,25 @@ export const userService = {
     }
   },
 
-  // User login
+ 
   login: async (email: string, password: string): Promise<any> => {
     try {
+      try {
+        console.log(`Checking if email exists before login: ${email}`);
+        // Use only the auth-service endpoint for email existence check
+        const emailCheckResponse = await api.get<{ exists: boolean }>(`${AUTH_API}/auth/email/${email}/exists`);
+        if (!emailCheckResponse.data.exists) {
+          // If email doesn't exist, throw a specific error that the UI can handle nicely
+          throw new Error('No account found with this email. Please create an account first.');
+        }
+      } catch (checkError: any) {
+        // Only throw if it's specifically a "no account found" error
+        if (checkError.message && checkError.message.includes('No account found')) {
+          throw checkError;
+        }
+        // Otherwise continue with login attempt - this handles cases where the email check endpoint fails
+      }
+
       const clientInfo = await getClientIdentifier();
 
       interface AuthResponse {
@@ -228,6 +241,15 @@ export const userService = {
       };
     } catch (error: any) {
       console.error('Login failed:', error);
+      
+      // Handle specific error cases for better user experience
+      if (error.message && error.message.includes('No account found')) {
+        throw new Error('No account found with this email. Please sign up first.');
+      } else if (error.response?.status === 401 || 
+                (error.response?.data?.error && error.response?.data?.error.includes('Invalid credentials'))) {
+        throw new Error('Invalid email or password. Please check your credentials.');
+      }
+      
       throw error;
     }
   },
@@ -381,21 +403,23 @@ export const userService = {
     }
 
     try {
+      // Check if email already exists before registration - use only auth-service endpoint
       try {
-        interface EmailExistsResponse {
-          exists: boolean;
-        }
-        const checkResponse = await api.get<EmailExistsResponse>(`${USER_URL}/users/email/${data.email}/exists`);
-        if (checkResponse.data && checkResponse.data.exists) {
-          throw new Error('This email is already registered. <a href="/sign-in" className="text-blue-600 hover:underline">Sign in instead?</a>');
+        console.log(`Checking if email exists before registration: ${data.email}`);
+        const authCheckResponse = await api.get<{ exists: boolean }>(`${AUTH_API}/auth/email/${data.email}/exists`);
+        if (authCheckResponse.data && authCheckResponse.data.exists) {
+          throw new Error('This email is already registered. <a href="/sign-in" class="text-blue-600 hover:underline">Sign in instead?</a>');
         }
       } catch (checkError: any) {
-        if (checkError.message.includes('This email is already registered')) {
+        // Only rethrow if it's an "email exists" error
+        if (checkError.message && checkError.message.includes('This email is already registered')) {
           throw checkError;
         }
+        // If the check fails with another error, continue with registration
+        // The backend will handle any conflicts
       }
 
-      // Fix: Update the signup endpoint to use the correct API path
+      // Send registration data to the auth service
       const response = await api.post(`${AUTH_API}/auth/signup`, registrationData);
 
       if (typeof window !== 'undefined' && window.location) {
@@ -407,7 +431,7 @@ export const userService = {
       console.error('Registration error:', error.response?.data || error);
       const errorMessage = error.response?.data?.error || error.response?.data?.message || error.message || 'Registration failed. Please try again.';
 
-      if (errorMessage.includes('Email already exists') || errorMessage.includes('already in use') || error.response?.status === 409) {
+      if (errorMessage.includes('Email already exists') || errorMessage.includes('already in use') || errorMessage.includes('already registered') || error.response?.status === 409) {
         throw new Error('This email is already registered. <a href="/sign-in" class="text-blue-600 hover:underline">Sign in instead?</a>');
       }
 
@@ -476,7 +500,26 @@ export const userService = {
 
   deleteUser: async (userId: string, userType: string): Promise<void> => {
     try {
+      // Delete from user service first
       await api.request({ method: 'DELETE', url: `${USER_URL}/users/${userId}`, data: { userType: userType.toUpperCase() } });
+      
+      // Then also delete from auth service
+      try {
+        await api.delete(`${AUTH_API}/auth/users/${userId}`);
+        console.log('Auth details also deleted for user:', userId);
+      } catch (authError) {
+        console.error('Error deleting auth details:', authError);
+        // Continue even if auth deletion fails - the user was deleted from the main service
+      }
+      
+      // Also try to invalidate any active sessions
+      try {
+        await api.post(`${API_URL}/session-service/sessions/invalidate/user/${userId}`);
+        console.log('User sessions invalidated for deleted user:', userId);
+      } catch (sessionError) {
+        console.error('Error invalidating sessions for deleted user:', sessionError);
+        // Continue even if session invalidation fails
+      }
     } catch (error) {
       console.error('Error deleting user:', error);
       throw error;
@@ -675,6 +718,22 @@ export const userService = {
     } catch (error) {
       console.error('Error deleting cuisine type:', error);
       throw error;
+    }
+  },
+
+  // Check if email exists
+  checkEmailExists: async (email: string): Promise<boolean> => {
+    console.log(`Checking if email exists: ${email}`);
+    try {
+      // Use only the auth-service endpoint with properly encoded email
+      const encodedEmail = encodeURIComponent(email.trim());
+      const authResponse = await api.get<{ exists: boolean }>(`${AUTH_API}/auth/email/${encodedEmail}/exists`);
+      return authResponse.data.exists;
+    } catch (error) {
+      console.error('Error checking email existence with auth-service:', error);
+      // If the check fails, return false to allow the operation to continue
+      // The server-side validation will catch any conflicts
+      return false;
     }
   }
 };

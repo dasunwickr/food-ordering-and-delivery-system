@@ -3,18 +3,23 @@ import * as AuthController from '../controllers/auth.controller';
 
 const router = Router();
 
-// Define explicitly typed handlers to resolve TypeScript issues
+
 type RequestHandler = (req: Request, res: Response, next?: NextFunction) => Promise<any> | void;
 
-// Auth routes with explicit casting to ensure TypeScript compatibility
+
 router.post('/signup', AuthController.signUp as RequestHandler);
 router.post('/signin', AuthController.signIn as RequestHandler);
 router.post('/forgot-password', AuthController.forgotPassword as RequestHandler);
 router.post('/verify-otp', AuthController.verifyOtp as RequestHandler);
 router.post('/reset-password', AuthController.resetPassword as RequestHandler);
-router.post('/change-password', AuthController.changePassword as RequestHandler); // TODO: Reset Password
+router.post('/change-password', AuthController.changePassword as RequestHandler);
 
-// Email sending route
+
+router.get('/email/:email/exists', AuthController.checkEmailExists as RequestHandler);
+
+
 router.post('/send-email', AuthController.sendCustomEmail as RequestHandler);
+
+router.delete('/users/:userId', AuthController.deleteUser as RequestHandler);
 
 export default router;
