@@ -23,7 +23,7 @@ const DisplayCategoriesFood = () => {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const response = await axios.get<Category[]>("http://localhost:8083/categories");
+        const response = await axios.get<Category[]>("http://localhost/api/menu-service/categories");
         if (response.status === 200) {
           setCategories(response.data);
         }
