@@ -408,18 +408,14 @@ export const userService = {
         console.log(`Checking if email exists before registration: ${data.email}`);
         const authCheckResponse = await api.get<{ exists: boolean }>(`${AUTH_API}/auth/email/${data.email}/exists`);
         if (authCheckResponse.data && authCheckResponse.data.exists) {
-          throw new Error('This email is already registered. <a href="/sign-in" class="text-blue-600 hover:underline">Sign in instead?</a>');
+          throw new Error('This email is already registered.');
         }
       } catch (checkError: any) {
-        // Only rethrow if it's an "email exists" error
         if (checkError.message && checkError.message.includes('This email is already registered')) {
           throw checkError;
         }
-        // If the check fails with another error, continue with registration
-        // The backend will handle any conflicts
       }
 
-      // Send registration data to the auth service
       const response = await api.post(`${AUTH_API}/auth/signup`, registrationData);
 
       if (typeof window !== 'undefined' && window.location) {
@@ -432,7 +428,7 @@ export const userService = {
       const errorMessage = error.response?.data?.error || error.response?.data?.message || error.message || 'Registration failed. Please try again.';
 
       if (errorMessage.includes('Email already exists') || errorMessage.includes('already in use') || errorMessage.includes('already registered') || error.response?.status === 409) {
-        throw new Error('This email is already registered. <a href="/sign-in" class="text-blue-600 hover:underline">Sign in instead?</a>');
+        throw new Error('This email is already registered.');
       }
 
       throw new Error(errorMessage);
@@ -448,35 +444,54 @@ export const userService = {
     console.log('Updating user with data:', userData);
     
     try {
-      // First, get the existing user to ensure we have the complete object
       const currentUser = await api.get<User>(`${USER_URL}/users/${id}`);
       console.log('Current user data:', currentUser.data);
       
-      // Create a merged object with current data plus updates
-      const mergedUserData = { ...currentUser.data };
+      // Create a properly formatted user data object that matches the backend expectations
+      const mergedUserData: any = { ...currentUser.data };
       
-      // Update the merged object with the new data
+      // Get userType from localStorage if available
+      const userType = typeof window !== 'undefined' ? localStorage.getItem('userType') : null;
+      if (userType) {
+        mergedUserData.userType = userType.toUpperCase();
+        console.log('Adding userType from localStorage:', userType.toUpperCase());
+      }
+      
+      // Map standard user fields
       Object.keys(userData).forEach(key => {
-        if (key !== 'location') {
-          (mergedUserData as any)[key] = (userData as any)[key];
+        if (key !== 'location' && key !== 'locationCoordinates') {
+          mergedUserData[key] = (userData as any)[key];
         }
       });
       
-      // Special handling for location data
+      // Handle phone/contactNumber mapping
+      if ('phone' in userData) {
+        mergedUserData.contactNumber = userData.phone;
+      }
+      
+      // Handle location data properly according to backend format
       if ('location' in userData && userData.location) {
         console.log('Location data detected in update:', userData.location);
         
-        // Customer location in Spring Data expects a Point object format
-        if (mergedUserData.userType?.toUpperCase() === 'CUSTOMER') {
-          (mergedUserData as any).location = {
-            x: userData.location.lng,
-            y: userData.location.lat
-          };
-          
-          // Store the address in a separate field for UI display
-          if ('address' in userData.location) {
-            (mergedUserData as any).locationAddress = userData.location.address;
-          }
+        // For CUSTOMER user type, format location as {x, y} instead of {lng, lat}
+        mergedUserData.location = {
+          x: userData.location.lng,
+          y: userData.location.lat 
+        };
+        
+        // If an address is provided, add it to the location data
+        if ('address' in userData.location) {
+          mergedUserData.locationAddress = userData.location.address;
+        }
+      } else if ('locationCoordinates' in userData && userData.locationCoordinates) {
+        // Alternative location format handling
+        mergedUserData.location = {
+          x: userData.locationCoordinates.lng,
+          y: userData.locationCoordinates.lat
+        };
+        
+        if ('address' in userData.locationCoordinates) {
+          mergedUserData.locationAddress = userData.locationCoordinates.address;
         }
       }
       
@@ -500,25 +515,20 @@ export const userService = {
 
   deleteUser: async (userId: string, userType: string): Promise<void> => {
     try {
-      // Delete from user service first
       await api.request({ method: 'DELETE', url: `${USER_URL}/users/${userId}`, data: { userType: userType.toUpperCase() } });
       
-      // Then also delete from auth service
       try {
         await api.delete(`${AUTH_API}/auth/users/${userId}`);
         console.log('Auth details also deleted for user:', userId);
       } catch (authError) {
         console.error('Error deleting auth details:', authError);
-        // Continue even if auth deletion fails - the user was deleted from the main service
       }
       
-      // Also try to invalidate any active sessions
       try {
         await api.post(`${API_URL}/session-service/sessions/invalidate/user/${userId}`);
         console.log('User sessions invalidated for deleted user:', userId);
       } catch (sessionError) {
         console.error('Error invalidating sessions for deleted user:', sessionError);
-        // Continue even if session invalidation fails
       }
     } catch (error) {
       console.error('Error deleting user:', error);
@@ -557,16 +567,13 @@ export const userService = {
 
   resetPassword: async (userId: string, currentPassword: string, newPassword: string): Promise<void> => {
     try {
-      // Get device info and IP address for security logging
       const clientInfo = await getClientIdentifier();
 
-      // First, get the user's email
       const user = await userService.getCurrentUser();
       if (!user || !user.email) {
         throw new Error('Unable to retrieve current user information');
       }
       
-      // Verify current password by attempting a login (but don't store the new tokens)
       try {
         await api.post(`${AUTH_API}/auth/signin`, {
           email: user.email,
@@ -574,20 +581,13 @@ export const userService = {
           device: clientInfo.userAgent,
           ipAddress: clientInfo.ip
         });
-        // If we get here, password was correct
       } catch (error: any) {
-        // If login fails, the current password is incorrect
         console.error('Password verification failed:', error);
         throw new Error('Current password is incorrect');
       }
       
-      // For an authenticated user changing their own password
-      // We need to use a different approach than the OTP-based reset-password
-      // Since we don't have a specific endpoint for authenticated password changes,
-      // we'll need to directly update the user in the auth service
       
       try {
-        // Call custom endpoint for authenticated user password change
         await api.post(`${AUTH_API}/auth/change-password`, {
           userId,
           currentPassword,
@@ -598,14 +598,11 @@ export const userService = {
       } catch (error: any) {
         console.error('Error changing password:', error);
         
-        // If this specific endpoint doesn't exist, we need to create it on the backend
-        // For now, show a more helpful error message
         throw new Error('Password change functionality is not properly configured on the server. Please contact administrator.');
       }
       
       console.log('Password reset successful');
       
-      // Invalidate other sessions for security
       try {
         const sessionId = localStorage.getItem('sessionId');
         if (sessionId) {

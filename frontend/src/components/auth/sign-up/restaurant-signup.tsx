@@ -5,6 +5,7 @@ import type React from "react"
 import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import { Building, FileText, MapPin, Clock, UtensilsCrossed, Plus, Minus, Check, X, Search, AlertCircle } from "lucide-react"
+import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -23,7 +24,6 @@ interface OperatingHours {
   closeTime: string
 }
 
-// Update the interface to include password
 interface RestaurantSignUpProps {
   userData: {
     email: string
@@ -777,6 +777,7 @@ export function RestaurantSignUp({ userData }: RestaurantSignUpProps) {
               setLocation(selectedLoc.address);
               setSelectedLocation({lat: selectedLoc.lat, lng: selectedLoc.lng});
               setLocationConfirmed(true);
+              toast.success(`Location selected: ${selectedLoc.address}`);
               toggleModal('map', false);
             }} 
           />

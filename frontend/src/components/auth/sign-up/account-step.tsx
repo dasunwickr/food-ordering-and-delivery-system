@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import { ArrowRight, Mail, AlertCircle } from "lucide-react"
 
@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button"
 import { FormInput } from "../form-input"
 import { PasswordInput } from "../password-input"
 import { SocialSignIn } from "./social-sign-in"
+import { checkEmailExists } from "@/services/auth-service"
 
 interface AccountStepProps {
   onSubmit: (email: string, password: string, confirmPassword: string) => void
@@ -20,6 +21,47 @@ export function AccountStep({ onSubmit }: AccountStepProps) {
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [errors, setErrors] = useState<{ email?: string; password?: string; confirmPassword?: string }>({})
+  const [isCheckingEmail, setIsCheckingEmail] = useState(false)
+  const [emailDebounceTimer, setEmailDebounceTimer] = useState<NodeJS.Timeout | null>(null)
+
+  
+  useEffect(() => {
+    if (emailDebounceTimer) {
+      clearTimeout(emailDebounceTimer)
+    }
+
+    if (!email || !/\S+@\S+\.\S+/.test(email) || email.length < 5) {
+      return
+    }
+
+    const timer = setTimeout(async () => {
+      try {
+        setIsCheckingEmail(true)
+        const result = await checkEmailExists(email)
+        
+        if (result.exists) {
+          setErrors(prev => ({ ...prev, email: "This email is already registered" }))
+        } else if (result.error) {
+          setErrors(prev => ({ ...prev, email: result.error }))
+        } else {
+          setErrors(prev => {
+            const { email, ...rest } = prev
+            return rest
+          })
+        }
+      } catch (error) {
+        console.error("Email validation error:", error)
+      } finally {
+        setIsCheckingEmail(false)
+      }
+    }, 500)
+    
+    setEmailDebounceTimer(timer)
+    
+    return () => {
+      if (timer) clearTimeout(timer)
+    }
+  }, [email])
 
   const validateForm = () => {
     const newErrors: { email?: string; password?: string; confirmPassword?: string } = {}
@@ -44,11 +86,28 @@ export function AccountStep({ onSubmit }: AccountStepProps) {
     return Object.keys(newErrors).length === 0
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
     if (validateForm()) {
-      onSubmit(email, password, confirmPassword)
+      try {
+        setIsCheckingEmail(true)
+        const result = await checkEmailExists(email)
+        
+        if (result.exists) {
+          if (!errors.email) {
+            setErrors(prev => ({ ...prev, email: "This email is already registered" }))
+          }
+          setIsCheckingEmail(false)
+          return
+        }
+        
+        onSubmit(email, password, confirmPassword)
+      } catch (error) {
+        console.error("Email validation error:", error)
+      } finally {
+        setIsCheckingEmail(false)
+      }
     }
   }
 
@@ -106,11 +165,17 @@ export function AccountStep({ onSubmit }: AccountStepProps) {
           onChange={setEmail}
           error={errors.email}
           icon={<Mail className="h-4 w-4" />}
+          disabled={isCheckingEmail}
         />
         {errors.email && (
           <div className="mt-2 flex items-center text-sm text-destructive">
             <AlertCircle className="mr-1 h-4 w-4" />
             <span>{errors.email}</span>
+          </div>
+        )}
+        {isCheckingEmail && !errors.email && (
+          <div className="mt-2 flex items-center text-sm text-muted-foreground">
+            <span className="animate-pulse">Checking email availability...</span>
           </div>
         )}
       </motion.div>

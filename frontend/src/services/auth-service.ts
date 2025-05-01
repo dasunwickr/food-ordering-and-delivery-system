@@ -3,6 +3,7 @@ import { ForgotPasswordFormData, LoginFormData, NewPasswordFormData, Registratio
 import { setCookie, getCookie, deleteCookie } from 'cookies-next';
 import { AUTH_API, USER_URL } from '@/services/index';
 import { getClientIpAddress } from '@/utils/ip-address';
+import { toast } from 'sonner';
 
 // Configure axios defaults for CORS handling
 axios.defaults.withCredentials = true;
@@ -137,15 +138,18 @@ export async function signIn(data: LoginFormData): Promise<AuthResponse> {
       token: token // Ensure token is consistently available in this field
     };
   } catch (error: any) {
-    // More detailed error logging
+    // More detailed error logging and display error with Sonner toast
     if (error.response) {
       console.error('Sign-in error response data:', error.response.data);
       console.error('Sign-in error response status:', error.response.status);
     }
     
+    const errorMsg = error.response?.data?.error || error.message;
+    toast.error(errorMsg);
+
     return {
       message: 'Authentication failed',
-      error: error.response?.data?.error || error.message,
+      error: errorMsg,
     };
   }
 }
@@ -155,9 +159,13 @@ export async function signUp(data: RegistrationFormData): Promise<AuthResponse> 
     const response = await axios.post<AuthResponse>(`${AUTH_API}/auth/signup`, data);
     return response.data;
   } catch (error: any) {
+    // Display error with Sonner toast
+    const errorMsg = error.response?.data?.error || error.message;
+    toast.error(errorMsg);
+    
     return {
       message: 'Registration failed',
-      error: error.response?.data?.error || error.message,
+      error: errorMsg,
     };
   }
 }
@@ -168,9 +176,13 @@ export async function forgotPassword(email: string): Promise<AuthResponse> {
     const response = await axios.post<AuthResponse>(`${AUTH_API}/auth/forgot-password`, { email });
     return response.data;
   } catch (error: any) {
+    // Display error with Sonner toast
+    const errorMsg = error.response?.data?.error || error.message;
+    toast.error(errorMsg);
+    
     return {
       message: 'Failed to process password reset request',
-      error: error.response?.data?.error || error.message,
+      error: errorMsg,
     };
   }
 }
@@ -181,9 +193,13 @@ export async function verifyOtp(email: string, otp: string): Promise<AuthRespons
     const response = await axios.post<AuthResponse>(`${AUTH_API}/auth/verify-otp`, { email, otp });
     return response.data;
   } catch (error: any) {
+    // Display error with Sonner toast
+    const errorMsg = error.response?.data?.error || error.message;
+    toast.error(errorMsg);
+    
     return {
       message: 'OTP verification failed',
-      error: error.response?.data?.error || error.message,
+      error: errorMsg,
     };
   }
 }
@@ -202,9 +218,14 @@ export async function resetPassword(email: string, newPassword: string): Promise
     return response.data;
   } catch (error: any) {
     console.error('Reset password error:', error.response?.data || error);
+    
+    // Display error with Sonner toast
+    const errorMsg = error.response?.data?.error || error.message;
+    toast.error(errorMsg);
+    
     return {
       message: 'Password reset failed',
-      error: error.response?.data?.error || error.message,
+      error: errorMsg,
     };
   }
 }
@@ -224,6 +245,9 @@ export function signOut(): void {
   deleteCookie('userId');
   deleteCookie('userType');
   deleteCookie('sessionId'); 
+  
+  // Show toast notification for sign out
+  toast.success('You have been signed out successfully');
   
   console.log('User signed out');
 }
@@ -273,6 +297,55 @@ export const hasUserType = (requiredType: string | string[]): boolean => {
   
   return currentUserType.toLowerCase() === requiredType.toLowerCase();
 };
+
+/**
+ * Check if an email address already exists in the system
+ * @param email - Email address to check
+ * @returns Promise with a boolean indicating if the email exists and any error message
+ */
+export async function checkEmailExists(email: string): Promise<{ exists: boolean; error?: string }> {
+  try {
+    // Validate email format first
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return {
+        exists: false,
+        error: 'Invalid email format'
+      };
+    }
+    
+    console.log('Checking if email exists:', email);
+    
+    // Call the auth service API endpoint
+    const response = await axios.get<{ exists: boolean }>(`${AUTH_API}/auth/email/${encodeURIComponent(email)}/exists`);
+    
+    console.log('Email check response:', response.data);
+    
+    return {
+      exists: response.data.exists,
+    };
+  } catch (error: any) {
+    console.error('Error checking email existence:', error);
+    
+    // Handle common error cases
+    if (error.response) {
+      if (error.response.status === 404) {
+        // 404 typically means the email doesn't exist
+        return { exists: false };
+      }
+      
+      return {
+        exists: false,
+        error: error.response.data?.message || 'Error checking email'
+      };
+    }
+    
+    return {
+      exists: false,
+      error: error.message || 'Unable to check email existence'
+    };
+  }
+}
 
 /**
  * Check if a route is accessible to the current user
