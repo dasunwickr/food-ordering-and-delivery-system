@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import Link from "next/link"
 import { Bell, Menu, User, DollarSign } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -14,7 +14,6 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
-import { getLocalStorageItem } from "@/utils/storage"
 
 interface DriverTopNavbarProps {
   onMenuClick: () => void
@@ -23,28 +22,6 @@ interface DriverTopNavbarProps {
 export function DriverTopNavbar({ onMenuClick }: DriverTopNavbarProps) {
   const [notificationCount, setNotificationCount] = useState(2)
   const [isOnline, setIsOnline] = useState(true)
-  const [driverData, setDriverData] = useState({
-    firstName: "Driver",
-    lastName: "",
-    email: "driver@example.com",
-    profilePicture: "/placeholder.svg?height=32&width=32"
-  })
-
-  useEffect(() => {
-    // Get user profile from localStorage if available
-    const userProfile = getLocalStorageItem<any>('userProfile')
-    if (userProfile) {
-      // Use the correct property for profile picture (different APIs might use different property names)
-      const profilePictureUrl = userProfile.profilePictureUrl || userProfile.profilePicture || driverData.profilePicture
-      
-      setDriverData({
-        firstName: userProfile.firstName || driverData.firstName,
-        lastName: userProfile.lastName || driverData.lastName,
-        email: userProfile.email || driverData.email,
-        profilePicture: profilePictureUrl
-      })
-    }
-  }, [])
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background px-4 md:px-6">
@@ -119,10 +96,9 @@ export function DriverTopNavbar({ onMenuClick }: DriverTopNavbarProps) {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="relative h-8 w-8 rounded-full">
               <img
-                src={driverData.profilePicture}
-                alt={`${driverData.firstName} ${driverData.lastName}`}
+                src="/placeholder.svg?height=32&width=32"
+                alt="Driver"
                 className="h-8 w-8 rounded-full object-cover"
-                key={driverData.profilePicture} // Force re-render when image URL changes
               />
               <span className="sr-only">Profile</span>
             </Button>
@@ -130,8 +106,8 @@ export function DriverTopNavbar({ onMenuClick }: DriverTopNavbarProps) {
           <DropdownMenuContent align="end">
             <div className="flex items-center gap-2 p-2">
               <div className="flex flex-col space-y-1 leading-none">
-                <p className="font-medium">{driverData.firstName} {driverData.lastName}</p>
-                <p className="text-xs text-muted-foreground">{driverData.email}</p>
+                <p className="font-medium">Michael Johnson</p>
+                <p className="text-xs text-muted-foreground">michael.j@example.com</p>
               </div>
             </div>
             <DropdownMenuSeparator />

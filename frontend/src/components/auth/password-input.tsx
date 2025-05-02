@@ -12,19 +12,9 @@ interface PasswordInputProps {
   error?: string
   placeholder?: string
   disabled?: boolean
-  hasError?: boolean
 }
 
-export function PasswordInput({ 
-  id, 
-  label, 
-  value, 
-  onChange, 
-  error, 
-  placeholder = "••••••••", 
-  disabled,
-  hasError = false 
-}: PasswordInputProps) {
+export function PasswordInput({ id, label, value, onChange, error, placeholder = "••••••••", disabled }: PasswordInputProps) {
   const [showPassword, setShowPassword] = useState(false)
 
   return (
@@ -39,7 +29,6 @@ export function PasswordInput({
       icon={<Lock className="h-4 w-4" />}
       className="pr-10"
       disabled={disabled}
-      hasError={hasError}
       suffix={
         <button
           type="button"
@@ -48,9 +37,9 @@ export function PasswordInput({
           disabled={disabled}
         >
           {showPassword ? (
-            <EyeOff className={`h-4 w-4 ${hasError ? 'text-red-400' : 'text-muted-foreground'}`} />
+            <EyeOff className="h-4 w-4 text-muted-foreground" />
           ) : (
-            <Eye className={`h-4 w-4 ${hasError ? 'text-red-400' : 'text-muted-foreground'}`} />
+            <Eye className="h-4 w-4 text-muted-foreground" />
           )}
         </button>
       }

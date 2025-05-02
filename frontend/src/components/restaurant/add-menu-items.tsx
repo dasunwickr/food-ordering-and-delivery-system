@@ -117,18 +117,17 @@ const AddMenuForm = () => {
 
     try {
       const API_URL = "http://localhost/api/menu-service";
-      const response = await axios.post(`${API_URL}/menu/add`, formDataToSend, {
-        headers: {
-        "Content-Type": "multipart/form-data",
-    },
-  });
+      const response = await fetch(`${API_URL}/add`, {
+        method: "POST",
+        body: formDataToSend,
+      });
 
-  if (response.status === 201 || response.status === 200) {
-    alert("Menu item added successfully!");
-    router.push("/restaurant/menu");
-  } else {
-    alert("Failed to add menu item.");
-  }
+      if (response.ok) {
+        alert("Menu item added successfully!");
+        router.push("/restaurant/menu");
+      } else {
+        alert("Failed to add menu item.");
+      }
     } catch (error) {
       console.error("Error adding menu item:", error);
       alert("An error occurred while adding the menu item.");

@@ -1,65 +1,18 @@
 import axios from 'axios';
 
-// Simple custom types
-type RequestConfig = {
-  baseURL?: string;
-  timeout?: number;
-  headers?: Record<string, string>;
-  withCredentials?: boolean;
-  method?: string;
-  url?: string;
-  data?: any;
-};
-
-// Environment configuration
-// This should match your API Gateway setting
+// Base URL for all API requests
 const baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost/api';
-const TIMEOUT = 30000; // Increased to 30 seconds timeout
-
-// Create basic request configuration
-const getRequestConfig = (): RequestConfig => ({
-  baseURL,
-  timeout: TIMEOUT,
-  headers: {
-    'Content-Type': 'application/json',
-    'Accept': 'application/json',
-  },
-  withCredentials: true, // Include cookies with cross-origin requests
-});
 
 // Create Axios instance with default configuration
-const api = axios.create(getRequestConfig());
+const api = axios.create({
+  baseURL,
+  timeout: 15000, // 15 seconds timeout
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
 
-// Enable/disable debug logging
-const DEBUG = true; // Always enable for now to help with debugging
-
-// Simple logger
-const logRequest = (config: any) => {
-  if (DEBUG) {
-    console.log('API Request:', {
-      method: config.method,
-      url: config.url,
-      data: config.data
-    });
-  }
-};
-
-const logResponse = (response: any) => {
-  if (DEBUG) {
-    console.log('API Response:', response.status, response.data);
-  }
-};
-
-const logError = (error: any) => {
-  console.error('API Error:', {
-    message: error.message,
-    status: error.response?.status,
-    data: error.response?.data,
-    url: error.config?.url
-  });
-};
-
-// Request interceptor to attach auth token
+// Request interceptor to attach the auth token
 api.interceptors.request.use((config) => {
   // Get the token from localStorage if in browser environment
   if (typeof window !== 'undefined') {
@@ -70,57 +23,84 @@ api.interceptors.request.use((config) => {
     }
   }
   
-  // Log request details
-  logRequest(config);
-  
   return config;
 }, (error) => {
-  logError(error);
+  // Handle request errors
+  console.error('Request error:', error);
   return Promise.reject(error);
 });
 
-// Response interceptor with better error handling
+// Response interceptor for error handling
 api.interceptors.response.use(
-  (response) => {
-    logResponse(response);
-    return response;
-  },
+  (response) => response,
   async (error) => {
-    logError(error);
+    const originalRequest = error.config;
     
-    // Create more detailed error information
-    if (!error.response) {
-      error.userMessage = 'Network error: Unable to connect to the server. Please check your internet connection or verify that the backend services are running.';
-    } else {
-      // Handle common status codes with more detailed messages
-      switch (error.response.status) {
-        case 400:
-          error.userMessage = `Bad request: ${error.response.data?.error || 'Please check your data'}`;
-          break;
-        case 401:
-          error.userMessage = 'Authentication required. Please sign in again.';
-          break;
-        case 403:
-          error.userMessage = 'Access denied: You do not have permission to access this resource.';
-          break;
-        case 404:
-          error.userMessage = `Resource not found: ${error.config?.url}. The service might be unavailable.`;
-          break;
-        case 500:
-          error.userMessage = 'Internal server error. Our team has been notified.';
-          break;
-        case 502:
-        case 503:
-        case 504:
-          error.userMessage = 'Service unavailable. This could be due to maintenance or high traffic.';
-          break;
-        default:
-          error.userMessage = `Error ${error.response.status}: ${error.response.data?.message || 'An unexpected error occurred'}`;
+    // Network errors handling (server down, connection refused, etc)
+    if (error.message === 'Network Error') {
+      console.error('Network error detected:', error);
+      // You could implement special handling for network errors here
+      // For example, notification to user that the server is unreachable
+    }
+    
+    // Handle timeout errors specifically
+    if (error.code === 'ECONNABORTED') {
+      console.error('Request timed out:', error);
+      return Promise.reject({
+        ...error,
+        message: 'The request timed out. Please try again later.'
+      });
+    }
+    
+    // If 401 Unauthorized error and not already retrying
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+      
+      try {
+        // Here you could attempt to refresh the token
+        // const refreshToken = localStorage.getItem('refreshToken');
+        // const res = await axios.post(`${baseURL}/auth/refresh`, { refreshToken });
+        // localStorage.setItem('authToken', res.data.accessToken);
+        
+        // Return original request with new token
+        // originalRequest.headers.Authorization = `Bearer ${res.data.accessToken}`;
+        // return api(originalRequest);
+        
+        // For now, just redirect to login
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('authToken');
+          window.location.href = '/sign-in';
+        }
+      } catch (refreshError) {
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('authToken');
+          window.location.href = '/sign-in';
+        }
+        return Promise.reject(refreshError);
       }
     }
     
-    // Add the user message to the error object
-    error.message = error.userMessage || error.message;
+    // Handle API errors with proper messages
+    if (error.response) {
+      // The server responded with a status code outside of 2xx range
+      console.error('API error response:', error.response.status, error.response.data);
+      
+      // You could handle different status codes differently
+      switch (error.response.status) {
+        case 404:
+          error.userMessage = 'The requested resource was not found.';
+          break;
+        case 403:
+          error.userMessage = 'You do not have permission to access this resource.';
+          break;
+        case 500:
+          error.userMessage = 'An internal server error occurred. Please try again later.';
+          break;
+        default:
+          error.userMessage = error.response.data?.message || 
+                             'An error occurred with the API request.';
+      }
+    }
     
     return Promise.reject(error);
   }

@@ -43,8 +43,6 @@ interface MapProps {
   showRoute?: boolean
   animate?: boolean
   zoom?: number
-  driverId?: string
-  enableLiveTracking?: boolean
 }
 
 export default function Map({
@@ -54,8 +52,6 @@ export default function Map({
   showRoute = true,
   animate = true,
   zoom = 14,
-  driverId,
-  enableLiveTracking = false,
 }: MapProps) {
   const mapRef = useRef<L.Map | null>(null)
   const routingControlRef = useRef<L.Routing.Control | null>(null)
@@ -104,11 +100,7 @@ export default function Map({
       })
 
       const driverIcon = L.divIcon({
-        html: enableLiveTracking 
-          ? `<div class="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-white shadow-md animate-pulse">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" class="lucide lucide-bike"><circle cx="18.5" cy="17.5" r="3.5"/><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="15" cy="5" r="1"/><path d="M12 17.5V14l-3-3 4-3 2 3h2"/></svg>
-              </div>`
-          : `<div class="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-white shadow-md">
+        html: `<div class="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-white shadow-md">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" class="lucide lucide-bike"><circle cx="18.5" cy="17.5" r="3.5"/><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="15" cy="5" r="1"/><path d="M12 17.5V14l-3-3 4-3 2 3h2"/></svg>
               </div>`,
         className: "",
@@ -128,9 +120,7 @@ export default function Map({
       // Add driver marker
       driverMarkerRef.current = L.marker([driverLocation.lat, driverLocation.lng], { icon: driverIcon })
         .addTo(mapRef.current)
-        .bindPopup(enableLiveTracking && driverId 
-          ? `${driverLocation.label || "Driver"} (Live tracking active)` 
-          : (driverLocation.label || "Driver"))
+        .bindPopup(driverLocation.label || "Driver")
 
       prevPositionRef.current = L.latLng(driverLocation.lat, driverLocation.lng)
 
@@ -176,11 +166,6 @@ export default function Map({
     if (mapRef.current && driverMarkerRef.current && prevPositionRef.current) {
       const newPosition = L.latLng(driverLocation.lat, driverLocation.lng)
 
-      // Don't animate if it's the same position
-      if (prevPositionRef.current.equals(newPosition)) {
-        return;
-      }
-
       if (animate) {
         // Animate marker movement
         const frames = 100
@@ -209,13 +194,6 @@ export default function Map({
         driverMarkerRef.current.setLatLng([driverLocation.lat, driverLocation.lng])
         prevPositionRef.current = newPosition
       }
-
-      // Update popup content if tracking is enabled
-      if (enableLiveTracking && driverId) {
-        driverMarkerRef.current.setPopupContent(
-          `${driverLocation.label || "Driver"} (Live tracking active)`
-        );
-      }
     }
 
     return () => {
@@ -226,25 +204,18 @@ export default function Map({
         driverMarkerRef.current = null
       }
     }
-  }, [driverLocation, pickupLocation, dropoffLocation, showRoute, animate, zoom, enableLiveTracking, driverId])
+  }, [driverLocation, pickupLocation, dropoffLocation, showRoute, animate, zoom])
 
   return (
     <>
       <div id="map" className="h-full w-full" />
-      <div className="mt-4 flex justify-between items-center">
+      <div className="mt-4">
         <button
           onClick={handleGoogleMaps}
           className="bg-primary text-white px-4 py-2 rounded shadow-md"
         >
           Open in Google Maps
         </button>
-        
-        {enableLiveTracking && driverId && (
-          <div className="flex items-center">
-            <div className="h-3 w-3 bg-green-500 rounded-full animate-pulse mr-2"></div>
-            <span className="text-sm text-muted-foreground">Live tracking active</span>
-          </div>
-        )}
       </div>
     </>
   )

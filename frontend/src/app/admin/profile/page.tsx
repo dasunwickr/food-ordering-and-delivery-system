@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -10,9 +10,6 @@ import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ProfileImageUploader } from "@/components/user-service/profile/profile-image-uploader"
 import { ResetPasswordModal } from "@/components/user-service/profile/reset-password"
-import { getLocalStorageItem } from "@/utils/storage"
-import userService from "@/services/user-service"
-import { toast } from "sonner"
 
 // Sample admin data
 const ADMIN_DATA = {
@@ -25,9 +22,6 @@ const ADMIN_DATA = {
   adminType: "Top Level",
 }
 
-console.log(userService.getCurrentUser())
-
-
 export default function ProfilePage() {
   const [admin, setAdmin] = useState(ADMIN_DATA)
   const [formData, setFormData] = useState({
@@ -37,30 +31,6 @@ export default function ProfilePage() {
     contactNumber: admin.contactNumber,
   })
   const [resetPasswordModalOpen, setResetPasswordModalOpen] = useState(false)
-
-  useEffect(() => {
-    // Get user profile from localStorage if available
-    const userProfile = getLocalStorageItem<any>('userProfile')
-    if (userProfile) {
-      setAdmin({
-        ...admin,
-        id: userProfile.id || admin.id,
-        firstName: userProfile.firstName || admin.firstName,
-        lastName: userProfile.lastName || admin.lastName,
-        email: userProfile.email || admin.email,
-        contactNumber: userProfile.contactNumber || userProfile.phone || admin.contactNumber,
-        profilePicture: userProfile.profilePictureUrl || admin.profilePicture,
-        adminType: userProfile.adminType || admin.adminType
-      })
-      
-      setFormData({
-        firstName: userProfile.firstName || admin.firstName,
-        lastName: userProfile.lastName || admin.lastName,
-        email: userProfile.email || admin.email,
-        contactNumber: userProfile.contactNumber || userProfile.phone || admin.contactNumber,
-      })
-    }
-  }, [])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -169,19 +139,9 @@ export default function ProfilePage() {
       <ResetPasswordModal
         open={resetPasswordModalOpen}
         onClose={() => setResetPasswordModalOpen(false)}
-        onSubmit={async (data) => {
-          try {
-            // Call our reset password service function
-            await userService.resetPassword(
-              admin.id, 
-              data.currentPassword, 
-              data.newPassword
-            );
-            toast.success("Password reset successful");
-            setResetPasswordModalOpen(false);
-          } catch (error: any) {
-            toast.error(error.message || "Password reset failed. Please try again.");
-          }
+        onSubmit={(data) => {
+          // In a real app, you would handle password reset here
+          setResetPasswordModalOpen(false)
         }}
       />
     </div>

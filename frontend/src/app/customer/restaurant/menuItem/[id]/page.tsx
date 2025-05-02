@@ -31,7 +31,7 @@ export default function MenuItemDetails() {
     const fetchMenuItem = async () => {
       try {
         const response = await axios.get<MenuItem>(
-          `http://localhost/api/menu-service/menu/${id}` // Replace with your API endpoint
+          `http://localhost:8083/menu/${id}` // Replace with your API endpoint
         );
         if (!response.data) {
           throw new Error("Menu item data is invalid or missing.");

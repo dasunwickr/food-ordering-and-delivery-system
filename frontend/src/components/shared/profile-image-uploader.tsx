@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Upload, Loader2 } from "lucide-react"
@@ -21,13 +21,6 @@ export function ProfileImageUploader({
   const [isHovering, setIsHovering] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   const [localImage, setLocalImage] = useState(currentImage)
-  
-  // Update local image when prop changes
-  useEffect(() => {
-    if (currentImage !== localImage && !isUploading) {
-      setLocalImage(currentImage)
-    }
-  }, [currentImage, localImage, isUploading])
 
   const handleUploadSuccess = (result: any) => {
     // Extract the secure URL from the Cloudinary response
@@ -42,10 +35,10 @@ export function ProfileImageUploader({
       setLocalImage(imageUrl)
       // Update the parent component's state with the new image URL
       onImageUpdate(imageUrl)
-      toast.success("Image updated successfully")
+      toast.success("Profile image updated successfully")
     } else {
       console.error("Failed to get image URL from result:", result)
-      toast.error("Failed to update image")
+      toast.error("Failed to update profile image")
     }
     setIsUploading(false)
   }
@@ -59,6 +52,11 @@ export function ProfileImageUploader({
 
   const handleUploadStart = () => {
     setIsUploading(true)
+  }
+
+  // Update local image when prop changes (e.g. after saving to backend)
+  if (currentImage !== localImage && !isUploading) {
+    setLocalImage(currentImage)
   }
 
   return (
@@ -85,6 +83,10 @@ export function ProfileImageUploader({
         }`}
       >
         <CldUploadButton
+          onUpload={(result: any) => {
+            handleUploadStart();
+            return result;
+          }}
           options={{
             maxFiles: 1,
             resourceType: "image",
@@ -99,7 +101,6 @@ export function ProfileImageUploader({
             croppingShowDimensions: true
           }}
           onSuccess={handleUploadSuccess}
-          onUpload={handleUploadStart}
           onError={handleUploadError}
           uploadPreset={process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || "food_ordering_app"}
           className="h-full w-full flex items-center justify-center"
@@ -116,7 +117,7 @@ export function ProfileImageUploader({
             ) : (
               <Upload className="h-5 w-5" />
             )}
-            <span className="sr-only">Change picture</span>
+            <span className="sr-only">Change profile picture</span>
           </Button>
         </CldUploadButton>
       </div>

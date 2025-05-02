@@ -2,21 +2,85 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
+// import { DriverLayout } from "@/components/driver/driver-layout"
 import { DeliveryCard } from "@/components/ui/delivery-card"
+// import { DeliveryMap } from "@/components/ui/delivery-map"
 import { DeliveryRequestModal } from "@/components/ui/delivery-request-modal"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { DeliveryStatus } from "@/components/ui/status-badge"
 import { Button } from "@/components/ui/button"
 import { Loader2 } from "lucide-react"
 import { DeliveryMap } from "@/components/ui/delivery-map"
-import { DriverLocationSharing } from "@/components/ui/driver-location-sharing"
-import { getCookie } from "cookies-next"
-import { getDeliveriesByDriverId, updateDelivery, getDeliveryWithOrderDetailsAndDriverInfo, IDelivery } from "@/services/delivery-service"
-import { userService, RestaurantUser, User } from "@/services/user-service"
-import { getLocalStorageItem } from "@/utils/storage"
-import { toast } from "sonner"
 
-// Sample request data (for simulating new delivery requests)
+// Sample data
+const SAMPLE_DELIVERIES = [
+  {
+    id: "del-001",
+    status: "ACCEPTED" as DeliveryStatus,
+    orderId: "ORD-1234",
+    restaurant: {
+      name: "Burger Palace",
+      address: "123 Main St, New York, NY",
+      phone: "555-123-4567",
+      location: { lat: 40.7128, lng: -74.006 },
+    },
+    customer: {
+      name: "John Smith",
+      address: "456 Park Ave, New York, NY",
+      phone: "555-987-6543",
+      location: { lat: 40.7282, lng: -73.9942 },
+    },
+    driver: {
+      name: "Michael Johnson",
+      phone: "555-555-5555",
+      vehicle: "Honda Civic (ABC-1234)",
+    },
+    driverLocation: { lat: 40.72, lng: -74.0 },
+    estimatedTime: "15 min",
+    distance: "2.3 mi",
+    amount: "8.50",
+    items: [
+      { name: "Cheeseburger", quantity: 2 },
+      { name: "Fries", quantity: 1 },
+      { name: "Soda", quantity: 2 },
+    ],
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: "del-002",
+    status: "IN_PROGRESS" as DeliveryStatus,
+    orderId: "ORD-5678",
+    restaurant: {
+      name: "Pizza Express",
+      address: "789 Broadway, New York, NY",
+      phone: "555-222-3333",
+      location: { lat: 40.7309, lng: -73.9872 },
+    },
+    customer: {
+      name: "Emily Davis",
+      address: "321 5th Ave, New York, NY",
+      phone: "555-444-5555",
+      location: { lat: 40.7448, lng: -73.9867 },
+    },
+    driver: {
+      name: "Michael Johnson",
+      phone: "555-555-5555",
+      vehicle: "Honda Civic (ABC-1234)",
+    },
+    driverLocation: { lat: 40.738, lng: -73.987 },
+    estimatedTime: "10 min",
+    distance: "1.8 mi",
+    amount: "9.25",
+    items: [
+      { name: "Large Pepperoni Pizza", quantity: 1 },
+      { name: "Garlic Knots", quantity: 1 },
+      { name: "2L Soda", quantity: 1 },
+    ],
+    createdAt: new Date(Date.now() - 1000 * 60 * 15).toISOString(),
+  },
+]
+
+// New delivery request
 const NEW_DELIVERY_REQUEST = {
   id: "del-003",
   orderId: "ORD-9012",
@@ -42,205 +106,26 @@ const NEW_DELIVERY_REQUEST = {
   amount: "10.75",
 }
 
-// Format for the transformed delivery data
-interface OrderItem {
-  name: string;
-  quantity: number;
-}
-
-interface FormattedDelivery {
-  id: string;
-  status: DeliveryStatus;
-  orderId: string;
-  restaurant: {
-    name: string;
-    address: string;
-    phone: string;
-    location: { lat: number; lng: number };
-  };
-  customer: {
-    name: string;
-    address: string;
-    phone: string;
-    location: { lat: number; lng: number };
-  };
-  driver?: {
-    name: string;
-    phone: string;
-    vehicle: string;
-  };
-  driverLocation: { lat: number; lng: number };
-  estimatedTime: string;
-  distance: string;
-  amount: string;
-  items: OrderItem[];
-  createdAt: string;
-}
-
 export default function DriverDeliveriesPage() {
   const router = useRouter()
-  const [deliveries, setDeliveries] = useState<FormattedDelivery[]>([])
+  const [deliveries, setDeliveries] = useState(SAMPLE_DELIVERIES)
   const [activeDelivery, setActiveDelivery] = useState<string | null>(null)
   const [showRequestModal, setShowRequestModal] = useState(false)
   const [loading, setLoading] = useState(true)
   const [simulateNewRequest, setSimulateNewRequest] = useState(false)
-  const [driverId, setDriverId] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    // Get driver ID from cookie or localStorage
-    const cookieDriverId = getCookie('userId')?.toString();
-    const localStorageDriverId = typeof window !== 'undefined' 
-      ? localStorage.getItem('userId')
-      : null;
-    const userProfile = getLocalStorageItem<any>('userProfile');
-    
-    setDriverId(cookieDriverId || localStorageDriverId || userProfile?.id || "driver-001");
-  }, []);
+    // Simulate loading
+    const timer = setTimeout(() => {
+      setLoading(false)
+    }, 1500)
+
+    return () => clearTimeout(timer)
+  }, [])
 
   useEffect(() => {
-    // Fetch deliveries when driverId is available
-    if (driverId) {
-      fetchDeliveries();
-    }
-  }, [driverId]);
-
-  const fetchDeliveries = async () => {
-    if (!driverId) return;
-    
-    try {
-      setLoading(true);
-      const apiDeliveries = await getDeliveriesByDriverId(driverId);
-      
-      if (apiDeliveries && apiDeliveries.length > 0) {
-        // Transform the API response into the format our UI expects
-        const formattedDeliveries = await Promise.all(apiDeliveries.map(async (delivery) => {
-          try {
-            // Get detailed order and driver information using the enhanced service
-            const orderDetails = await getDeliveryWithOrderDetailsAndDriverInfo(delivery._id || '');
-            
-            // Default values for restaurant and customer information
-            let restaurantInfo = {
-              name: "Restaurant Name",
-              address: "Restaurant Address",
-              phone: "Restaurant Phone",
-              location: { lat: 40.7128, lng: -74.006 }, // Default NYC location
-            };
-            
-            let customerInfo = {
-              name: "Customer Name",
-              address: "Customer Address",
-              phone: "Customer Phone",
-              location: { lat: 40.7282, lng: -73.9942 }, // Default location
-            };
-            
-            // Default for order items
-            let orderItems: OrderItem[] = [];
-            let orderAmount = "0.00";
-            
-            // Try to get restaurant details if we have restaurantId
-            if (orderDetails?.order?.restaurantId) {
-              try {
-                const restaurantData = await userService.getUserById(orderDetails.order.restaurantId) as RestaurantUser;
-                if (restaurantData) {
-                  restaurantInfo = {
-                    name: restaurantData.restaurantName || `${restaurantData.firstName} ${restaurantData.lastName}'s Restaurant`,
-                    address: restaurantData.restaurantAddress || "Restaurant Address",
-                    phone: restaurantData.phone || restaurantData.contactNumber || "Restaurant Phone",
-                    location: restaurantData.location || { lat: 40.7128, lng: -74.006 },
-                  };
-                }
-              } catch (restaurantError) {
-                console.error("Error fetching restaurant details:", restaurantError);
-                // Continue with default restaurant info
-              }
-            }
-            
-            // Populate customer info from order data
-            if (orderDetails?.order?.customerDetails) {
-              const details = orderDetails.order.customerDetails;
-              if ('name' in details && details.name) {
-                customerInfo.name = details.name;
-              }
-              if (details.address) {
-                customerInfo.address = details.address;
-              }
-              if ('contact' in details && details.contact) {
-                customerInfo.phone = details.contact;
-              }
-              if (details.latitude && details.longitude) {
-                customerInfo.location = { 
-                  lat: details.latitude, 
-                  lng: details.longitude 
-                };
-              }
-            }
-            
-            if (orderDetails?.order?.totalAmount) {
-              orderAmount = orderDetails.order.totalAmount.toString();
-            }
-            
-            // Extract order items if available
-            if (orderDetails?.order?.cartItems && Array.isArray(orderDetails.order.cartItems)) {
-              orderItems = orderDetails.order.cartItems.map(item => ({
-                name: item.itemName || 'Unknown Item',
-                quantity: item.quantity || 1
-              }));
-            }
-            
-            // Driver's current location
-            let driverCurrentLocation = { lat: 40.72, lng: -74.0 }; 
-            if (orderDetails.driverLocation) {
-              driverCurrentLocation = orderDetails.driverLocation;
-            }
-            
-            // Calculate estimated delivery times and distances
-            const estimatedTime = delivery.status === "DELIVERED" ? "0 min" : "15 min";
-            const distance = "2.5 mi"; // Placeholder - would be calculated based on coordinates
-            
-            return {
-              id: delivery._id || '',
-              status: delivery.status as DeliveryStatus,
-              orderId: delivery.orderId,
-              restaurant: restaurantInfo,
-              customer: customerInfo,
-              driver: {
-                name: getLocalStorageItem<User>('userProfile')?.firstName + " " + getLocalStorageItem<User>('userProfile')?.lastName || "Driver Name",
-                phone: getLocalStorageItem<User>('userProfile')?.phone || "Driver Phone",
-                vehicle: orderDetails.vehicleDetails?.vehicleNumber || "Vehicle Info",
-              },
-              driverLocation: driverCurrentLocation,
-              estimatedTime: estimatedTime,
-              distance: distance,
-              amount: orderAmount,
-              items: orderItems,
-              createdAt: delivery.createdAt || new Date().toISOString(),
-            };
-          } catch (error) {
-            console.error("Error formatting delivery:", error);
-            return null;
-          }
-        }));
-        
-        // Filter out any null values from failed transformations
-        setDeliveries(formattedDeliveries.filter(Boolean) as FormattedDelivery[]);
-      } else {
-        // No deliveries found - use empty array
-        setDeliveries([]);
-      }
-    } catch (err) {
-      console.error("Failed to fetch deliveries:", err);
-      setError("Failed to load your deliveries. Please try again later.");
-      // Continue with empty array
-      setDeliveries([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    // Simulate new delivery request after 5 seconds if enabled and we don't have any active deliveries
-    if (!simulateNewRequest && deliveries.filter(d => ["ACCEPTED", "IN_PROGRESS"].includes(d.status)).length === 0) {
+    // Simulate new delivery request after 5 seconds
+    if (!simulateNewRequest) {
       const timer = setTimeout(() => {
         setShowRequestModal(true)
         setSimulateNewRequest(true)
@@ -248,125 +133,57 @@ export default function DriverDeliveriesPage() {
 
       return () => clearTimeout(timer)
     }
-  }, [simulateNewRequest, deliveries])
+  }, [simulateNewRequest])
 
-  const handleAcceptDelivery = async (id: string) => {
+  const handleAcceptDelivery = (id: string) => {
     setShowRequestModal(false)
 
-    try {
-      // In a real app, you would call the API to accept a delivery
-      // For now, we're simulating with our sample NEW_DELIVERY_REQUEST
-      
-      // Create a new formatted delivery object from our sample request
-      const newDelivery: FormattedDelivery = {
-        id: NEW_DELIVERY_REQUEST.id,
-        status: "ACCEPTED" as DeliveryStatus,
-        orderId: NEW_DELIVERY_REQUEST.orderId,
-        restaurant: NEW_DELIVERY_REQUEST.restaurant,
-        customer: NEW_DELIVERY_REQUEST.customer,
-        driver: {
-          name: getLocalStorageItem<User>('userProfile')?.firstName + " " + getLocalStorageItem<User>('userProfile')?.lastName || "Driver Name",
-          phone: getLocalStorageItem<User>('userProfile')?.phone || "Driver Phone", 
-          vehicle: "Vehicle Info",
-        },
-        driverLocation: {
-          lat: (NEW_DELIVERY_REQUEST.restaurant.location.lat + NEW_DELIVERY_REQUEST.customer.location.lat) / 2,
-          lng: (NEW_DELIVERY_REQUEST.restaurant.location.lng + NEW_DELIVERY_REQUEST.customer.location.lng) / 2,
-        },
-        estimatedTime: NEW_DELIVERY_REQUEST.estimatedTime,
-        distance: NEW_DELIVERY_REQUEST.distance,
-        amount: NEW_DELIVERY_REQUEST.amount,
-        items: NEW_DELIVERY_REQUEST.items,
-        createdAt: new Date().toISOString(),
-      };
-
-      setDeliveries([...deliveries, newDelivery]);
-      setActiveDelivery(id);
-      toast.success("Delivery accepted successfully");
-    } catch (error) {
-      console.error("Error accepting delivery:", error);
-      toast.error("Failed to accept delivery");
+    // Add the new delivery to the list
+    const newDelivery = {
+      ...NEW_DELIVERY_REQUEST,
+      status: "ACCEPTED" as DeliveryStatus,
+      driver: {
+        name: "Michael Johnson",
+        phone: "555-555-5555",
+        vehicle: "Honda Civic (ABC-1234)",
+      },
+      driverLocation: {
+        lat: (NEW_DELIVERY_REQUEST.restaurant.location.lat + NEW_DELIVERY_REQUEST.customer.location.lat) / 2,
+        lng: (NEW_DELIVERY_REQUEST.restaurant.location.lng + NEW_DELIVERY_REQUEST.customer.location.lng) / 2,
+      },
+      createdAt: new Date().toISOString(),
     }
+
+    setDeliveries([...deliveries, newDelivery])
+    setActiveDelivery(id)
   }
 
   const handleDeclineDelivery = () => {
-    setShowRequestModal(false);
-    toast.info("Delivery request declined");
+    setShowRequestModal(false)
   }
 
-  const handlePickupDelivery = async (id: string) => {
-    try {
-      const delivery = deliveries.find(d => d.id === id);
-      if (!delivery) {
-        throw new Error("Delivery not found");
-      }
-      
-      // Update status in the backend
-      await updateDelivery(id, { status: "IN_PROGRESS" });
-      
-      // Update status locally
-      setDeliveries(
-        deliveries.map((delivery) =>
-          delivery.id === id ? { ...delivery, status: "IN_PROGRESS" as DeliveryStatus } : delivery,
-        ),
-      );
-      
-      toast.success("Delivery marked as picked up");
-    } catch (error) {
-      console.error("Failed to update delivery status:", error);
-      toast.error("Failed to update delivery status");
-    }
+  const handlePickupDelivery = (id: string) => {
+    setDeliveries(
+      deliveries.map((delivery) =>
+        delivery.id === id ? { ...delivery, status: "IN_PROGRESS" as DeliveryStatus } : delivery,
+      ),
+    )
   }
 
-  const handleDeliverDelivery = async (id: string) => {
-    try {
-      const delivery = deliveries.find(d => d.id === id);
-      if (!delivery) {
-        throw new Error("Delivery not found");
-      }
-      
-      // Update status in the backend
-      await updateDelivery(id, { 
-        status: "DELIVERED", 
-        deliveredAt: new Date().toISOString() 
-      });
-      
-      // Update status locally
-      setDeliveries(
-        deliveries.map((delivery) =>
-          delivery.id === id ? { ...delivery, status: "DELIVERED" as DeliveryStatus } : delivery,
-        ),
-      );
-      
-      toast.success("Delivery completed successfully");
-    } catch (error) {
-      console.error("Failed to update delivery status:", error);
-      toast.error("Failed to update delivery status");
-    }
+  const handleDeliverDelivery = (id: string) => {
+    setDeliveries(
+      deliveries.map((delivery) =>
+        delivery.id === id ? { ...delivery, status: "DELIVERED" as DeliveryStatus } : delivery,
+      ),
+    )
   }
 
-  const handleCancelDelivery = async (id: string) => {
-    try {
-      const delivery = deliveries.find(d => d.id === id);
-      if (!delivery) {
-        throw new Error("Delivery not found");
-      }
-      
-      // Update status in the backend
-      await updateDelivery(id, { status: "CANCELLED" });
-      
-      // Update status locally
-      setDeliveries(
-        deliveries.map((delivery) =>
-          delivery.id === id ? { ...delivery, status: "CANCELLED" as DeliveryStatus } : delivery,
-        ),
-      );
-      
-      toast.success("Delivery cancelled successfully");
-    } catch (error) {
-      console.error("Failed to cancel delivery:", error);
-      toast.error("Failed to cancel delivery");
-    }
+  const handleCancelDelivery = (id: string) => {
+    setDeliveries(
+      deliveries.map((delivery) =>
+        delivery.id === id ? { ...delivery, status: "CANCELLED" as DeliveryStatus } : delivery,
+      ),
+    )
   }
 
   const handleViewDetails = (id: string) => {
@@ -374,10 +191,6 @@ export default function DriverDeliveriesPage() {
   }
 
   const activeDeliveryData = deliveries.find((delivery) => delivery.id === activeDelivery)
-
-  const handleRefresh = () => {
-    fetchDeliveries();
-  };
 
   if (loading) {
     return (
@@ -397,19 +210,8 @@ export default function DriverDeliveriesPage() {
       <div className="space-y-6">
         <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
           <h1 className="text-2xl font-bold tracking-tight">Active Deliveries</h1>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={handleRefresh}>Refresh</Button>
-            <Button onClick={() => setShowRequestModal(true)}>Simulate New Request</Button>
-          </div>
+          <Button onClick={() => setShowRequestModal(true)}>Simulate New Request</Button>
         </div>
-
-        {error && (
-          <div className="rounded-md bg-red-50 p-4 mb-4">
-            <div className="flex">
-              <div className="text-sm text-red-700">{error}</div>
-            </div>
-          </div>
-        )}
 
         {activeDelivery && activeDeliveryData ? (
           <div className="grid gap-6 lg:grid-cols-2">
@@ -434,9 +236,6 @@ export default function DriverDeliveriesPage() {
                   icon: "customer",
                 }}
                 className="h-[400px]"
-                // Enable live updates for the driver's own position
-                driverId={driverId || undefined}
-                enableLiveTracking={true}
               />
 
               <div className="flex flex-wrap gap-2">
@@ -465,14 +264,6 @@ export default function DriverDeliveriesPage() {
                   Back to List
                 </Button>
               </div>
-              
-              {/* Add driver location sharing component */}
-              {driverId && ["ACCEPTED", "IN_PROGRESS"].includes(activeDeliveryData.status) && (
-                <DriverLocationSharing 
-                  driverId={driverId}
-                  deliveryId={activeDeliveryData.id}
-                />
-              )}
             </div>
 
             <div>

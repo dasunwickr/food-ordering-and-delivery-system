@@ -1,18 +1,19 @@
-import axios from "axios";
-import MenuItems, { MenuItem } from "@/components/restaurant/menu-items";
+import MenuItems from "@/components/restaurant/menu-items";
 
-// Fetch menu items on the server side using Axios
-async function fetchMenuItems(): Promise<MenuItem[]> {
-  try {
-    const response = await axios.get<MenuItem[]>(
-      "http://localhost/api/menu-service/menu/all"
-    );
+// Fetch menu items on the server side
+async function fetchMenuItems() {
+  const response = await fetch("http://localhost:8083/menu/all", {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
 
-    return response.data;
-  } catch (error) {
-    console.error("Failed to fetch menu items:", error);
+  if (!response.ok) {
     throw new Error("Failed to fetch menu items");
   }
+
+  return response.json();
 }
 
 export default async function MenuPage() {

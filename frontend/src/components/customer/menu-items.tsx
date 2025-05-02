@@ -1,10 +1,11 @@
-"use client"; // Mark this file as a client component
-import React, { useState } from "react";
-import Link from "next/link"; // Import Link for navigation
-import { BsCartPlus } from "react-icons/bs"; // Import the Cart Plus icon
-import axios from "axios";
-import { useRouter } from "next/navigation";
-import { toast } from "@/components/ui/use-toast";
+"use client" // Mark this file as a client component
+import { useState } from "react"
+import Link from "next/link" // Import Link for navigation
+import { BsCartPlus } from "react-icons/bs" // Import the Cart Plus icon
+import axios from "axios"
+import Swal from "sweetalert2"
+import { useRouter } from "next/navigation"
+import { toast } from "@/components/ui/use-toast"
 import {
   Dialog,
   DialogContent,
@@ -13,62 +14,72 @@ import {
   DialogTrigger,
   DialogFooter,
   DialogClose,
-} from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+} from "@/components/ui/dialog"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Star } from "lucide-react"
 
 interface Portion {
-  id: number;
-  portionSize: string;
-  price: number;
+  id: number
+  portionSize: string
+  price: number
 }
 
 interface MenuItem {
-  id: number;
-  restaurantId: number;
-  itemName: string;
-  description: string;
-  category: string;
-  availabilityStatus: boolean;
-  offer: number;
-  imageUrl?: string;
-  imagePublicId?: string;
-  portions: Portion[];
+  id: number
+  restaurantId: number
+  itemName: string
+  description: string
+  category: string
+  availabilityStatus: boolean
+  offer: number
+  imageUrl?: string
+  imagePublicId?: string
+  rating?: number // Add this line
+  portions: Portion[]
 }
 
 interface MenuItemsProps {
-  menuItems: MenuItem[];
-  customerId: string;
-  restaurantId: number;
+  menuItems: MenuItem[]
+  customerId: string
+  restaurantId: number
 }
 
 const MenuItems = ({ menuItems, customerId, restaurantId }: MenuItemsProps) => {
-  const router = useRouter();
-  const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
-  const [quantity, setQuantity] = useState<number>(1);
-  const [portionSize, setPortionSize] = useState<string>("");
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const router = useRouter()
+  const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null)
+  const [quantity, setQuantity] = useState<number>(1)
+  const [portionSize, setPortionSize] = useState<string>("")
+  const [isLoading, setIsLoading] = useState<boolean>(false)
+  const [ratings, setRatings] = useState<Record<number, number>>({})
 
   const incrementQuantity = () => {
-    setQuantity((prev) => prev + 1);
-  };
+    setQuantity((prev) => prev + 1)
+  }
 
   const decrementQuantity = () => {
     if (quantity > 1) {
-      setQuantity((prev) => prev - 1);
+      setQuantity((prev) => prev - 1)
     }
-  };
+  }
 
   const resetDialog = () => {
-    setSelectedItem(null);
-    setQuantity(1);
-    setPortionSize("");
-  };
+    setSelectedItem(null)
+    setQuantity(1)
+    setPortionSize("")
+  }
+
+  const handleRating = (itemId: number, rating: number) => {
+    setRatings((prev) => ({
+      ...prev,
+      [itemId]: rating,
+    }))
+
+    // You can add an API call here to save the rating
+    toast({
+      title: "Rating Submitted",
+      description: `You rated this item ${rating} stars!`,
+    })
+  }
 
   const handleAddToCart = async () => {
     if (!selectedItem || !portionSize) {
@@ -76,36 +87,34 @@ const MenuItems = ({ menuItems, customerId, restaurantId }: MenuItemsProps) => {
         title: "Error",
         description: "Please select a portion size",
         variant: "destructive",
-      });
-      return;
+      })
+      return
     }
-  
+
     try {
-      setIsLoading(true);
-  
+      setIsLoading(true)
+
       // Find the selected portion details
-      const selectedPortion = selectedItem.portions.find(
-        (portion) => portion.portionSize === portionSize
-      );
+      const selectedPortion = selectedItem.portions.find((portion) => portion.portionSize === portionSize)
       if (!selectedPortion) {
-        throw new Error("Invalid portion size");
+        throw new Error("Invalid portion size")
       }
-  
+
       // Map the portion size to the backend's expected enum format
-      let potionSizeEnum;
+      let potionSizeEnum
       if (portionSize.toLowerCase().includes("small")) {
-        potionSizeEnum = "Small";
+        potionSizeEnum = "Small"
       } else if (portionSize.toLowerCase().includes("medium")) {
-        potionSizeEnum = "Medium";
+        potionSizeEnum = "Medium"
       } else if (portionSize.toLowerCase().includes("large")) {
-        potionSizeEnum = "Large";
+        potionSizeEnum = "Large"
       } else {
-        potionSizeEnum = portionSize; // Use as is if it doesn't match
+        potionSizeEnum = portionSize // Use as is if it doesn't match
       }
-  
+
       // Use restaurantId from selectedItem
-      const restaurantIdFromItem = selectedItem.restaurantId;
-  
+      const restaurantIdFromItem = selectedItem.restaurantId
+
       // Prepare the request payload
       const payload = {
         itemId: String(selectedItem.id),
@@ -114,40 +123,50 @@ const MenuItems = ({ menuItems, customerId, restaurantId }: MenuItemsProps) => {
         potionSize: potionSizeEnum,
         unitPrice: selectedPortion.price,
         image: selectedItem.imageUrl || "/placeholder.svg",
-      };
-  
+      }
+
       // Call the backend API to add the item to the cart
-      await axios.post(`/api/cart/add/${customerId}/${restaurantIdFromItem}`, payload);
-  
+      await axios.post(`/api/cart/add/${customerId}/${restaurantIdFromItem}`, payload)
+
       toast({
         title: "Success",
         description: `${selectedItem.itemName} (${portionSize}) added to cart!`,
-      });
-  
+      })
+
       // Ask if user wants to view cart
-      const viewCart = window.confirm("Item added to cart. Do you want to view your cart?");
-      if (viewCart) {
-        router.push(`/cart/${customerId}/${restaurantIdFromItem}`);
-      }
-  
-      resetDialog();
+      Swal.fire({
+        title: "Item added to cart!",
+        text: "Do you want to view your cart?",
+        icon: "success",
+        showCancelButton: true,
+        confirmButtonText: "Yes, view cart",
+        cancelButtonText: "No, keep shopping",
+        customClass: {
+          confirmButton: "bg-primary text-white px-4 py-2 rounded hover:bg-primary/80",
+          cancelButton: "bg-gray-200 text-black px-4 py-2 rounded ml-2",
+        },
+      }).then((result) => {
+        if (result.isConfirmed) {
+          router.push(`/cart/${customerId}/${restaurantIdFromItem}`)
+        }
+      })
+
+      resetDialog()
     } catch (error) {
-      console.error("Error adding item to cart:", error);
+      console.error("Error adding item to cart:", error)
       toast({
         title: "Error",
         description: "Failed to add item to cart. Please try again.",
         variant: "destructive",
-      });
+      })
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  };
+  }
 
   return (
     <div className="max-w-8xl mx-auto p-6 bg-background shadow-lg rounded-lg">
-      <h1 className="text-3xl font-bold text-center text-primary mb-6">
-        Menu Items
-      </h1>
+      <h1 className="text-3xl font-bold text-center text-primary mb-6">Menu Items</h1>
 
       {/* Grid Layout for Menu Items */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -163,7 +182,7 @@ const MenuItems = ({ menuItems, customerId, restaurantId }: MenuItemsProps) => {
                 className="block"
               >
                 <img
-                  src={item.imageUrl}
+                  src={item.imageUrl || "/placeholder.svg"}
                   alt={item.itemName}
                   className="w-full h-48 object-cover cursor-pointer"
                 />
@@ -172,13 +191,28 @@ const MenuItems = ({ menuItems, customerId, restaurantId }: MenuItemsProps) => {
 
             {/* Details Section */}
             <div className="p-4 space-y-2">
-              <h2 className="text-lg font-semibold text-card-foreground">
-                {item.itemName}
-              </h2>
+              <h2 className="text-lg font-semibold text-card-foreground">{item.itemName}</h2>
               <p className="text-muted-foreground">{item.description}</p>
-              <p className="text-sm text-accent-foreground">
-                Category: {item.category}
-              </p>
+              <p className="text-sm text-accent-foreground">Category: {item.category}</p>
+
+              {/* Rating Stars */}
+              <div className="flex items-center gap-1 mt-1">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <Star
+                    key={star}
+                    className={`w-4 h-4 cursor-pointer ${
+                      (ratings[item.id] || item.rating || 0) >= star
+                        ? "fill-yellow-400 text-yellow-400"
+                        : "text-gray-300"
+                    }`}
+                    onClick={() => handleRating(item.id, star)}
+                  />
+                ))}
+                <span className="text-xs ml-1 text-muted-foreground">
+                  {ratings[item.id] || item.rating || "Rate this item"}
+                </span>
+              </div>
+
               <p className="text-xl font-bold text-primary">
                 Starting at $
                 {item.portions && item.portions.length > 0
@@ -199,9 +233,9 @@ const MenuItems = ({ menuItems, customerId, restaurantId }: MenuItemsProps) => {
             <Dialog
               onOpenChange={(open) => {
                 if (open) {
-                  setSelectedItem(item);
+                  setSelectedItem(item)
                 } else {
-                  resetDialog();
+                  resetDialog()
                 }
               }}
             >
@@ -235,9 +269,7 @@ const MenuItems = ({ menuItems, customerId, restaurantId }: MenuItemsProps) => {
                       </div>
                       <div>
                         <h3 className="font-semibold">{selectedItem.itemName}</h3>
-                        <p className="text-sm text-muted-foreground line-clamp-1">
-                          {selectedItem.description}
-                        </p>
+                        <p className="text-sm text-muted-foreground line-clamp-1">{selectedItem.description}</p>
                       </div>
                     </div>
                     <div className="space-y-2">
@@ -279,14 +311,10 @@ const MenuItems = ({ menuItems, customerId, restaurantId }: MenuItemsProps) => {
                       <div className="pt-2">
                         <p className="text-sm font-medium">Total Price:</p>
                         <p className="text-lg font-bold">
-                          $
-                          {(selectedItem.portions.find((p) => p.portionSize === portionSize)?.price || 0).toFixed(
-                            2
-                          )}
+                          ${(selectedItem.portions.find((p) => p.portionSize === portionSize)?.price || 0).toFixed(2)}
                           {quantity > 1 &&
                             ` × ${quantity} = $${(
-                              (selectedItem.portions.find((p) => p.portionSize === portionSize)?.price || 0) *
-                              quantity
+                              (selectedItem.portions.find((p) => p.portionSize === portionSize)?.price || 0) * quantity
                             ).toFixed(2)}`}
                         </p>
                       </div>
@@ -295,9 +323,7 @@ const MenuItems = ({ menuItems, customerId, restaurantId }: MenuItemsProps) => {
                 )}
                 <DialogFooter>
                   <DialogClose asChild>
-                    <button className="px-4 py-2 bg-gray-200 text-black rounded">
-                      Cancel
-                    </button>
+                    <button className="px-4 py-2 bg-gray-200 text-black rounded">Cancel</button>
                   </DialogClose>
                   <button
                     onClick={handleAddToCart}
@@ -314,13 +340,9 @@ const MenuItems = ({ menuItems, customerId, restaurantId }: MenuItemsProps) => {
       </div>
 
       {/* No Menu Items Found */}
-      {menuItems.length === 0 && (
-        <div className="text-center text-muted-foreground mt-6">
-          No menu items available.
-        </div>
-      )}
+      {menuItems.length === 0 && <div className="text-center text-muted-foreground mt-6">No menu items available.</div>}
     </div>
-  );
-};
+  )
+}
 
-export default MenuItems;
+export default MenuItems

@@ -1,9 +1,11 @@
 import axios from 'axios';
 import { ForgotPasswordFormData, LoginFormData, NewPasswordFormData, RegistrationFormData } from '@/validators/auth';
+import { getClientIp } from '@/services/client-service';
 import { setCookie, getCookie, deleteCookie } from 'cookies-next';
-import { AUTH_API, USER_URL } from '@/services/index';
-import { getClientIpAddress } from '@/utils/ip-address';
-import { toast } from 'sonner';
+
+// Updated API URL configuration to ensure consistent endpoint handling
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api';
+const AUTH_API = `${API_URL}/auth-service/auth`;
 
 // Configure axios defaults for CORS handling
 axios.defaults.withCredentials = true;
@@ -14,7 +16,6 @@ interface AuthResponse {
   userId?: string;
   sessionId?: string;
   token?: string;
-  sessionToken?: string; 
   success?: boolean;
   error?: string;
   userType?: string;
@@ -24,18 +25,9 @@ export async function signIn(data: LoginFormData): Promise<AuthResponse> {
   try {
     // Get IP address and device info using our client service
     const device = navigator.userAgent;
-    const ipAddress = await getClientIpAddress();
+    const ipAddress = await getClientIp();
 
-    // Debug the request payload
-    console.log('Sign-in request payload:', {
-      email: data.email,
-      password: '***hidden***',
-      device: device.substring(0, 50) + '...',
-      ipAddress
-    });
-
-    // Fix: Change endpoint from sign-in to signin to match backend route
-    const response = await axios.post<AuthResponse>(`${AUTH_API}/auth/signin`, {
+    const response = await axios.post<AuthResponse>(`${AUTH_API}/sign-in`, {
       ...data,
       device,
       ipAddress,
@@ -43,129 +35,65 @@ export async function signIn(data: LoginFormData): Promise<AuthResponse> {
 
     // Debug log to identify the response structure
     console.log('Auth API Response:', {
-      token: response.data.token || response.data.sessionToken, 
+      token: response.data.token,
       userId: response.data.userId,
       sessionId: response.data.sessionId,
       userType: response.data.userType
     });
 
-    // Extract token properly from response (server sends as either token or sessionToken)
-    const token = response.data.token || response.data.sessionToken;
-    const userId = response.data.userId;
-    const sessionId = response.data.sessionId;
-    const userType = response.data.userType;
-
-    // Store auth data in localStorage if we have the essential data
-    if (token && userId) {
-      // First, store the auth data
+    // Store auth data in localStorage
+    if (response.data.token && response.data.userId && response.data.userType) {
       if (typeof window !== 'undefined') {
-        localStorage.setItem('authToken', token);
-        localStorage.setItem('userId', userId);
-        
-        if (userType) {
-          localStorage.setItem('userType', userType.toLowerCase());
-        }
+        localStorage.setItem('authToken', response.data.token);
+        localStorage.setItem('userId', response.data.userId);
+        localStorage.setItem('userType', response.data.userType.toLowerCase());
         
         // Also store sessionId if available
-        if (sessionId) {
-          localStorage.setItem('sessionId', sessionId);
+        if (response.data.sessionId) {
+          localStorage.setItem('sessionId', response.data.sessionId);
         }
       }
 
       // Also set cookies for server-side auth (middleware)
-      setCookie('authToken', token, { 
+      setCookie('authToken', response.data.token, { 
         maxAge: 30 * 24 * 60 * 60, // 30 days
         path: '/' 
       });
-      setCookie('userId', userId, { 
+      setCookie('userId', response.data.userId, { 
+        maxAge: 30 * 24 * 60 * 60,
+        path: '/' 
+      });
+      setCookie('userType', response.data.userType.toLowerCase(), { 
         maxAge: 30 * 24 * 60 * 60,
         path: '/' 
       });
       
-      if (userType) {
-        setCookie('userType', userType.toLowerCase(), { 
-          maxAge: 30 * 24 * 60 * 60,
-          path: '/' 
-        });
-      }
-      
       // Store sessionId in cookie if available
-      if (sessionId) {
-        setCookie('sessionId', sessionId, { 
+      if (response.data.sessionId) {
+        setCookie('sessionId', response.data.sessionId, { 
           maxAge: 30 * 24 * 60 * 60,
           path: '/' 
         });
       }
-
-      // Fetch user profile data from user service and store it
-      try {
-        // Use our axios instance from lib/axios instead of direct fetch
-        // This ensures consistent headers, error handling, and base URL
-        const api = (await import('@/lib/axios')).default;
-        const userResponse = await api.get(`${USER_URL}/users/email/${data.email}`);
-        
-        if (userResponse.data) {
-          // Store the complete user profile
-          localStorage.setItem('userProfile', JSON.stringify(userResponse.data));
-          console.log('User profile data stored in localStorage:', userResponse.data);
-        }
-      } catch (profileError) {
-        console.error('Error fetching user profile:', profileError);
-        
-        // Fallback approach if the first one fails
-        try {
-          const fallbackResponse = await axios.get(`${USER_URL}/users/email/${data.email}`, {
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
-          });
-          
-          if (fallbackResponse.data) {
-            localStorage.setItem('userProfile', JSON.stringify(fallbackResponse.data));
-            console.log('User profile data stored using fallback method:', fallbackResponse.data);
-          }
-        } catch (fallbackError) {
-          console.error('Fallback user profile fetch also failed:', fallbackError);
-        }
-      }
-    } else {
-      console.error('Missing essential auth data in response:', response.data);
     }
 
-    // Return original response with normalized token field
-    return {
-      ...response.data,
-      token: token // Ensure token is consistently available in this field
-    };
+    return response.data;
   } catch (error: any) {
-    // More detailed error logging and display error with Sonner toast
-    if (error.response) {
-      console.error('Sign-in error response data:', error.response.data);
-      console.error('Sign-in error response status:', error.response.status);
-    }
-    
-    const errorMsg = error.response?.data?.error || error.message;
-    toast.error(errorMsg);
-
     return {
       message: 'Authentication failed',
-      error: errorMsg,
+      error: error.response?.data?.error || error.message,
     };
   }
 }
 
 export async function signUp(data: RegistrationFormData): Promise<AuthResponse> {
   try {
-    const response = await axios.post<AuthResponse>(`${AUTH_API}/auth/signup`, data);
+    const response = await axios.post<AuthResponse>(`${AUTH_API}/sign-up`, data);
     return response.data;
   } catch (error: any) {
-    // Display error with Sonner toast
-    const errorMsg = error.response?.data?.error || error.message;
-    toast.error(errorMsg);
-    
     return {
       message: 'Registration failed',
-      error: errorMsg,
+      error: error.response?.data?.error || error.message,
     };
   }
 }
@@ -173,16 +101,12 @@ export async function signUp(data: RegistrationFormData): Promise<AuthResponse> 
 // Request password reset
 export async function forgotPassword(email: string): Promise<AuthResponse> {
   try {
-    const response = await axios.post<AuthResponse>(`${AUTH_API}/auth/forgot-password`, { email });
+    const response = await axios.post<AuthResponse>(`${AUTH_API}/forgot-password`, { email });
     return response.data;
   } catch (error: any) {
-    // Display error with Sonner toast
-    const errorMsg = error.response?.data?.error || error.message;
-    toast.error(errorMsg);
-    
     return {
       message: 'Failed to process password reset request',
-      error: errorMsg,
+      error: error.response?.data?.error || error.message,
     };
   }
 }
@@ -190,16 +114,12 @@ export async function forgotPassword(email: string): Promise<AuthResponse> {
 // Verify OTP
 export async function verifyOtp(email: string, otp: string): Promise<AuthResponse> {
   try {
-    const response = await axios.post<AuthResponse>(`${AUTH_API}/auth/verify-otp`, { email, otp });
+    const response = await axios.post<AuthResponse>(`${AUTH_API}/verify-otp`, { email, otp });
     return response.data;
   } catch (error: any) {
-    // Display error with Sonner toast
-    const errorMsg = error.response?.data?.error || error.message;
-    toast.error(errorMsg);
-    
     return {
       message: 'OTP verification failed',
-      error: errorMsg,
+      error: error.response?.data?.error || error.message,
     };
   }
 }
@@ -208,9 +128,9 @@ export async function verifyOtp(email: string, otp: string): Promise<AuthRespons
 export async function resetPassword(email: string, newPassword: string): Promise<AuthResponse> {
   try {
     // Get IP address using our client service
-    const ipAddress = await getClientIpAddress();
+    const ipAddress = await getClientIp();
     
-    const response = await axios.post<AuthResponse>(`${AUTH_API}/auth/reset-password`, {
+    const response = await axios.post<AuthResponse>(`${AUTH_API}/reset-password`, {
       email,
       newPassword,
       ipAddress,
@@ -218,14 +138,9 @@ export async function resetPassword(email: string, newPassword: string): Promise
     return response.data;
   } catch (error: any) {
     console.error('Reset password error:', error.response?.data || error);
-    
-    // Display error with Sonner toast
-    const errorMsg = error.response?.data?.error || error.message;
-    toast.error(errorMsg);
-    
     return {
       message: 'Password reset failed',
-      error: errorMsg,
+      error: error.response?.data?.error || error.message,
     };
   }
 }
@@ -237,17 +152,14 @@ export function signOut(): void {
     localStorage.removeItem('authToken');
     localStorage.removeItem('userId');
     localStorage.removeItem('userType');
-    localStorage.removeItem('sessionId'); 
+    localStorage.removeItem('sessionId'); // Remove sessionId from localStorage
   }
 
   // Clear cookies
   deleteCookie('authToken');
   deleteCookie('userId');
   deleteCookie('userType');
-  deleteCookie('sessionId'); 
-  
-  // Show toast notification for sign out
-  toast.success('You have been signed out successfully');
+  deleteCookie('sessionId'); // Remove sessionId from cookies
   
   console.log('User signed out');
 }
@@ -297,55 +209,6 @@ export const hasUserType = (requiredType: string | string[]): boolean => {
   
   return currentUserType.toLowerCase() === requiredType.toLowerCase();
 };
-
-/**
- * Check if an email address already exists in the system
- * @param email - Email address to check
- * @returns Promise with a boolean indicating if the email exists and any error message
- */
-export async function checkEmailExists(email: string): Promise<{ exists: boolean; error?: string }> {
-  try {
-    // Validate email format first
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      return {
-        exists: false,
-        error: 'Invalid email format'
-      };
-    }
-    
-    console.log('Checking if email exists:', email);
-    
-    // Call the auth service API endpoint
-    const response = await axios.get<{ exists: boolean }>(`${AUTH_API}/auth/email/${encodeURIComponent(email)}/exists`);
-    
-    console.log('Email check response:', response.data);
-    
-    return {
-      exists: response.data.exists,
-    };
-  } catch (error: any) {
-    console.error('Error checking email existence:', error);
-    
-    // Handle common error cases
-    if (error.response) {
-      if (error.response.status === 404) {
-        // 404 typically means the email doesn't exist
-        return { exists: false };
-      }
-      
-      return {
-        exists: false,
-        error: error.response.data?.message || 'Error checking email'
-      };
-    }
-    
-    return {
-      exists: false,
-      error: error.message || 'Unable to check email existence'
-    };
-  }
-}
 
 /**
  * Check if a route is accessible to the current user

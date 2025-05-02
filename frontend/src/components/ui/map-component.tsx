@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Loader2, MapPin } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -82,53 +82,40 @@ function LocationMarkerComponent({ location, onLocationChange }: {
   }, []);
   
   useEffect(() => {
-    if (!map) return;
+    if (!map || !location?.lat || !location?.lng) return;
     
-    // Log location for debugging
-    console.log("LocationMarkerComponent received location:", location);
+    // Create a marker using the default icon
+    const marker = L.marker([location.lat, location.lng], { 
+      // Use the default icon (which we've configured above)
+      draggable: true
+    }).addTo(map);
     
-    // Remove existing markers first to avoid duplicates
-    map.eachLayer((layer) => {
-      if (layer instanceof L.Marker) {
-        map.removeLayer(layer);
-      }
-    });
-    
-    // Only add marker if we have valid coordinates
-    if (location?.lat && location?.lng) {
-      // Create a marker using the default icon
-      const marker = L.marker([location.lat, location.lng], { 
-        draggable: true
-      }).addTo(map);
-      
-      // Add popup
-      if (location.address) {
-        marker.bindPopup(location.address).openPopup();
-      }
-      
-      // Handle drag events to update location
-      marker.on('dragend', async function(e) {
-        const position = marker.getLatLng();
-        const address = await reverseGeocode(position.lat, position.lng);
-        onLocationChange({
-          lat: position.lat,
-          lng: position.lng,
-          address
-        });
-      });
-      
-      // Center map on marker with animation and appropriate zoom level
-      map.setView([location.lat, location.lng], 15, {
-        animate: true,
-        duration: 1
-      });
+    // Add popup
+    if (location.address) {
+      marker.bindPopup(location.address).openPopup();
     }
     
+    // Handle drag events to update location
+    marker.on('dragend', async function(e) {
+      const position = marker.getLatLng();
+      const address = await reverseGeocode(position.lat, position.lng);
+      onLocationChange({
+        lat: position.lat,
+        lng: position.lng,
+        address
+      });
+    });
+    
+    // Center map on marker
+    map.setView([location.lat, location.lng], map.getZoom());
+    
+    // Return a cleanup function
     return () => {
-      // Clean up will happen when component is unmounted or location changes
+      map.removeLayer(marker);
     };
   }, [map, location, onLocationChange]);
   
+  // We don't use the react-leaflet Marker component
   return null;
 }
 
@@ -192,15 +179,6 @@ export function MapComponent({ location, onLocationChange, height }: MapComponen
   const [showSuggestions, setShowSuggestions] = useState(false);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
-  const [initialLocationSet, setInitialLocationSet] = useState(false);
-  
-  // Set initial search query based on location address if available
-  useEffect(() => {
-    if (location?.address && !initialLocationSet) {
-      setSearchQuery(location.address);
-      setInitialLocationSet(true);
-    }
-  }, [location, initialLocationSet]);
   
   // Add CSS for the custom marker
   useEffect(() => {
@@ -309,14 +287,9 @@ export function MapComponent({ location, onLocationChange, height }: MapComponen
     };
   }, [searchQuery]);
   
-  // Make sure we have a valid initial location with proper fallback
-  const initialLocation = useMemo(() => {
-    console.log("Setting initial map location with:", location);
-    if (location && typeof location.lat === 'number' && typeof location.lng === 'number') {
-      return [location.lat, location.lng];
-    }
-    return [6.9271, 79.8612]; // Default to Colombo, Sri Lanka
-  }, [location]);
+  const initialLocation = location && location.lat && location.lng 
+    ? [location.lat, location.lng] 
+    : [6.9271, 79.8612]; // Default to Colombo, Sri Lanka
   
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();

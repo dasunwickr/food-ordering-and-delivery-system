@@ -1,14 +1,50 @@
 import React from "react";
-import DisplayCategories from "@/components/common/categories/categories"; // Adjust the import path as needed
-import RestaurantsSlider from "@/components/common/restaurants/restaurantSlider";
-function Page() {
+import MenuItemsWithOffers from "@/components/customer/offer-menu-items";
+
+// Define the type for a menu item
+interface MenuItem {
+  id: number;
+  restaurantId: number;
+  itemName: string;
+  description: string;
+  category: string;
+  availabilityStatus: boolean;
+  offer: number; // Offer percentage (e.g., 10 for 10% off)
+  imageUrl?: string;
+  imagePublicId?: string;
+  portions: {
+    id: number;
+    portionSize: string;
+    price: number;
+  }[];
+}
+
+async function fetchMenuItems(): Promise<MenuItem[]> {
+  const response = await fetch("http://localhost:8083/menu/all", {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch menu items");
+  }
+
+  return response.json();
+}
+
+export default async function Page() {
+  const menuItems = await fetchMenuItems();
+
+  // Filter menu items with offers
+  const menuItemsWithOffers = menuItems.filter(
+    (item: MenuItem) => item.offer > 0
+  );
+
   return (
     <div>
-      <h1 className="text-2xl font-bold my-4">Available Categories</h1>
-      <DisplayCategories />
-      <RestaurantsSlider/>
+      <MenuItemsWithOffers menuItems={menuItemsWithOffers} />
     </div>
   );
 }
-
-export default Page;

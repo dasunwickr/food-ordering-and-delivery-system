@@ -30,26 +30,21 @@ export default async function MenuPage({
 }: {
   params: { id: string };
 }) {
-  const { id } = params; // Extract the restaurant ID from the dynamic route
+  const { id } = params;
 
-  // Example: Retrieve customerId (you can replace this with actual logic)
-  const customerId = "customer123"; // Replace with real logic to get customerId
-
-  // Fetch menu items for the given restaurant ID
+  const customerId = "customer123";
   const menuItems = await fetchMenuItems(id);
 
-  // Handle cases where menu items are not found
   if (!menuItems) {
-    notFound(); // Use Next.js's `notFound` to render a 404 page
+    notFound();
   }
 
   return (
     <div>
-      {/* Pass the fetched menu items, customerId, and restaurantId to the MenuItems component */}
       <MenuItems
         menuItems={menuItems}
-        customerId={customerId} // Pass customerId here
-        restaurantId={Number(id)} // Convert id to a number and pass as restaurantId
+        customerId={customerId}
+        restaurantId={Number(id)}
       />
     </div>
   );

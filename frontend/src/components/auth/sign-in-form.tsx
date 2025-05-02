@@ -5,15 +5,19 @@ import type React from "react"
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { motion } from "framer-motion"
-import { ArrowRight, Mail, Loader2, AlertCircle, ShieldAlert } from "lucide-react"
-import { toast } from "sonner"
+import { ArrowRight, Mail, Loader2, AlertCircle } from "lucide-react"
+import api from "@/lib/axios"
+
 
 import { Button } from "@/components/ui/button"
 import { FormInput } from "./form-input"
 import { PasswordInput } from "./password-input"
 import { SocialSignIn } from "./sign-up/social-sign-in"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { checkEmailExists } from "@/services/auth-service"
+
+// Interface for the email existence check API response
+interface EmailExistsResponse {
+  exists: boolean;
+}
 
 interface SignInFormProps {
   onSubmit: (email: string, password: string) => void
@@ -24,62 +28,58 @@ export function SignInForm({ onSubmit, isLoading = false }: SignInFormProps) {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({})
-  const [serviceError, setServiceError] = useState<string | null>(null)
-  const [isCredentialError, setIsCredentialError] = useState(false)
-  const [isCheckingEmail, setIsCheckingEmail] = useState(false)
-  const [emailNotRegistered, setEmailNotRegistered] = useState(false)
-  const [emailDebounceTimer, setEmailDebounceTimer] = useState<NodeJS.Timeout | null>(null)
+  const [checkingEmail, setCheckingEmail] = useState(false)
+  const [emailTimer, setEmailTimer] = useState<NodeJS.Timeout | null>(null)
+  const [emailExists, setEmailExists] = useState<boolean | null>(null)
 
-  // Check email existence when email changes, with debounce
+  // Check if email exists when email changes
   useEffect(() => {
-    // Clear any existing timer
-    if (emailDebounceTimer) {
-      clearTimeout(emailDebounceTimer)
+    // Reset email existence state when email changes
+    if (email) {
+      setEmailExists(null);
+    }
+    
+    // Clear previous timer
+    if (emailTimer) {
+      clearTimeout(emailTimer);
     }
 
-    // Reset email not registered state when email changes
-    setEmailNotRegistered(false)
-
-    // Reset credential error state when email or password changes
-    setIsCredentialError(false)
-    setServiceError(null)
-
-    // Don't validate empty, invalid or short emails
-    if (!email || !/\S+@\S+\.\S+/.test(email) || email.length < 5) {
-      return
+    // Don't check if email is empty or invalid format
+    if (!email || !/\S+@\S+\.\S+/.test(email) || isLoading) {
+      return;
     }
 
-    // Set a new timer to check after 600ms of no typing
+    // Set a timer to prevent checking on every keystroke
     const timer = setTimeout(async () => {
+      setCheckingEmail(true);
       try {
-        setIsCheckingEmail(true)
-        const result = await checkEmailExists(email)
+        // Try to check if email exists via the users API endpoint
+        const response = await api.get<EmailExistsResponse>(`/user-service/users/email/${email}/exists`);
+        setEmailExists(response.data.exists);
         
-        if (!result.exists && !result.error) {
-          setEmailNotRegistered(true)
+        if (!response.data.exists) {
+          setErrors(prev => ({ ...prev, email: "No account found with this email" }));
         } else {
-          setEmailNotRegistered(false)
+          setErrors(prev => ({ ...prev, email: undefined }));
         }
-      } catch (error) {
-        console.error("Email validation error:", error)
+      } catch (error: any) {
+        // If the endpoint returns 404, the email doesn't exist
+        if (error.response?.status === 404) {
+          setEmailExists(false);
+          setErrors(prev => ({ ...prev, email: "No account found with this email" }));
+        }
       } finally {
-        setIsCheckingEmail(false)
+        setCheckingEmail(false);
       }
-    }, 600)
+    }, 500); // 500ms debounce
     
-    setEmailDebounceTimer(timer)
+    setEmailTimer(timer);
     
-    // Cleanup function to clear the timeout if the component unmounts
+    // Cleanup timer on component unmount
     return () => {
-      if (timer) clearTimeout(timer)
-    }
-  }, [email])
-
-  // Clear credential error when password changes
-  useEffect(() => {
-    setIsCredentialError(false)
-    setServiceError(null)
-  }, [password])
+      if (timer) clearTimeout(timer);
+    };
+  }, [email, isLoading]);
 
   const validateForm = () => {
     const newErrors: { email?: string; password?: string } = {}
@@ -88,6 +88,8 @@ export function SignInForm({ onSubmit, isLoading = false }: SignInFormProps) {
       newErrors.email = "Email is required"
     } else if (!/\S+@\S+\.\S+/.test(email)) {
       newErrors.email = "Email is invalid"
+    } else if (emailExists === false) {
+      newErrors.email = "No account found with this email"
     }
 
     if (!password) {
@@ -100,59 +102,10 @@ export function SignInForm({ onSubmit, isLoading = false }: SignInFormProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Clear any previous service errors
-    setServiceError(null)
-    setIsCredentialError(false)
-    
     if (validateForm()) {
-      try {
-        // Call the provided onSubmit function with email and password
-        await onSubmit(email, password)
-        // Redirection is now handled in the parent component
-      } catch (error: any) {
-        // Handle login errors more gracefully
-        console.error("Login error:", error)
-        const errorMessage = error?.message || "Unable to sign in. Please check your credentials or try again later."
-        
-        // Check if it's likely a credentials error
-        const isCredentials = /invalid credentials|incorrect password|authentication failed|wrong password|user not found/i.test(errorMessage.toLowerCase())
-        
-        setIsCredentialError(isCredentials)
-        setServiceError(isCredentials ? 
-          "Invalid email or password. Please try again." : 
-          errorMessage
-        )
-        
-        // Show error toast notification using Sonner
-        toast.error(
-          isCredentials ? 
-            "Invalid credentials" : 
-            "Authentication Error", 
-          {
-            description: isCredentials ? 
-              "Please check your email and password and try again." : 
-              errorMessage,
-            icon: isCredentials ? "🔒" : "⚠️",
-            position: "top-center",
-            duration: 4000,
-          }
-        )
-      }
-    } else {
-      // Show validation error toast
-      if (errors.email) {
-        toast.error("Email Error", {
-          description: errors.email,
-          icon: "✉️"
-        })
-      }
-      
-      if (errors.password) {
-        toast.error("Password Error", {
-          description: errors.password,
-          icon: "🔑"
-        })
-      }
+      // Call the provided onSubmit function with email and password
+      await onSubmit(email, password)
+      // Redirection is now handled in the parent component
     }
   }
 
@@ -187,33 +140,6 @@ export function SignInForm({ onSubmit, isLoading = false }: SignInFormProps) {
       initial="hidden"
       animate="visible"
     >
-      {serviceError && (
-        <motion.div
-          variants={itemVariants}
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-        >
-          <Alert 
-            variant={isCredentialError ? "destructive" : "default"} 
-            className={`mb-6 border-2 ${isCredentialError ? "bg-red-50 border-red-300" : ""}`}
-          >
-            {isCredentialError ? 
-              <ShieldAlert className="h-5 w-5 text-red-500" /> : 
-              <AlertCircle className="h-4 w-4" />
-            }
-            <AlertDescription className={`ml-2 ${isCredentialError ? "font-medium" : ""}`}>
-              {serviceError}
-              {isCredentialError && (
-                <div className="mt-1 text-sm font-normal text-muted-foreground">
-                  Check your email and password and try again
-                </div>
-              )}
-            </AlertDescription>
-          </Alert>
-        </motion.div>
-      )}
-      
       <motion.div variants={itemVariants}>
         <FormInput
           id="email"
@@ -223,19 +149,14 @@ export function SignInForm({ onSubmit, isLoading = false }: SignInFormProps) {
           value={email}
           onChange={setEmail}
           error={errors.email}
-          icon={<Mail className="h-4 w-4" />}
-          disabled={isLoading || isCheckingEmail}
-          hasError={isCredentialError}
+          icon={checkingEmail ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+
+          disabled={isLoading}
         />
-        {emailNotRegistered && (
-          <div className="mt-2 flex items-center text-sm text-amber-500">
+        {errors.email === "No account found with this email" && (
+          <div className="mt-2 flex items-center text-sm text-destructive">
             <AlertCircle className="mr-1 h-4 w-4" />
-            <span>This email is not registered. <Link href="/sign-up" className="underline font-medium">Sign up?</Link></span>
-          </div>
-        )}
-        {isCheckingEmail && !emailNotRegistered && (
-          <div className="mt-2 flex items-center text-xs text-muted-foreground">
-            <span className="animate-pulse">Checking email...</span>
+            <span>No account found. <Link href="/sign-up" className="underline">Create an account</Link> instead?</span>
           </div>
         )}
       </motion.div>
@@ -257,7 +178,6 @@ export function SignInForm({ onSubmit, isLoading = false }: SignInFormProps) {
             onChange={setPassword} 
             error={errors.password} 
             disabled={isLoading}
-            hasError={isCredentialError}
           />
         </div>
       </motion.div>
@@ -266,7 +186,7 @@ export function SignInForm({ onSubmit, isLoading = false }: SignInFormProps) {
         <Button 
           type="submit" 
           className="w-full" 
-          disabled={isLoading}
+          disabled={isLoading || checkingEmail || emailExists === false}
         >
           {isLoading ? (
             <>
