@@ -18,6 +18,42 @@ export const createDelivery = async (
 };
 
 /**
+ * Create a delivery for a new order
+ */
+export const createDeliveryForNewOrder = async (
+  orderId: string,
+): Promise<IDelivery> => {
+  try {
+    // Check if a delivery already exists for this order
+    const existingDelivery = await Delivery.findOne({ orderId });
+    if (existingDelivery) {
+      throw new Error('Delivery already exists for this order');
+    }
+
+    // Create new delivery with initial status
+    const newDelivery = new Delivery({
+      orderId,
+      status: "PENDING",
+      createdAt: new Date(),
+      updatedAt: new Date()
+    });
+
+    const savedDelivery = await newDelivery.save();
+
+    // Emit a socket event for real-time tracking
+    global.io?.emit('delivery:created', {
+      deliveryId: savedDelivery._id,
+      orderId: savedDelivery.orderId,
+      status: savedDelivery.status
+    });
+
+    return savedDelivery;
+  } catch (error) {
+    throw new Error(`Error creating delivery for order: ${error}`);
+  }
+};
+
+/**
  * Get all deliveries
  */
 export const getAllDeliveries = async (): Promise<IDelivery[]> => {

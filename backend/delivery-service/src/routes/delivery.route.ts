@@ -1,37 +1,64 @@
 // src/routes/deliveryRoutes.ts
-import express from "express";
-import * as deliveryController from "../controllers/delivery.controller";
+import { Router } from 'express';
+import * as deliveryController from '../controllers/delivery.controller';
 
-const router = express.Router();
+const router = Router();
 
-// Health Check
-router.get("/health", deliveryController.healthCheck);
+/**
+ * @swagger
+ * /api/deliveries:
+ *   post:
+ *     summary: Create a new delivery for an order
+ *     tags: [Deliveries]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - orderId
+ *             properties:
+ *               orderId:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Delivery created successfully
+ *       400:
+ *         description: Invalid request body
+ *       500:
+ *         description: Server error
+ */
+router.post('/', deliveryController.createDelivery);
 
-// Create a new delivery
-router.post("/", deliveryController.createDelivery);
+// Get delivery by order ID
+router.get('/order/:orderId', deliveryController.getDeliveryByOrderId);
 
 // Get all deliveries
-router.get("/", deliveryController.getAllDeliveries);
+router.get('/', deliveryController.getAllDeliveries);
 
 // Get deliveries by customer ID
-router.get("/customer/:customerId", deliveryController.getDeliveriesByCustomerId);
+router.get('/customer/:customerId', deliveryController.getDeliveriesByCustomerId);
 
 // Get deliveries by driver ID
-router.get("/driver/:driverId", deliveryController.getDeliveriesByDriverId);
+router.get('/driver/:driverId', deliveryController.getDeliveriesByDriverId);
 
 // Get deliveries by restaurant ID
-router.get("/restaurant/:restaurantId", deliveryController.getDeliveriesByRestaurantId);
+router.get('/restaurant/:restaurantId', deliveryController.getDeliveriesByRestaurantId);
 
-// Get a specific delivery with order details
-router.get("/:id/with-order", deliveryController.getDeliveryWithOrderDetails);
+// Get delivery by ID with order details
+router.get('/:id/with-order', deliveryController.getDeliveryWithOrderDetails);
 
-// Get a specific delivery by ID
-router.get("/:id", deliveryController.getDeliveryById);
+// Get delivery by ID
+router.get('/:id', deliveryController.getDeliveryById);
 
-// Update a delivery by ID
-router.put("/:id", deliveryController.updateDelivery);
+// Update delivery
+router.put('/:id', deliveryController.updateDelivery);
 
-// Delete a delivery by ID
-router.delete("/:id", deliveryController.deleteDelivery);
+// Delete delivery
+router.delete('/:id', deliveryController.deleteDelivery);
+
+// Health check
+router.get('/health', deliveryController.healthCheck);
 
 export default router;

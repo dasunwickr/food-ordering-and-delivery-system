@@ -1,5 +1,6 @@
 // src/controllers/deliveryController.ts
 import { Request, Response } from "express";
+import Delivery from "../models/delivery.model";
 import * as deliveryService from "../services/delivery.service";
 
 /**
@@ -10,10 +11,18 @@ export const createDelivery = async (
   res: Response,
 ): Promise<void> => {
   try {
-    const delivery = await deliveryService.createDelivery(req.body);
+    const { orderId } = req.body;
+
+    if (!orderId) {
+      res.status(400).json({ error: 'orderId is required' });
+      return;
+    }
+
+    const delivery = await deliveryService.createDeliveryForNewOrder(orderId);
     res.status(201).json(delivery);
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
+  } catch (error) {
+    console.error('Error creating delivery:', error);
+    res.status(500).json({ error: 'Failed to create delivery' });
   }
 };
 
@@ -115,6 +124,29 @@ export const getDeliveryWithOrderDetails = async (
     res.status(200).json(result);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
+  }
+};
+
+/**
+ * Get delivery by order ID
+ */
+export const getDeliveryByOrderId = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  try {
+    const { orderId } = req.params;
+    const delivery = await Delivery.findOne({ orderId });
+    
+    if (!delivery) {
+      res.status(404).json({ error: 'Delivery not found' });
+      return;
+    }
+
+    res.status(200).json(delivery);
+  } catch (error) {
+    console.error('Error fetching delivery:', error);
+    res.status(500).json({ error: 'Failed to fetch delivery' });
   }
 };
 

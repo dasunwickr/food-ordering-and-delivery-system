@@ -7,10 +7,13 @@ import com.nomnom.order_service.model.Order;
 import com.nomnom.order_service.repository.OrderRepository;
 import com.nomnom.order_service.request.*;
 import com.nomnom.order_service.shared.enums.PotionSize;
+import lombok.AllArgsConstructor;
+import lombok.Data;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.reactive.function.client.WebClient;
 
 import java.util.Date;
 import java.util.List;
@@ -27,10 +30,13 @@ public class OrderService implements IOrderService {
 
     private final OrderRepository orderRepository;
     private final RestTemplate restTemplate;
+    private final WebClient.Builder webClientBuilder;
+    private final String DELIVERY_SERVICE_URL = "http://delivery-service:5003"; 
 
-    public OrderService(OrderRepository orderRepository, RestTemplate restTemplate) {
+    public OrderService(OrderRepository orderRepository, RestTemplate restTemplate, WebClient.Builder webClientBuilder) {
         this.orderRepository = orderRepository;
         this.restTemplate = restTemplate;
+        this.webClientBuilder = webClientBuilder;
     }
 
     @Override
@@ -88,7 +94,37 @@ public class OrderService implements IOrderService {
 
         // Save order
         Order savedOrder = orderRepository.save(order);
+
+        // Create a delivery for this order
+        createDeliveryForOrder(savedOrder.getOrderId());
+
         return mapToOrderDTO(savedOrder);
+    }
+
+    private void createDeliveryForOrder(String orderId) {
+        try {
+            webClientBuilder.build()
+                .post()
+                .uri(DELIVERY_SERVICE_URL + "/api/deliveries")
+                .bodyValue(new CreateDeliveryRequest(orderId))
+                .retrieve()
+                .bodyToMono(Void.class)
+                .doOnSuccess(result -> {
+                    // Update order status to indicate delivery is created
+                    updateOrderStatus(orderId, "Pending Delivery");
+                })
+                .doOnError(error -> {
+                    // Log the error but don't fail order creation
+                    System.err.println("Failed to create delivery record: " + error.getMessage());
+                    // Update order status to indicate delivery creation failed
+                    updateOrderStatus(orderId, "Delivery Assignment Failed");
+                })
+                .block();
+        } catch (Exception e) {
+            // Log error but don't fail order creation
+            System.err.println("Failed to create delivery record: " + e.getMessage());
+            updateOrderStatus(orderId, "Delivery Assignment Failed");
+        }
     }
 
     private Order.CartItem.PotionSize mapPotionSize(PotionSize potionSize) {
@@ -216,4 +252,10 @@ public class OrderService implements IOrderService {
         order.setUpdatedAt(new Date());
         orderRepository.save(order);
     }
+}
+
+@Data
+@AllArgsConstructor
+class CreateDeliveryRequest {
+    private String orderId;
 }

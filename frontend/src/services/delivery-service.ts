@@ -39,7 +39,7 @@ export interface OrderDetails {
  */
 export const getAllDeliveries = async (): Promise<IDelivery[]> => {
   try {
-    const response = await api.get<IDelivery[]>('/api/delivery-service/', {
+    const response = await api.get<IDelivery[]>('/delivery-service/', {
       withCredentials: true
     });
     return response.data;
@@ -54,7 +54,7 @@ export const getAllDeliveries = async (): Promise<IDelivery[]> => {
  */
 export const getDeliveriesByCustomerId = async (customerId: string): Promise<IDelivery[]> => {
   try {
-    const response = await api.get<IDelivery[]>(`/api/delivery-service/customer/${customerId}`, {
+    const response = await api.get<IDelivery[]>(`/delivery-service/customer/${customerId}`, {
       withCredentials: true
     });
     return response.data;
@@ -69,8 +69,13 @@ export const getDeliveriesByCustomerId = async (customerId: string): Promise<IDe
  */
 export const getDeliveriesByDriverId = async (driverId: string): Promise<IDelivery[]> => {
   try {
-    const response = await api.get<IDelivery[]>(`/api/delivery-service/driver/${driverId}`, {
-      withCredentials: true
+    const response = await api.get<IDelivery[]>(`/delivery-service/driver/${driverId}`, {
+      withCredentials: true,
+      headers: {
+        'Accept': 'application/json',
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache'
+      }
     });
     return response.data;
   } catch (error) {
@@ -85,7 +90,7 @@ export const getDeliveriesByDriverId = async (driverId: string): Promise<IDelive
 export const getDeliveriesByRestaurantId = async (restaurantId: string): Promise<IDelivery[]> => {
   try {
     console.log(`Fetching deliveries for restaurant ID: ${restaurantId}`);
-    const apiUrl = `/api/delivery-service/restaurant/${restaurantId}`;
+    const apiUrl = `/delivery-service/restaurant/${restaurantId}`;
     
     // Log axios configuration for debugging
     console.log('Axios config:', {
@@ -134,7 +139,7 @@ export const getDeliveriesByRestaurantId = async (restaurantId: string): Promise
  */
 export const getDeliveryById = async (deliveryId: string): Promise<IDelivery> => {
   try {
-    const response = await api.get<IDelivery>(`/api/delivery-service/${deliveryId}`);
+    const response = await api.get<IDelivery>(`/delivery-service/${deliveryId}`);
     return response.data;
   } catch (error) {
     console.error('Failed to fetch delivery:', error);
@@ -147,7 +152,7 @@ export const getDeliveryById = async (deliveryId: string): Promise<IDelivery> =>
  */
 export const getDeliveryWithOrderDetails = async (deliveryId: string): Promise<{ delivery: IDelivery; order: OrderDetails }> => {
   try {
-    const response = await api.get<{ delivery: IDelivery; order: OrderDetails }>(`/api/delivery-service/${deliveryId}/with-order`);
+    const response = await api.get<{ delivery: IDelivery; order: OrderDetails }>(`/delivery-service/${deliveryId}/with-order`);
     return response.data;
   } catch (error) {
     console.error('Failed to fetch delivery with order details:', error);
@@ -211,7 +216,7 @@ export const getDeliveryWithOrderDetailsAndDriverInfo = async (deliveryId: strin
  */
 export const createDelivery = async (deliveryData: Partial<IDelivery>): Promise<IDelivery> => {
   try {
-    const response = await api.post<IDelivery>('/api/delivery-service/', deliveryData);
+    const response = await api.post<IDelivery>('/delivery-service/', deliveryData);
     return response.data;
   } catch (error) {
     console.error('Failed to create delivery:', error);
@@ -227,7 +232,7 @@ export const updateDelivery = async (
   updateData: Partial<IDelivery>
 ): Promise<IDelivery> => {
   try {
-    const response = await api.put<IDelivery>(`/api/delivery-service/${deliveryId}`, updateData);
+    const response = await api.put<IDelivery>(`/delivery-service/${deliveryId}`, updateData);
     return response.data;
   } catch (error) {
     console.error('Failed to update delivery:', error);
@@ -240,7 +245,7 @@ export const updateDelivery = async (
  */
 export const deleteDelivery = async (deliveryId: string): Promise<void> => {
   try {
-    await api.delete(`/api/delivery-service/${deliveryId}`);
+    await api.delete(`/delivery-service/${deliveryId}`);
   } catch (error) {
     console.error('Failed to delete delivery:', error);
     throw new Error('Failed to delete delivery');
