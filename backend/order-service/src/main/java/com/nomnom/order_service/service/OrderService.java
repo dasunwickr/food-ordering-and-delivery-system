@@ -139,7 +139,7 @@ public class OrderService implements IOrderService {
                 .bodyToMono(Void.class)
                 .doOnSuccess(result -> {
                     System.out.println("Successfully created delivery for order: " + orderId);
-                    // Update order status to indicate delivery is created
+                    // Update order status to "Pending Delivery" to indicate it's ready for a driver pickup
                     updateOrderStatus(orderId, "Pending Delivery");
                 })
                 .doOnError(error -> {

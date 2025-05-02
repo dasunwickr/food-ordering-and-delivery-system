@@ -4,6 +4,8 @@ export interface IDriverDetails {
   driverId: string;
   driverName: string;
   vehicleNumber: string;
+  latitude?: number;
+  longitude?: number;
 }
 
 export interface ICustomerDetails {
@@ -11,6 +13,7 @@ export interface ICustomerDetails {
   contact: string;
   longitude: number;
   latitude: number;
+  address?: string;
 }
 
 export interface ICartItem {
@@ -24,7 +27,8 @@ export interface ICartItem {
 }
 
 export interface IOrder extends Document {
-  orderId: string;
+  _id: string;
+  orderId: string
   customerId: string;
   restaurantId: string;
   customerDetails: ICustomerDetails;
@@ -39,8 +43,11 @@ export interface IOrder extends Document {
   updatedAt: Date;
 }
 
+// This connects to the order-service MongoDB database
+// We're using the same schema to ensure compatibility
 const orderSchema: Schema = new Schema(
   {
+    _id: { type: String, required: true },
     orderId: { type: String, required: true },
     customerId: { type: String, required: true },
     restaurantId: { type: String, required: true },
@@ -48,19 +55,18 @@ const orderSchema: Schema = new Schema(
       name: { type: String, required: true },
       contact: { type: String, required: true },
       longitude: { type: Number, required: true },
-      latitude: { type: Number, required: true }
+      latitude: { type: Number, required: true },
+      address: { type: String }
     },
-    cartItems: [
-      {
-        itemId: { type: String, required: true },
-        itemName: { type: String, required: true },
-        quantity: { type: Number, required: true },
-        potionSize: { type: String, required: true, enum: ['Small', 'Medium', 'Large'] },
-        price: { type: Number, required: true },
-        totalPrice: { type: Number, required: true },
-        image: { type: String }
-      }
-    ],
+    cartItems: [{
+      itemId: { type: String, required: true },
+      itemName: { type: String, required: true },
+      quantity: { type: Number, required: true },
+      potionSize: { type: String, enum: ['Small', 'Medium', 'Large'], required: true },
+      price: { type: Number, required: true },
+      totalPrice: { type: Number, required: true },
+      image: { type: String }
+    }],
     orderTotal: { type: Number, required: true },
     deliveryFee: { type: Number, required: true },
     totalAmount: { type: Number, required: true },
@@ -69,14 +75,26 @@ const orderSchema: Schema = new Schema(
     driverDetails: {
       driverId: { type: String },
       driverName: { type: String },
-      vehicleNumber: { type: String }
+      vehicleNumber: { type: String },
+      latitude: { type: Number },
+      longitude: { type: Number }
     },
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now }
+  },
+  {
+    timestamps: true,
+    // This allows us to access fields that aren't in the schema
+    strict: false
   }
 );
 
-// Use the same mongoose instance but specify the correct database and collection
-const Order = mongoose.model<IOrder>('Order', orderSchema, 'orders');
+// Connect to the order-service database instead
+const connectionString = process.env.ORDER_SERVICE_DB_URI || 'mongodb://localhost:27017/order-service';
 
-export default Order; 
+// Create a separate connection for the Order model
+const orderDbConnection = mongoose.createConnection(connectionString);
+
+const Order = orderDbConnection.model<IOrder>("Order", orderSchema);
+
+export default Order;

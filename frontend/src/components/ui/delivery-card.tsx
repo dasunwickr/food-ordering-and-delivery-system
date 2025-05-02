@@ -28,8 +28,9 @@ export interface DeliveryCardProps {
   estimatedTime?: string
   distance?: string
   amount?: string
-  createdAt: string
+  createdAt?: string
   className?: string
+  items?: Array<{name: string, quantity: number}>
   onViewDetails?: (id: string) => void
   onAccept?: (id: string) => void
   onDecline?: (id: string) => void
@@ -59,7 +60,8 @@ export function DeliveryCard({
   onCancel,
   viewType = "driver",
 }: DeliveryCardProps) {
-  const formatTime = (timestamp: string) => {
+  const formatTime = (timestamp?: string) => {
+    if (!timestamp) return "N/A";
     return new Date(timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
   }
 
