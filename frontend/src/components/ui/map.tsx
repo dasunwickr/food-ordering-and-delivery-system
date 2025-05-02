@@ -16,12 +16,19 @@ declare module "leaflet" {
       draggableWaypoints?: boolean
       fitSelectedRoutes?: boolean
       showAlternatives?: boolean
+      router?: any
+      formatter?: any
     }
     class Control {
       constructor(options: RoutingControlOptions)
       addTo(map: L.Map): this
     }
     function control(options: RoutingControlOptions): Control
+    function osrm(options: { serviceUrl: string }): any
+    function osrmv1(options: { serviceUrl: string; profile: string }): any
+    class Formatter {
+      constructor(options: { language: string })
+    }
   }
 }
 import type { Location } from "@/components/ui/delivery-map"
@@ -72,6 +79,30 @@ export default function Map({
     )
   }
 
+  const animateMarker = (
+    marker: L.Marker,
+    from: L.LatLng,
+    to: L.LatLng,
+    frames = 100
+  ) => {
+    let frame = 0
+
+    const animate = () => {
+      if (frame < frames) {
+        frame++
+        const lat = from.lat + (to.lat - from.lat) * (frame / frames)
+        const lng = from.lng + (to.lng - from.lng) * (frame / frames)
+
+        marker.setLatLng([lat, lng])
+        requestAnimationFrame(animate)
+      } else {
+        marker.setLatLng(to)
+      }
+    }
+
+    animate()
+  }
+
   useEffect(() => {
     fixLeafletIcon()
 
@@ -104,7 +135,7 @@ export default function Map({
       })
 
       const driverIcon = L.divIcon({
-        html: enableLiveTracking 
+        html: enableLiveTracking
           ? `<div class="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-white shadow-md animate-pulse">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" class="lucide lucide-bike"><circle cx="18.5" cy="17.5" r="3.5"/><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="15" cy="5" r="1"/><path d="M12 17.5V14l-3-3 4-3 2 3h2"/></svg>
               </div>`
@@ -117,22 +148,26 @@ export default function Map({
       })
 
       // Add markers for restaurant and customer
-      L.marker([pickupLocation.lat, pickupLocation.lng], { icon: restaurantIcon })
-        .addTo(mapRef.current)
+      L.marker([pickupLocation.lat, pickupLocation.lng], {
+        icon: restaurantIcon,
+      })
         .bindPopup(pickupLocation.label || "Restaurant")
-
-      L.marker([dropoffLocation.lat, dropoffLocation.lng], { icon: customerIcon })
         .addTo(mapRef.current)
+
+      L.marker([dropoffLocation.lat, dropoffLocation.lng], {
+        icon: customerIcon,
+      })
         .bindPopup(dropoffLocation.label || "Customer")
-
-      // Add driver marker
-      driverMarkerRef.current = L.marker([driverLocation.lat, driverLocation.lng], { icon: driverIcon })
         .addTo(mapRef.current)
-        .bindPopup(enableLiveTracking && driverId 
-          ? `${driverLocation.label || "Driver"} (Live tracking active)` 
-          : (driverLocation.label || "Driver"))
 
-      prevPositionRef.current = L.latLng(driverLocation.lat, driverLocation.lng)
+      // Add initial driver marker if location is provided
+      if (driverLocation) {
+        driverMarkerRef.current = L.marker([driverLocation.lat, driverLocation.lng], {
+          icon: driverIcon,
+        })
+          .bindPopup(driverLocation.label || "Driver")
+          .addTo(mapRef.current)
+      }
 
       // Add routing
       if (showRoute) {
@@ -151,9 +186,16 @@ export default function Map({
           draggableWaypoints: false,
           fitSelectedRoutes: true,
           showAlternatives: false,
+          router: L.Routing.osrmv1({
+            serviceUrl: 'https://router.project-osrm.org/route/v1',
+            profile: 'driving'
+          }),
+          formatter: new L.Routing.Formatter({
+            language: 'en'
+          })
         }).addTo(mapRef.current)
 
-        // Instead of removing the routing control element, hide it using CSS
+        // Hide the routing control element
         const routingContainer = document.querySelector(".leaflet-routing-container")
         if (routingContainer) {
           routingContainer.setAttribute("style", "display: none")
@@ -173,57 +215,23 @@ export default function Map({
     }
 
     // Update driver position
-    if (mapRef.current && driverMarkerRef.current && prevPositionRef.current) {
-      const newPosition = L.latLng(driverLocation.lat, driverLocation.lng)
+    if (mapRef.current && driverMarkerRef.current && driverLocation) {
+      const newPos = L.latLng(driverLocation.lat, driverLocation.lng)
 
-      // Don't animate if it's the same position
-      if (prevPositionRef.current.equals(newPosition)) {
-        return;
-      }
-
-      if (animate) {
-        // Animate marker movement
-        const frames = 100
-        let frame = 0
-
-        const animateMarker = () => {
-          if (frame < frames && prevPositionRef.current) {
-            frame++
-            const lat =
-              prevPositionRef.current.lat +
-              (newPosition.lat - prevPositionRef.current.lat) * (frame / frames)
-            const lng =
-              prevPositionRef.current.lng +
-              (newPosition.lng - prevPositionRef.current.lng) * (frame / frames)
-
-            driverMarkerRef.current?.setLatLng([lat, lng])
-            requestAnimationFrame(animateMarker)
-          } else {
-            driverMarkerRef.current?.setLatLng([driverLocation.lat, driverLocation.lng])
-            prevPositionRef.current = newPosition
-          }
-        }
-
-        animateMarker()
+      if (animate && prevPositionRef.current) {
+        animateMarker(driverMarkerRef.current, prevPositionRef.current, newPos)
       } else {
-        driverMarkerRef.current.setLatLng([driverLocation.lat, driverLocation.lng])
-        prevPositionRef.current = newPosition
+        driverMarkerRef.current.setLatLng(newPos)
       }
 
-      // Update popup content if tracking is enabled
-      if (enableLiveTracking && driverId) {
-        driverMarkerRef.current.setPopupContent(
-          `${driverLocation.label || "Driver"} (Live tracking active)`
-        );
-      }
+      prevPositionRef.current = newPos
     }
 
+    // Cleanup
     return () => {
       if (mapRef.current) {
         mapRef.current.remove()
         mapRef.current = null
-        routingControlRef.current = null
-        driverMarkerRef.current = null
       }
     }
   }, [driverLocation, pickupLocation, dropoffLocation, showRoute, animate, zoom, enableLiveTracking, driverId])

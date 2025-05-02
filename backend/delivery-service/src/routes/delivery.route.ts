@@ -1,6 +1,7 @@
 // src/routes/deliveryRoutes.ts
 import { Router } from 'express';
 import * as deliveryController from '../controllers/delivery.controller';
+import axios from 'axios';
 
 const router = Router();
 
@@ -60,5 +61,20 @@ router.delete('/:id', deliveryController.deleteDelivery);
 
 // Health check
 router.get('/health', deliveryController.healthCheck);
+
+// Proxy route for OSRM routing service
+router.get('/route/:coordinates', async (req, res) => {
+  try {
+    const { coordinates } = req.params;
+    const response = await axios.get(
+      `https://router.project-osrm.org/route/v1/driving/${coordinates}`,
+      { params: req.query }
+    );
+    res.json(response.data);
+  } catch (error) {
+    console.error('OSRM proxy error:', error);
+    res.status(500).json({ error: 'Failed to fetch route' });
+  }
+});
 
 export default router;

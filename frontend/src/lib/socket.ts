@@ -1,7 +1,7 @@
 import { io, Socket } from 'socket.io-client';
 
-// Use environment variable for the socket URL or default to delivery-service
-const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://delivery-service:5003';
+// Use environment variable for the socket URL or default to localhost
+const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:5003';
 
 let socket: Socket | null = null;
 
@@ -12,6 +12,7 @@ export const getSocket = (): Socket => {
       transports: ['websocket', 'polling'],
       reconnectionAttempts: 5,
       reconnectionDelay: 1000,
+      withCredentials: true // Enable CORS credentials
     });
 
     // Log connection events

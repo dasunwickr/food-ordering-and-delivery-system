@@ -14,10 +14,12 @@ export const initializeSocket = (httpServer: HTTPServer): SocketIOServer => {
   // Initialize Socket.IO with the HTTP server
   io = new SocketIOServer(httpServer, {
     cors: {
-      origin: "*", // In production, restrict this to your frontend domain
+      origin: ["http://localhost:3000"], // Frontend URL
       methods: ["GET", "POST"],
-      credentials: true
-    }
+      credentials: true,
+      allowedHeaders: ["Content-Type", "Authorization"]
+    },
+    transports: ['websocket', 'polling']
   });
 
   // Socket.IO event handling

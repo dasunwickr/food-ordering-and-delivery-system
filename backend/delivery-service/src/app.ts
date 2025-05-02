@@ -16,7 +16,12 @@ const server = http.createServer(app);
 
 // Middleware
 app.use(express.json());
-app.use(cors());
+app.use(cors({
+  origin: "http://localhost:3000",
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE"],
+  allowedHeaders: ["Content-Type", "Authorization"]
+}));
 
 // Database Connection
 connectToDatabase();
@@ -24,7 +29,7 @@ connectToDatabase();
 // Initialize Socket.IO with the server
 initializeSocket(server);
 
-// API Routes
+// API Routes - Change from /api/deliveries to /api to match API gateway rewrite
 app.use("/api", deliveryRoutes);
 
 export { app, server };
