@@ -286,9 +286,3 @@ public class OrderService implements IOrderService {
 class CreateDeliveryRequest {
     private String orderId;
 }
-
-@Data
-@AllArgsConstructor
-class CreateDeliveryDTO {
-    private String orderId;
-}
