@@ -2,6 +2,7 @@ package com.nomnom.order_service.service;
 
 import com.nomnom.order_service.dto.CartDTO;
 import com.nomnom.order_service.dto.CartItemDTO;
+import com.nomnom.order_service.dto.CreateDeliveryDTO;
 import com.nomnom.order_service.dto.OrderDTO;
 import com.nomnom.order_service.model.Order;
 import com.nomnom.order_service.repository.OrderRepository;
@@ -41,75 +42,103 @@ public class OrderService implements IOrderService {
 
     @Override
     public OrderDTO createOrder(CreateOrderRequest request) {
-        // Fetch cart items from Cart Service
-        String cartUrl = cartServiceUrl + "/" + request.getCustomerId() + "/" + request.getRestaurantId();
-        ResponseEntity<CartDTO> response = restTemplate.getForEntity(cartUrl, CartDTO.class);
-        if (response.getBody() == null || response.getBody().getItems().isEmpty()) {
-            throw new RuntimeException("Cart is empty");
-        }
-        CartDTO cartDTO = response.getBody();
+        try {
+            // Fetch cart items from Cart Service
+            String cartUrl = cartServiceUrl + "/" + request.getCustomerId() + "/" + request.getRestaurantId();
+            System.out.println("Attempting to fetch cart from URL: " + cartUrl);
+            
+            ResponseEntity<CartDTO> response;
+            try {
+                response = restTemplate.getForEntity(cartUrl, CartDTO.class);
+            } catch (Exception e) {
+                System.err.println("Failed to connect to Cart Service: " + e.getMessage());
+                throw new RuntimeException("Failed to connect to Cart Service: " + e.getMessage());
+            }
+            
+            if (response.getBody() == null || response.getBody().getItems().isEmpty()) {
+                throw new RuntimeException("Cart is empty");
+            }
+            CartDTO cartDTO = response.getBody();
 
-        // Calculate order total
-        double orderTotal = cartDTO.getItems().stream()
-                .mapToDouble(item -> item.getTotalPrice())
-                .sum();
+            // Calculate order total
+            double orderTotal = cartDTO.getItems().stream()
+                    .mapToDouble(item -> item.getTotalPrice())
+                    .sum();
 
-        // Create order
-        Order order = new Order();
-        order.setOrderId(UUID.randomUUID().toString());
-        order.setCustomerId(request.getCustomerId());
-        order.setRestaurantId(request.getRestaurantId());
-        order.setCustomerDetails(new Order.CustomerDetails(
-                request.getCustomerName(),
-                request.getCustomerContact(),
-                request.getLongitude(), // Updated field
-                request.getLatitude()   // Updated field
-        ));
-        order.setCartItems(cartDTO.getItems().stream()
-                .map(item -> new Order.CartItem(
-                        item.getItemId(),
-                        item.getItemName(),
-                        item.getQuantity(),
-                        mapPotionSize(item.getPotionSize()), // Map PotionSize
-                        item.getPrice(),
-                        item.getTotalPrice(),
-                        item.getImage()
-                )).toList());
-        order.setOrderTotal(orderTotal);
-        order.setDeliveryFee(5.0); // Example fixed delivery fee
-        order.setTotalAmount(orderTotal + 5.0);
-        order.setPaymentType(request.getPaymentType());
-        order.setOrderStatus("Pending");
-
-        // Map driver details
-        if (request.getDriverDetails() != null) {
-            order.setDriverDetails(new Order.DriverDetails(
-                    request.getDriverDetails().getDriverId(),
-                    request.getDriverDetails().getDriverName(),
-                    request.getDriverDetails().getVehicleNumber()
+            // Create order
+            Order order = new Order();
+            order.setOrderId(UUID.randomUUID().toString());
+            order.setCustomerId(request.getCustomerId());
+            order.setRestaurantId(request.getRestaurantId());
+            order.setCustomerDetails(new Order.CustomerDetails(
+                    request.getCustomerName(),
+                    request.getCustomerContact(),
+                    request.getLongitude(),
+                    request.getLatitude()
             ));
+            order.setCartItems(cartDTO.getItems().stream()
+                    .map(item -> new Order.CartItem(
+                            item.getItemId(),
+                            item.getItemName(),
+                            item.getQuantity(),
+                            mapPotionSize(item.getPotionSize()),
+                            item.getPrice(),
+                            item.getTotalPrice(),
+                            item.getImage()
+                    )).toList());
+            order.setOrderTotal(orderTotal);
+            order.setDeliveryFee(5.0); // Example fixed delivery fee
+            order.setTotalAmount(orderTotal + 5.0);
+            order.setPaymentType(request.getPaymentType());
+            order.setOrderStatus("Pending");
+
+            // Map driver details
+            if (request.getDriverDetails() != null) {
+                order.setDriverDetails(new Order.DriverDetails(
+                        request.getDriverDetails().getDriverId(),
+                        request.getDriverDetails().getDriverName(),
+                        request.getDriverDetails().getVehicleNumber()
+                ));
+            }
+            order.setCreatedAt(new Date());
+            order.setUpdatedAt(new Date());
+
+            // Save order
+            System.out.println("Saving order to database: " + order.getOrderId());
+            Order savedOrder = orderRepository.save(order);
+
+            // Create a delivery for this order - this won't block the order creation
+            try {
+                createDeliveryForOrder(savedOrder.getOrderId());
+            } catch (Exception e) {
+                System.err.println("Failed to create delivery, but order was created: " + e.getMessage());
+                // Continue with order creation even if delivery creation fails
+            }
+
+            return mapToOrderDTO(savedOrder);
+        } catch (Exception e) {
+            System.err.println("Error creating order: " + e.getMessage());
+            e.printStackTrace();
+            throw e;
         }
-        order.setCreatedAt(new Date());
-        order.setUpdatedAt(new Date());
-
-        // Save order
-        Order savedOrder = orderRepository.save(order);
-
-        // Create a delivery for this order
-        createDeliveryForOrder(savedOrder.getOrderId());
-
-        return mapToOrderDTO(savedOrder);
     }
 
     private void createDeliveryForOrder(String orderId) {
         try {
+            System.out.println("Attempting to create delivery for order: " + orderId);
+            System.out.println("Delivery service URL: " + DELIVERY_SERVICE_URL);
+            
+            // Use the DTO class instead of anonymous class
+            CreateDeliveryDTO request = new CreateDeliveryDTO(orderId);
+            
             webClientBuilder.build()
                 .post()
                 .uri(DELIVERY_SERVICE_URL + "/api/deliveries")
-                .bodyValue(new CreateDeliveryRequest(orderId))
+                .bodyValue(request)
                 .retrieve()
                 .bodyToMono(Void.class)
                 .doOnSuccess(result -> {
+                    System.out.println("Successfully created delivery for order: " + orderId);
                     // Update order status to indicate delivery is created
                     updateOrderStatus(orderId, "Pending Delivery");
                 })
@@ -120,6 +149,7 @@ public class OrderService implements IOrderService {
                 .block();
         } catch (Exception e) {
             System.err.println("Failed to create delivery record: " + e.getMessage());
+            e.printStackTrace();
             updateOrderStatus(orderId, "Delivery Assignment Failed");
         }
     }
@@ -254,5 +284,11 @@ public class OrderService implements IOrderService {
 @Data
 @AllArgsConstructor
 class CreateDeliveryRequest {
+    private String orderId;
+}
+
+@Data
+@AllArgsConstructor
+class CreateDeliveryDTO {
     private String orderId;
 }

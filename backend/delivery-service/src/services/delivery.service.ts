@@ -2,6 +2,11 @@
 
 import Delivery, { IDelivery } from "../models/delivery.model";
 import Order from "../models/order.model";
+import { Server } from 'socket.io';
+
+declare global {
+  var io: Server | undefined;
+}
 
 /**
  * Create a new delivery
