@@ -114,29 +114,26 @@ public class OrderService implements IOrderService {
                     updateOrderStatus(orderId, "Pending Delivery");
                 })
                 .doOnError(error -> {
-                    // Log the error but don't fail order creation
                     System.err.println("Failed to create delivery record: " + error.getMessage());
-                    // Update order status to indicate delivery creation failed
                     updateOrderStatus(orderId, "Delivery Assignment Failed");
                 })
                 .block();
         } catch (Exception e) {
-            // Log error but don't fail order creation
             System.err.println("Failed to create delivery record: " + e.getMessage());
             updateOrderStatus(orderId, "Delivery Assignment Failed");
         }
     }
 
     private Order.CartItem.PotionSize mapPotionSize(PotionSize potionSize) {
-        // Handle null potionSize by assigning a default value
         if (potionSize == null) {
-            return Order.CartItem.PotionSize.Small; // Default to "Small"
+            return Order.CartItem.PotionSize.Small; 
         }
-        return switch (potionSize) {
-            case Small -> Order.CartItem.PotionSize.Small;
-            case Medium -> Order.CartItem.PotionSize.Medium;
-            case Large -> Order.CartItem.PotionSize.Large;
-        };
+        switch (potionSize) {
+            case Small: return Order.CartItem.PotionSize.Small;
+            case Medium: return Order.CartItem.PotionSize.Medium;
+            case Large: return Order.CartItem.PotionSize.Large;
+            default: return Order.CartItem.PotionSize.Small;
+        }
     }
 
     private OrderDTO mapToOrderDTO(Order order) {
@@ -155,7 +152,7 @@ public class OrderService implements IOrderService {
                                 item.getItemId(),
                                 item.getItemName(),
                                 item.getQuantity(),
-                                mapPotionSizeToDTO(item.getPotionSize()), // Map PotionSize
+                                mapPotionSizeToDTO(item.getPotionSize()), 
                                 item.getPrice(),
                                 item.getTotalPrice(),
                                 item.getImage()
