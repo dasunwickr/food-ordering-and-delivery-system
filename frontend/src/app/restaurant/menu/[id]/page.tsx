@@ -80,7 +80,7 @@ const UpdateMenuItem = () => {
   useEffect(() => {
     const fetchMenuItem = async () => {
       try {
-        const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8083";
+        const API_URL = "http://localhost/api/menu-service";
         const response = await axios.get<MenuItem>(`${API_URL}/menu/${id}`);
         const fetchedMenuItem = response.data;
 
@@ -124,47 +124,45 @@ const UpdateMenuItem = () => {
   };
 
   // Handle form submission
-  const onSubmit = async (values: UpdateMenuFormValues) => {
-    const formDataToSend = new FormData();
+  // Handle form submission
+const onSubmit = async (values: UpdateMenuFormValues) => {
+  const formDataToSend = new FormData();
+  Object.entries(values).forEach(([key, value]) => {
+    if (value === undefined || value === null) {
+      console.warn(`Skipping field '${key}' because it is undefined or null.`);
+      return; // Skip undefined or null values
+    }
+    if (value instanceof File) {
+      formDataToSend.append(key, value);
+    } else if (typeof value === "boolean") {
+      formDataToSend.append(key, value.toString());
+    } else if (key === "portions") {
+      // Convert portions array to JSON string
+      formDataToSend.append(key, JSON.stringify(value));
+    } else {
+      formDataToSend.append(key, value.toString());
+    }
+  });
 
-    Object.entries(values).forEach(([key, value]) => {
-      if (value === undefined || value === null) {
-        console.warn(`Skipping field '${key}' because it is undefined or null.`);
-        return; // Skip undefined or null values
-      }
-
-      if (value instanceof File) {
-        formDataToSend.append(key, value);
-      } else if (typeof value === "boolean") {
-        formDataToSend.append(key, value.toString());
-      } else if (key === "portions") {
-        // Convert portions array to JSON string
-        formDataToSend.append(key, JSON.stringify(value));
-      } else {
-        formDataToSend.append(key, value.toString());
-      }
+  try {
+    const API_URL = "http://localhost/api/menu-service";
+    const response = await axios.put(`${API_URL}/menu/update/${id}`, formDataToSend, {
+      headers: {
+        "Content-Type": "multipart/form-data", // Important for file uploads
+      },
     });
 
-    try {
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8083";
-      const response = await fetch(`${API_URL}/menu/update/${id}`, {
-        method: "PUT",
-        body: formDataToSend,
-      });
-
-      if (response.ok) {
-        alert("Menu item updated successfully!");
-        console.log("Navigating to /restaurant/menu");
-        router.push("/restaurant/menu");// Navigate to /restaurant/menu on success
-      } else {
-        alert("Failed to update menu item.");
-      }
-    } catch (error) {
-      console.error("Error updating menu item:", error);
-      alert("An error occurred while updating the menu item.");
+    if (response.status === 200) {
+      alert("Menu item updated successfully!");
+      router.push("/restaurant/menu"); // Navigate to /restaurant/menu on success
+    } else {
+      alert("Failed to update menu item.");
     }
-  };
-
+  } catch (error) {
+    console.error("Error updating menu item:", error);
+    alert("An error occurred while updating the menu item.");
+  }
+};
   // Render loading state
   if (loading) {
     return <p>Loading menu item...</p>;

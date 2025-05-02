@@ -72,7 +72,7 @@ const AddMenuForm = () => {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const response = await axios.get<Category[]>("http://localhost:8083/categories");
+        const response = await axios.get<Category[]>("http://localhost/api/menu-service/categories");
         if (response.status === 200) {
           setCategories(response.data); // Set the fetched categories
         }
@@ -116,18 +116,19 @@ const AddMenuForm = () => {
     });
 
     try {
-      const API_URL = "http://localhost:8083";
-      const response = await fetch(`${API_URL}/menu/add`, {
-        method: "POST",
-        body: formDataToSend,
-      });
+      const API_URL = "http://localhost/api/menu-service";
+      const response = await axios.post(`${API_URL}/menu/add`, formDataToSend, {
+        headers: {
+        "Content-Type": "multipart/form-data",
+    },
+  });
 
-      if (response.ok) {
-        alert("Menu item added successfully!");
-        router.push("/restaurant/menu");
-      } else {
-        alert("Failed to add menu item.");
-      }
+  if (response.status === 201 || response.status === 200) {
+    alert("Menu item added successfully!");
+    router.push("/restaurant/menu");
+  } else {
+    alert("Failed to add menu item.");
+  }
     } catch (error) {
       console.error("Error adding menu item:", error);
       alert("An error occurred while adding the menu item.");

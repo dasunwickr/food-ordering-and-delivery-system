@@ -23,7 +23,7 @@ const DisplayCategoriesFood = () => {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const response = await axios.get<Category[]>("http://localhost:8083/categories");
+        const response = await axios.get<Category[]>("http://localhost/api/menu-service/categories");
         if (response.status === 200) {
           setCategories(response.data);
         }
@@ -75,9 +75,7 @@ const DisplayCategoriesFood = () => {
   return (
     <div className="max-w-8xl mx-auto p-6 bg-white overflow-hidden">
       {/* Ensure no vertical scrollbar */}
-      <h1 className="text-2xl font-bold text-amber-700 mb-6">
-        Available Categories
-      </h1>
+      
 
       {/* Horizontal Slider Container */}
       <div className="relative overflow-hidden">
