@@ -66,14 +66,27 @@ router.get('/health', deliveryController.healthCheck);
 router.get('/route/:coordinates', async (req, res) => {
   try {
     const { coordinates } = req.params;
+    const baseUrl = process.env.OSRM_SERVICE_URL || 'https://routing.openstreetmap.de';
     const response = await axios.get(
-      `https://router.project-osrm.org/route/v1/driving/${coordinates}`,
-      { params: req.query }
+      `${baseUrl}/routed-car/route/v1/driving/${coordinates}`,
+      { 
+        params: req.query,
+        timeout: 10000, // 10 second timeout
+        headers: {
+          'User-Agent': 'food-delivery-system/1.0'
+        }
+      }
     );
     res.json(response.data);
-  } catch (error) {
+  } catch (error: any) {
     console.error('OSRM proxy error:', error);
-    res.status(500).json({ error: 'Failed to fetch route' });
+    if (error.code === 'ECONNABORTED') {
+      res.status(504).json({ error: 'Routing request timed out' });
+    } else if (error.response) {
+      res.status(error.response.status).json({ error: error.response.data });
+    } else {
+      res.status(500).json({ error: 'Failed to fetch route' });
+    }
   }
 });
 

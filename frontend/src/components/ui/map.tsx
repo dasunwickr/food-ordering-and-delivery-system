@@ -18,20 +18,24 @@ declare module "leaflet" {
       showAlternatives?: boolean
       router?: any
       formatter?: any
+      show?: boolean
     }
     class Control {
       constructor(options: RoutingControlOptions)
       addTo(map: L.Map): this
+      remove(): void
+      on(event: string, callback: (e: any) => void): this
     }
     function control(options: RoutingControlOptions): Control
     function osrm(options: { serviceUrl: string }): any
-    function osrmv1(options: { serviceUrl: string; profile: string }): any
+    function osrmv1(options: { serviceUrl: string; profile: string; useHints?: boolean; timeout?: number }): any
     class Formatter {
       constructor(options: { language: string })
     }
   }
 }
 import type { Location } from "@/components/ui/delivery-map"
+import { useToast } from "@/components/ui/use-toast"
 
 // Fix for default marker icons in Leaflet with Next.js
 const fixLeafletIcon = () => {
@@ -64,6 +68,7 @@ export default function Map({
   driverId,
   enableLiveTracking = false,
 }: MapProps) {
+  const { toast } = useToast()
   const mapRef = useRef<L.Map | null>(null)
   const routingControlRef = useRef<L.Routing.Control | null>(null)
   const driverMarkerRef = useRef<L.Marker | null>(null)
@@ -171,6 +176,9 @@ export default function Map({
 
       // Add routing
       if (showRoute) {
+        // Use a public OSRM instance as fallback
+        const publicServiceUrl = 'https://router.project-osrm.org';
+        
         routingControlRef.current = L.Routing.control({
           waypoints: [
             L.latLng(pickupLocation.lat, pickupLocation.lng),
@@ -187,12 +195,15 @@ export default function Map({
           fitSelectedRoutes: true,
           showAlternatives: false,
           router: L.Routing.osrmv1({
-            serviceUrl: 'https://router.project-osrm.org/route/v1',
-            profile: 'driving'
+            serviceUrl: publicServiceUrl,
+            profile: 'driving',
+            useHints: false,
+            timeout: 30000
           }),
           formatter: new L.Routing.Formatter({
             language: 'en'
-          })
+          }),
+          show: false // Hide the routing instructions panel
         }).addTo(mapRef.current)
 
         // Hide the routing control element
@@ -200,6 +211,44 @@ export default function Map({
         if (routingContainer) {
           routingContainer.setAttribute("style", "display: none")
         }
+
+        // Add error handler
+        routingControlRef.current.on('routingerror', function(e) {
+          console.error('Routing error:', e);
+          if (e.error && e.error.target && e.error.target.status === 504) {
+            toast({
+              title: "Route calculation timed out",
+              description: "Please try again in a moment",
+              variant: "destructive"
+            });
+          }
+          
+          // Show a fallback message for any routing error
+          if (!document.getElementById("routing-fallback-message")) {
+            const mapContainer = document.getElementById("map");
+            if (mapContainer) {
+              const fallbackMsg = document.createElement("div");
+              fallbackMsg.id = "routing-fallback-message";
+              fallbackMsg.className = "absolute bottom-2 left-2 bg-white p-2 rounded shadow-md text-sm";
+              fallbackMsg.innerHTML = "Could not calculate route. Using direct path instead.";
+              mapContainer.appendChild(fallbackMsg);
+              
+              // Create a simple straight line as fallback
+              L.polyline(
+                [
+                  [pickupLocation.lat, pickupLocation.lng],
+                  [dropoffLocation.lat, dropoffLocation.lng]
+                ],
+                { color: 'var(--primary)', opacity: 0.5, dashArray: '5, 10' }
+              ).addTo(mapRef.current);
+              
+              // Remove the message after 5 seconds
+              setTimeout(() => {
+                fallbackMsg.remove();
+              }, 5000);
+            }
+          }
+        });
       }
 
       // Fit bounds to include all markers
@@ -229,9 +278,13 @@ export default function Map({
 
     // Cleanup
     return () => {
+      if (routingControlRef.current) {
+        routingControlRef.current.remove();
+        routingControlRef.current = null;
+      }
       if (mapRef.current) {
-        mapRef.current.remove()
-        mapRef.current = null
+        mapRef.current.remove();
+        mapRef.current = null;
       }
     }
   }, [driverLocation, pickupLocation, dropoffLocation, showRoute, animate, zoom, enableLiveTracking, driverId])
