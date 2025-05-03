@@ -17,6 +17,7 @@ services:
       - DB_USER=root
       - DB_PASSWORD=examplepassword
       - DB_NAME=mydatabase
+    
 
   # MySQL database service
   mysql:
@@ -36,6 +37,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+  
 
 # Define volumes for persistent storage
 volumes:
