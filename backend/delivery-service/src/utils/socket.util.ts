@@ -32,12 +32,32 @@ export const initializeSocket = (server: HTTPServer): void => {
 
     // Listen for driver location updates
     socket.on('driver:location', (data: { driverId: string, lat: number, lng: number }) => {
+      console.log(`Received location update from driver ${data.driverId}: ${data.lat}, ${data.lng}`);
+      
       // Forward the location update to all clients tracking this driver
       io.emit(`driver:${data.driverId}:location`, {
         lat: data.lat,
         lng: data.lng,
         timestamp: new Date().toISOString()
       });
+    });
+
+    // Listen for clients subscribing to driver location updates
+    socket.on('subscribe:driverLocation', (data: { driverId: string }) => {
+      const { driverId } = data;
+      console.log(`Client ${socket.id} subscribed to driver ${driverId} location updates`);
+      
+      // Join a room specific to this driver's location updates
+      socket.join(`driver:${driverId}:updates`);
+    });
+    
+    // Listen for clients unsubscribing from driver location updates
+    socket.on('unsubscribe:driverLocation', (data: { driverId: string }) => {
+      const { driverId } = data;
+      console.log(`Client ${socket.id} unsubscribed from driver ${driverId} location updates`);
+      
+      // Leave the driver's location update room
+      socket.leave(`driver:${driverId}:updates`);
     });
 
     // Listen for driver registration

@@ -753,6 +753,9 @@ export default function DriverDeliveriesPage() {
                         distance={delivery.distance}
                         amount={delivery.amount}
                         onViewDetails={() => handleViewDetails(delivery.id)}
+                        onPickup={handlePickupDelivery}
+                        onDeliver={handleDeliverDelivery}
+                        onCancel={handleCancelDelivery}
                       />
                     ))}
                 </div>

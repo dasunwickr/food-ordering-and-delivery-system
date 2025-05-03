@@ -108,8 +108,8 @@ export const unsubscribeFromDriverLocation = (driverId: string): void => {
   // Unsubscribe from driver location updates
   socket.emit('unsubscribe:driverLocation', { driverId });
   
-  // Remove all listeners for this driver
-  socket.off(`driver:${driverId}:locationUpdate`);
+  // Remove all listeners for this driver - fix event name to match the one we're subscribing to
+  socket.off(`driver:${driverId}:location`);
 };
 
 // Send driver location update

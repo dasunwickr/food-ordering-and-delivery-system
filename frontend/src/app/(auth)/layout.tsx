@@ -10,6 +10,8 @@ const AuthLayout = ({ children }: { children: React.ReactNode }) => {
             src="/logo-colored.svg"
             alt="Logo"
             fill
+            priority
+            sizes="(max-width: 768px) 100vw, 240px"
             className="object-contain"
           />
         </div>
