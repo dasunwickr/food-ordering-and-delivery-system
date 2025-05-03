@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 
-const ORDER_API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8081/api/order"
+const ORDER_API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost/api/order-service/order"
 
 export async function GET(request: NextRequest, { params }: { params: { customerId: string } }) {
   const { customerId } = params

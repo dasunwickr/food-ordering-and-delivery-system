@@ -188,3 +188,50 @@ export const changePassword = async (userId: string, currentPassword: string, ne
 
   return { success: true };
 };
+
+/**
+ * Check if an email exists in the auth database
+ * @param email The email to check
+ * @returns Boolean indicating if the email exists
+ */
+export const checkEmailExists = async (email: string): Promise<boolean> => {
+  try {
+    const user = await UserModel.findOne({ email });
+    return !!user; // Return true if user exists, false otherwise
+  } catch (error) {
+    console.error('Error checking email existence:', error);
+    throw new Error('Failed to check email');
+  }
+};
+
+/**
+ * Delete a user from the auth database by their userId
+ * This is used when a user is deleted from the user service
+ * @param userId The ID of the user to delete
+ * @returns Boolean indicating if the deletion was successful
+ */
+export const deleteUser = async (userId: string): Promise<{ success: boolean, message: string }> => {
+  try {
+    console.log(`Attempting to delete user with userId: ${userId}`);
+    
+    // Find the user by userId (which was saved during registration)
+    const user = await UserModel.findOne({ userId });
+    
+    if (!user) {
+      console.log(`No user found with userId: ${userId}`);
+      return { success: false, message: 'User not found' };
+    }
+    
+    // Delete the user from auth database
+    await UserModel.deleteOne({ userId });
+    
+    console.log(`Successfully deleted auth record for userId: ${userId}`);
+    return { 
+      success: true, 
+      message: 'User authentication details deleted successfully' 
+    };
+  } catch (error: any) {
+    console.error(`Error deleting user auth data: ${error.message}`, error);
+    throw new Error(`Failed to delete user authentication details: ${error.message}`);
+  }
+};

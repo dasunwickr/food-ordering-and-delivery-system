@@ -111,6 +111,10 @@ services:
     env_file:
       - ./delivery-service/.env
     restart: unless-stopped
+    develop:
+      watch:
+        - action: rebuild
+          path: ./delivery-service/src/
     networks:
       - nomnom-network
   

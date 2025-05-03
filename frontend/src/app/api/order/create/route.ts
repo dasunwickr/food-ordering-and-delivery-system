@@ -1,10 +1,18 @@
 import { type NextRequest, NextResponse } from "next/server"
 
-const ORDER_API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8081/api/order"
+const ORDER_API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost/api/order-service/order"
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
+
+    // Validate required fields
+    const requiredFields = ['customerId', 'restaurantId', 'customerName', 'customerContact', 'longitude', 'latitude', 'paymentType'];
+    for (const field of requiredFields) {
+      if (!body[field]) {
+        return NextResponse.json({ error: `Missing required field: ${field}` }, { status: 400 });
+      }
+    }
 
     // Call the order service API
     const response = await fetch(`${ORDER_API_URL}/create`, {
@@ -16,7 +24,9 @@ export async function POST(request: NextRequest) {
     })
 
     if (!response.ok) {
-      throw new Error(`Error creating order: ${response.status}`)
+      const errorData = await response.text();
+      console.error("Order service error:", errorData);
+      throw new Error(`Error creating order: ${response.status} - ${errorData}`);
     }
 
     const data = await response.json()
@@ -36,6 +46,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(data)
   } catch (error) {
     console.error("Error creating order:", error)
+    if (error instanceof Error) {
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
     return NextResponse.json({ error: "Failed to create order" }, { status: 500 })
   }
 }

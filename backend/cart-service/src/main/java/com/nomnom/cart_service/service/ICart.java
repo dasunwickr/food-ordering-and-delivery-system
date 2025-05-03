@@ -17,4 +17,6 @@ public interface ICart {
     void clearCart(String customerId, String restaurantId);
 
     List<Cart> getAllCarts();
+
+    List<Cart> getCartsByCustomerId(String customerId);
 }

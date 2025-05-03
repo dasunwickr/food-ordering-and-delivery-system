@@ -12,8 +12,9 @@ type RequestConfig = {
 };
 
 // Environment configuration
+// This should match your API Gateway setting
 const baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost/api';
-const TIMEOUT = 15000; // 15 seconds timeout
+const TIMEOUT = 30000; // Increased to 30 seconds timeout
 
 // Create basic request configuration
 const getRequestConfig = (): RequestConfig => ({
@@ -30,7 +31,7 @@ const getRequestConfig = (): RequestConfig => ({
 const api = axios.create(getRequestConfig());
 
 // Enable/disable debug logging
-const DEBUG = process.env.NODE_ENV !== 'production';
+const DEBUG = true; // Always enable for now to help with debugging
 
 // Simple logger
 const logRequest = (config: any) => {
@@ -50,7 +51,12 @@ const logResponse = (response: any) => {
 };
 
 const logError = (error: any) => {
-  console.error('API Error:', error);
+  console.error('API Error:', {
+    message: error.message,
+    status: error.response?.status,
+    data: error.response?.data,
+    url: error.config?.url
+  });
 };
 
 // Request interceptor to attach auth token
@@ -73,7 +79,7 @@ api.interceptors.request.use((config) => {
   return Promise.reject(error);
 });
 
-// Response interceptor
+// Response interceptor with better error handling
 api.interceptors.response.use(
   (response) => {
     logResponse(response);
@@ -82,36 +88,39 @@ api.interceptors.response.use(
   async (error) => {
     logError(error);
     
-    // Add user-friendly messages based on common errors
+    // Create more detailed error information
     if (!error.response) {
-      error.userMessage = 'Unable to connect to the server. Please check your internet connection.';
+      error.userMessage = 'Network error: Unable to connect to the server. Please check your internet connection or verify that the backend services are running.';
     } else {
-      // Handle common status codes
+      // Handle common status codes with more detailed messages
       switch (error.response.status) {
         case 400:
-          error.userMessage = 'Invalid request. Please check your data.';
+          error.userMessage = `Bad request: ${error.response.data?.error || 'Please check your data'}`;
           break;
         case 401:
-          error.userMessage = 'Authentication required. Please sign in.';
-          // Handle sign out on auth errors
-          if (typeof window !== 'undefined') {
-            localStorage.removeItem('authToken');
-            window.location.href = '/sign-in';
-          }
+          error.userMessage = 'Authentication required. Please sign in again.';
           break;
         case 403:
-          error.userMessage = 'You do not have permission to access this resource.';
+          error.userMessage = 'Access denied: You do not have permission to access this resource.';
           break;
         case 404:
-          error.userMessage = 'The requested resource was not found.';
+          error.userMessage = `Resource not found: ${error.config?.url}. The service might be unavailable.`;
           break;
         case 500:
-          error.userMessage = 'An internal server error occurred. Please try again later.';
+          error.userMessage = 'Internal server error. Our team has been notified.';
+          break;
+        case 502:
+        case 503:
+        case 504:
+          error.userMessage = 'Service unavailable. This could be due to maintenance or high traffic.';
           break;
         default:
-          error.userMessage = 'An error occurred with the API request.';
+          error.userMessage = `Error ${error.response.status}: ${error.response.data?.message || 'An unexpected error occurred'}`;
       }
     }
+    
+    // Add the user message to the error object
+    error.message = error.userMessage || error.message;
     
     return Promise.reject(error);
   }

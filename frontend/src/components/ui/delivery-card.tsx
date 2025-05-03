@@ -28,14 +28,16 @@ export interface DeliveryCardProps {
   estimatedTime?: string
   distance?: string
   amount?: string
-  createdAt: string
+  createdAt?: string
   className?: string
+  items?: Array<{name: string, quantity: number}>
   onViewDetails?: (id: string) => void
   onAccept?: (id: string) => void
   onDecline?: (id: string) => void
   onPickup?: (id: string) => void
   onDeliver?: (id: string) => void
   onCancel?: (id: string) => void
+  onHandToDriver?: (id: string) => void
   viewType?: "driver" | "restaurant" | "customer" | "admin"
 }
 
@@ -57,9 +59,11 @@ export function DeliveryCard({
   onPickup,
   onDeliver,
   onCancel,
+  onHandToDriver,
   viewType = "driver",
 }: DeliveryCardProps) {
-  const formatTime = (timestamp: string) => {
+  const formatTime = (timestamp?: string) => {
+    if (!timestamp) return "N/A";
     return new Date(timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
   }
 
@@ -142,7 +146,7 @@ export function DeliveryCard({
         )}
 
         {status === "ACCEPTED" && viewType === "restaurant" && (
-          <Button size="sm" className="flex-1" onClick={() => onPickup?.(id)}>
+          <Button size="sm" className="flex-1" onClick={() => onHandToDriver?.(id)}>
             Hand to Driver
           </Button>
         )}

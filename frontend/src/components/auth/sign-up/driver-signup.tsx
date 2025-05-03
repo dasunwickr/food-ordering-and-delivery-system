@@ -5,6 +5,7 @@ import type React from "react"
 import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import { FileText, Car, MapPin, Check, Upload, Search } from "lucide-react"
+import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -100,12 +101,14 @@ export function DriverSignUp({ userData }: DriverSignUpProps) {
         
         // Show success modal
         setShowSuccessModal(true)
+        toast.success("Driver account created successfully!")
       } catch (error: any) {
         console.error("Registration failed:", error)
         setErrors({
           ...errors,
           general: error.response?.data?.message || "Registration failed. Please try again."
         })
+        toast.error("Registration failed. Please try again.")
       }
     }
   }
@@ -353,7 +356,7 @@ export function DriverSignUp({ userData }: DriverSignUpProps) {
           <MapSelector 
             height="350px" 
             onConfirmLocation={(selectedLocation) => {
-              const formattedLocation = `Lat: ${selectedLocation.lat}, Lng: ${selectedLocation.lng}`;
+              const formattedLocation = selectedLocation.address;
               setLocation(formattedLocation);
               confirmLocationSelection();
             }} 

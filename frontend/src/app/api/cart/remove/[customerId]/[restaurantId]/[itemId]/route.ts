@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 
-const BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8082/api/cart"
+const BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost/api/cart-service/cart"
 
 export async function DELETE(
   request: NextRequest,
