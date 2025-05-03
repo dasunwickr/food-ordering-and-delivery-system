@@ -72,8 +72,9 @@ public class UserService {
     }
 
     public List<User> getUsersByType(String type) {
+        if(type == null) throw new IllegalArgumentException("User type cannot be null");
         return userRepository.findAll().stream()
-                .filter(user -> user.getUserType() != null && user.getUserType().equalsIgnoreCase(type))
+                .filter(user -> type.equalsIgnoreCase(user.getUserType()))
                 .collect(Collectors.toList());
     }
 

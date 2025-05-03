@@ -17,9 +17,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { DeliveryMap } from "@/components/ui/delivery-map"
+import MultiDeliveryMap, { DeliveryMapItem } from "@/components/ui/multi-delivery-map"
 import { toast } from "sonner"
 import { 
   getAllDeliveries, 
@@ -103,10 +103,54 @@ export default function AdminDeliveriesPage() {
   const [showMap, setShowMap] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [analytics, setAnalytics] = useState(ANALYTICS_DATA)
+  const [liveDriverLocations, setLiveDriverLocations] = useState<Record<string, {lat: number, lng: number}>>({})
 
   useEffect(() => {
     fetchDeliveries()
   }, [])
+
+  // Set up real-time location tracking for all active drivers
+  useEffect(() => {
+    const activeDrivers = deliveries
+      .filter(d => ["ACCEPTED", "IN_PROGRESS"].includes(d.status) && d.driver)
+      .map(d => d.driver?.name?.split(' ')[0] || d.driver?.vehicle?.split('(')[1]?.split(')')[0])
+      .filter(Boolean) as string[];
+    
+    // Subscribe to location updates for all active drivers
+    if (activeDrivers.length > 0) {
+      console.log("Setting up location tracking for drivers:", activeDrivers);
+      
+      // Import socket functions
+      import('@/lib/socket').then(({ subscribeToDriverLocation, unsubscribeFromDriverLocation }) => {
+        // Setup listeners for each driver
+        activeDrivers.forEach(driverId => {
+          console.log(`Setting up listener for driver: ${driverId}`);
+          subscribeToDriverLocation(driverId, (location) => {
+            if (location && typeof location.lat === 'number' && typeof location.lng === 'number') {
+              console.log(`Received live location for driver ${driverId}:`, location);
+              setLiveDriverLocations(prev => ({
+                ...prev,
+                [driverId]: {
+                  lat: location.lat,
+                  lng: location.lng
+                }
+              }));
+            }
+          });
+        });
+        
+        // Cleanup function to unsubscribe when component unmounts
+        return () => {
+          import('@/lib/socket').then(({ unsubscribeFromDriverLocation }) => {
+            activeDrivers.forEach(driverId => {
+              console.log(`Cleaning up listener for driver: ${driverId}`);
+              unsubscribeFromDriverLocation(driverId);
+            });
+          });
+        };
+      });
+    }
+  }, [deliveries]);
 
   // Helper function to get customer details from user service
   const fetchCustomerDetails = async (customerId: string) => {
@@ -151,7 +195,36 @@ export default function AdminDeliveriesPage() {
   // Fetch orders with Pending Delivery status directly from the order service
   const fetchPendingDeliveryOrders = async (): Promise<any[]> => {
     try {
-      const response = await api.get('/order-service/orders/status/Pending%20Delivery', {
+      // Try with the correct format (uppercase with underscores)
+      try {
+        const response = await api.get('/order-service/orders/status/PENDING_DELIVERY', {
+          withCredentials: true
+        });
+        
+        if (Array.isArray(response.data)) {
+          console.log('Successfully fetched pending delivery orders with PENDING_DELIVERY format');
+          return response.data;
+        }
+      } catch (formatError) {
+        console.log('PENDING_DELIVERY format failed, trying alternative format');
+      }
+      
+      // Try with the format used in the UI
+      try {
+        const response = await api.get('/order-service/orders/status/Pending%20Delivery', {
+          withCredentials: true
+        });
+        
+        if (Array.isArray(response.data)) {
+          console.log('Successfully fetched pending delivery orders with "Pending Delivery" format');
+          return response.data;
+        }
+      } catch (spaceError) {
+        console.log('Space-separated format failed, trying yet another format');
+      }
+      
+      // Try with a different common format (camelCase)
+      const response = await api.get('/order-service/orders/pendingDelivery', {
         withCredentials: true
       });
       
@@ -503,6 +576,73 @@ export default function AdminDeliveriesPage() {
     toast.info("Driver reassignment would be implemented here with a selection modal")
   }
 
+  // Add utility function to get the current driver location
+  const getCurrentDriverLocation = (delivery: FormattedDelivery) => {
+    // Try to get driver ID
+    const driverId = delivery.driver?.name?.split(' ')[0] || 
+                     delivery.driver?.vehicle?.split('(')[1]?.split(')')[0];
+    
+    if (driverId && liveDriverLocations[driverId]) {
+      return {
+        lat: liveDriverLocations[driverId].lat,
+        lng: liveDriverLocations[driverId].lng,
+        label: delivery.driver?.name || "Driver",
+        icon: "driver"
+      };
+    }
+    
+    // Fall back to the stored location
+    return {
+      lat: Number(delivery.driverLocation.lat) || 0,
+      lng: Number(delivery.driverLocation.lng) || 0,
+      label: delivery.driver?.name || "Driver",
+      icon: "driver"
+    };
+  };
+
+  // Format deliveries for map display
+  const getMapDeliveries = (): DeliveryMapItem[] => {
+    return deliveries.map(delivery => ({
+      id: delivery.id,
+      status: delivery.status,
+      restaurant: {
+        name: delivery.restaurant.name,
+        location: {
+          lat: delivery.restaurant.location.lat,
+          lng: delivery.restaurant.location.lng,
+          label: delivery.restaurant.name,
+          icon: "restaurant"
+        }
+      },
+      customer: {
+        name: delivery.customer.name,
+        location: {
+          lat: delivery.customer.location.lat,
+          lng: delivery.customer.location.lng,
+          label: delivery.customer.name,
+          icon: "customer"
+        }
+      },
+      ...(delivery.driver ? {
+        driver: {
+          id: delivery.driver.name.split(' ')[0] || delivery.id, // Use first name or id as driver id
+          name: delivery.driver.name,
+          location: {
+            lat: liveDriverLocations[delivery.driver.name.split(' ')[0]]?.lat || delivery.driverLocation.lat,
+            lng: liveDriverLocations[delivery.driver.name.split(' ')[0]]?.lng || delivery.driverLocation.lng,
+            label: delivery.driver.name,
+            icon: "driver"
+          }
+        }
+      } : {})
+    }));
+  };
+
+  // Handle map delivery selection
+  const handleMapDeliverySelect = (deliveryId: string) => {
+    setActiveDelivery(deliveryId);
+  };
+
   const filteredDeliveries = deliveries.filter((delivery) => {
     const matchesSearch =
       delivery.orderId.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -599,28 +739,14 @@ export default function AdminDeliveriesPage() {
             </CardHeader>
             <CardContent className="p-0">
               <div className="h-[500px]">
-                {deliveries.length > 0 && deliveries[0] && (
-                  <DeliveryMap
-                    driverLocation={{
-                      lat: deliveries[0].driverLocation.lat,
-                      lng: deliveries[0].driverLocation.lng,
-                      label: "Driver 1",
-                      icon: "driver",
-                    }}
-                    pickupLocation={{
-                      lat: deliveries[0].restaurant.location.lat,
-                      lng: deliveries[0].restaurant.location.lng,
-                      label: deliveries[0].restaurant.name,
-                      icon: "restaurant",
-                    }}
-                    dropoffLocation={{
-                      lat: deliveries[0].customer.location.lat,
-                      lng: deliveries[0].customer.location.lng,
-                      label: deliveries[0].customer.name,
-                      icon: "customer",
-                    }}
-                    className="h-full"
+                {deliveries.length > 0 && (
+                  <MultiDeliveryMap
+                    deliveries={getMapDeliveries()}
+                    enableLiveTracking={true}
                     zoom={12}
+                    height="500px"
+                    onDeliverySelect={handleMapDeliverySelect}
+                    selectedDeliveryId={activeDelivery}
                   />
                 )}
               </div>
@@ -631,31 +757,6 @@ export default function AdminDeliveriesPage() {
         {activeDelivery && activeDeliveryData ? (
           <div className="grid gap-6 lg:grid-cols-2">
             <div className="space-y-4">
-              <DeliveryMap
-                driverLocation={{
-                  lat: activeDeliveryData.driverLocation.lat,
-                  lng: activeDeliveryData.driverLocation.lng,
-                  label: activeDeliveryData.driver?.name || "Driver",
-                  icon: "driver",
-                }}
-                pickupLocation={{
-                  lat: activeDeliveryData.restaurant.location.lat,
-                  lng: activeDeliveryData.restaurant.location.lng,
-                  label: activeDeliveryData.restaurant.name,
-                  icon: "restaurant",
-                }}
-                dropoffLocation={{
-                  lat: activeDeliveryData.customer.location.lat,
-                  lng: activeDeliveryData.customer.location.lng,
-                  label: activeDeliveryData.customer.name,
-                  icon: "customer",
-                }}
-                className="h-[400px]"
-                enableLiveTracking={Boolean(activeDeliveryData.driver) && 
-                  ["ACCEPTED", "IN_PROGRESS"].includes(activeDeliveryData.status)}
-                driverId={activeDeliveryData.driver?.vehicle.split('(')[1]?.split(')')[0] || undefined}
-              />
-
               <DeliveryTimeline status={activeDeliveryData.status} timestamps={activeDeliveryData.timestamps} />
 
               <div className="flex flex-wrap gap-2">

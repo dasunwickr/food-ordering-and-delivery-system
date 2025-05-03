@@ -197,80 +197,146 @@ export const getDeliveryWithOrderDetailsAndDriverInfo = async (deliveryId: strin
       throw new Error('Invalid delivery ID: Cannot fetch delivery details with undefined ID');
     }
     
-    // First get the basic delivery and order details
-    const deliveryData = await getDeliveryWithOrderDetails(deliveryId);
-    
-    // Default response without driver info
-    const response: { 
-      delivery: IDelivery; 
-      order: OrderDetails;
-      driverLocation?: { lat: number; lng: number };
-      vehicleDetails?: { type?: string; vehicleNumber?: string };
-    } = {
-      delivery: deliveryData.delivery,
-      order: deliveryData.order
+    // Default response structure with minimal data to prevent crashes
+    const defaultResponse = {
+      delivery: {
+        _id: deliveryId,
+        orderId: '',
+        status: 'PENDING' as keyof DeliveryStatus
+      },
+      order: {
+        customerId: '',
+        restaurantId: '',
+        orderStatus: 'Pending'
+      }
     };
     
-    // Check if order has driver details (from order service database)
-    if (deliveryData.order.driverDetails?.driverId) {
-      // Use driver location from order service if available
-      if (deliveryData.order.driverDetails.latitude && deliveryData.order.driverDetails.longitude) {
-        response.driverLocation = {
-          lat: deliveryData.order.driverDetails.latitude,
-          lng: deliveryData.order.driverDetails.longitude
-        };
-      }
+    // Try to get the basic delivery and order details
+    try {
+      const deliveryData = await getDeliveryWithOrderDetails(deliveryId);
       
-      // Create vehicle details from order data
-      if (deliveryData.order.driverDetails.vehicleNumber) {
-        response.vehicleDetails = {
-          vehicleNumber: deliveryData.order.driverDetails.vehicleNumber
-        };
-      }
+      // Build response with driver info
+      const response: { 
+        delivery: IDelivery; 
+        order: OrderDetails;
+        driverLocation?: { lat: number; lng: number };
+        vehicleDetails?: { type?: string; vehicleNumber?: string };
+      } = {
+        delivery: deliveryData.delivery,
+        order: deliveryData.order
+      };
       
-      try {
-        // Also try to get current live location from driver service
-        const driverLocation = await userService.getDriverCurrentLocation(deliveryData.order.driverDetails.driverId);
-        if (driverLocation) {
-          response.driverLocation = driverLocation;
+      // Check if order has driver details (from order service database)
+      if (deliveryData.order?.driverDetails?.driverId) {
+        // Use driver location from order service if available
+        if (deliveryData.order.driverDetails.latitude && deliveryData.order.driverDetails.longitude) {
+          response.driverLocation = {
+            lat: deliveryData.order.driverDetails.latitude,
+            lng: deliveryData.order.driverDetails.longitude
+          };
         }
         
-        // Get additional vehicle details if not in the order
-        if (!response.vehicleDetails?.vehicleNumber) {
-          const vehicleDetails = await userService.getDriverVehicleDetails(deliveryData.order.driverDetails.driverId);
+        // Create vehicle details from order data
+        if (deliveryData.order.driverDetails.vehicleNumber) {
+          response.vehicleDetails = {
+            vehicleNumber: deliveryData.order.driverDetails.vehicleNumber
+          };
+        }
+        
+        try {
+          // Also try to get current live location from driver service
+          const driverLocation = await userService.getDriverCurrentLocation(deliveryData.order.driverDetails.driverId);
+          if (driverLocation) {
+            response.driverLocation = driverLocation;
+          }
+          
+          // Get additional vehicle details if not in the order
+          if (!response.vehicleDetails?.vehicleNumber) {
+            const vehicleDetails = await userService.getDriverVehicleDetails(deliveryData.order.driverDetails.driverId);
+            if (vehicleDetails) {
+              response.vehicleDetails = vehicleDetails;
+            }
+          }
+        } catch (driverInfoError) {
+          console.error('Error fetching driver information:', driverInfoError);
+          // Continue without driver info if fetching fails
+        }
+      }
+      // If order doesn't have driver details but delivery has driverId, try to use that
+      else if (deliveryData.delivery?.driverId) {
+        try {
+          // Get the driver's current location
+          const driverLocation = await userService.getDriverCurrentLocation(deliveryData.delivery.driverId);
+          if (driverLocation) {
+            response.driverLocation = driverLocation;
+          }
+          
+          // Get the driver's vehicle details
+          const vehicleDetails = await userService.getDriverVehicleDetails(deliveryData.delivery.driverId);
           if (vehicleDetails) {
             response.vehicleDetails = vehicleDetails;
           }
+        } catch (driverInfoError) {
+          console.error('Error fetching driver information:', driverInfoError);
+          // Continue without driver info if fetching fails
         }
-      } catch (driverInfoError) {
-        console.error('Error fetching driver information:', driverInfoError);
-        // Continue without driver info if fetching fails
       }
-    }
-    // If order doesn't have driver details but delivery has driverId, try to use that
-    else if (deliveryData.delivery.driverId) {
+      
+      return response;
+    } catch (detailsError) {
+      console.error(`Error in getDeliveryWithOrderDetails for ID ${deliveryId}:`, detailsError);
+      
+      // Try fallback approach - get basic delivery and order separately
       try {
-        // Get the driver's current location
-        const driverLocation = await userService.getDriverCurrentLocation(deliveryData.delivery.driverId);
-        if (driverLocation) {
-          response.driverLocation = driverLocation;
-        }
+        // Try to get just the delivery first
+        const delivery = await getDeliveryById(deliveryId);
         
-        // Get the driver's vehicle details
-        const vehicleDetails = await userService.getDriverVehicleDetails(deliveryData.delivery.driverId);
-        if (vehicleDetails) {
-          response.vehicleDetails = vehicleDetails;
+        // If we have a delivery with an orderId, try to get the order directly
+        if (delivery && delivery.orderId) {
+          try {
+            const orderResponse = await api.get(`/order-service/orders/${delivery.orderId}`);
+            if (orderResponse.data) {
+              // Type assertion or type checking for the response data
+              const responseData = orderResponse.data as Record<string, unknown>;
+              // Ensure the response has the required properties for OrderDetails
+              const orderData: OrderDetails = {
+                customerId: (responseData.customerId as string) || '',
+                restaurantId: (responseData.restaurantId as string) || '',
+                ...responseData
+              };
+              return {
+                delivery,
+                order: orderData
+              };
+            }
+          } catch (orderError) {
+            console.error(`Error fetching order for delivery ${deliveryId}:`, orderError);
+          }
         }
-      } catch (driverInfoError) {
-        console.error('Error fetching driver information:', driverInfoError);
-        // Continue without driver info if fetching fails
+      } catch (deliveryError) {
+        console.error(`Error fetching delivery ${deliveryId}:`, deliveryError);
       }
+      
+      // If all attempts fail, return the default empty response 
+      // to prevent UI crashes
+      return defaultResponse;
     }
-    
-    return response;
   } catch (error) {
     console.error('Failed to fetch delivery with enhanced driver details:', error);
-    throw new Error('Failed to fetch delivery with enhanced driver details');
+    
+    // Return a minimal response with the ID to prevent UI crashes
+    return {
+      delivery: {
+        _id: deliveryId,
+        orderId: '',
+        status: 'PENDING' as keyof DeliveryStatus
+      },
+      order: {
+        customerId: '',
+        restaurantId: '',
+        orderStatus: 'Pending'
+      }
+    };
   }
 };
 
