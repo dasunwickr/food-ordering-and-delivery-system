@@ -139,7 +139,7 @@ export const assignDriverToDelivery = async (
       const updatedDelivery = await delivery.save();
       
       // Update the order status in the order-service db
-      const order = await Order.findOne({ orderId: orderId });
+      const order = await Order.findOne({ _id: orderId });
       if (order) {
         // Update order with driver details
         if (!order.driverDetails) {
@@ -172,7 +172,7 @@ export const assignDriverToDelivery = async (
     }
     
     // If delivery not found, check if we have a synthetic delivery from order
-    const order = await Order.findOne({ orderId: orderId });
+    const order = await Order.findOne({ _id: orderId });
     if (!order) {
       throw new Error("Order not found");
     }
@@ -246,7 +246,8 @@ function toDeliveryData(doc: IDelivery | any): IDeliveryData {
     data._id = data._id.toString();
   } else if (!data._id) {
     // Generate a placeholder ID if none exists
-    data._id = `generated-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+    // data._id = `generated-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+    console.trace('Warning: Delivery data has no _id field', data);
   }
   
   return data;
@@ -270,7 +271,7 @@ export const getAllDeliveries = async (): Promise<IDeliveryData[]> => {
     // Map order data to delivery format for any missing deliveries
     const deliveryOrderIds = deliveries.map(d => d.orderId);
     const missingDeliveries: IDeliveryData[] = orders
-      .filter(order => order.orderId && !deliveryOrderIds.includes(order.orderId))
+      .filter(order => order._id && !deliveryOrderIds.includes(order._id))
       .map(order => {
         // Map the order status to delivery status
         let status = "PENDING";
@@ -283,8 +284,8 @@ export const getAllDeliveries = async (): Promise<IDeliveryData[]> => {
         }
         
         return {
-          _id: `generated-${order.orderId}`,
-          orderId: order.orderId,
+          _id : order._id ,
+          orderId: order._id,
           driverId: order.driverDetails?.driverId,
           status,
           createdAt: order.createdAt,
@@ -322,7 +323,7 @@ export const getDeliveriesByCustomerId = async (
     }
     
     // Extract orderIds
-    const orderIds = orders.map(order => order.orderId);
+    const orderIds = orders.map(order => order._id);
     
     // Find existing deliveries with these orderIds
     const existingDeliveries = await Delivery.find({ orderId: { $in: orderIds } });
@@ -330,7 +331,7 @@ export const getDeliveriesByCustomerId = async (
     // For any orders without deliveries, create delivery-like objects
     const existingDeliveryOrderIds = existingDeliveries.map(d => d.orderId);
     const missingDeliveries: IDeliveryData[] = orders
-      .filter(order => !existingDeliveryOrderIds.includes(order.orderId))
+      .filter(order => !existingDeliveryOrderIds.includes(order._id))
       .map(order => {
         // Map the order status to delivery status
         let status = "PENDING";
@@ -342,8 +343,8 @@ export const getDeliveriesByCustomerId = async (
         }
         
         return {
-          _id: `generated-${order.orderId}`,
-          orderId: order.orderId,
+          _id: `generated-${order._id}`,
+          orderId: order._id,
           driverId: order.driverDetails?.driverId,
           status,
           createdAt: order.createdAt,
@@ -416,7 +417,7 @@ export const getDeliveriesByDriverId = async (
     console.log('Order IDs assigned to this driver:', orders.map(o => o.orderId));
     
     // Extract orderIds
-    const orderIds = orders.map(order => order.orderId);
+    const orderIds = orders.map(order => order._id);
     
     // Find existing deliveries with these orderIds
     existingDeliveries = await Delivery.find({ orderId: { $in: orderIds } });
@@ -424,7 +425,7 @@ export const getDeliveriesByDriverId = async (
     // For any orders without deliveries, create delivery-like objects
     const existingDeliveryOrderIds = existingDeliveries.map(d => d.orderId);
     const missingDeliveries: IDeliveryData[] = orders
-      .filter(order => !existingDeliveryOrderIds.includes(order.orderId))
+      .filter(order => !existingDeliveryOrderIds.includes(order._id))
       .map(order => {
         // Map the order status to delivery status
         let status = "PENDING";
@@ -436,8 +437,8 @@ export const getDeliveriesByDriverId = async (
         }
         
         return {
-          _id: `generated-${order.orderId}`,
-          orderId: order.orderId,
+          _id: `generated-${order._id}`,
+          orderId: order._id,
           driverId: order.driverDetails?.driverId,
           status,
           createdAt: order.createdAt,
@@ -503,8 +504,8 @@ export const getDeliveriesByRestaurantId = async (
     
     // Extract orderIds - ensure they are valid
     const orderIds = orders
-      .filter(order => order.orderId && order.orderId !== 'undefined')
-      .map(order => order.orderId);
+      .filter(order => order._id && order._id !== 'undefined')
+      .map(order => order._id);
     
     console.log(`Found ${orderIds.length} valid order IDs`);
     
@@ -514,7 +515,7 @@ export const getDeliveriesByRestaurantId = async (
     // For any orders without deliveries, create delivery-like objects
     const existingDeliveryOrderIds = existingDeliveries.map(d => d.orderId);
     const missingDeliveries: IDeliveryData[] = orders
-      .filter(order => order.orderId && order.orderId !== 'undefined' && !existingDeliveryOrderIds.includes(order.orderId))
+      .filter(order => order._id && order._id !== 'undefined' && !existingDeliveryOrderIds.includes(order._id))
       .map(order => {
         // Map the order status to delivery status
         let status = "PENDING";
@@ -526,8 +527,8 @@ export const getDeliveriesByRestaurantId = async (
         }
         
         return {
-          _id: `generated-${order.orderId}`,
-          orderId: order.orderId,
+          _id: `generated-${order._id}`,
+          orderId: order._id,
           driverId: order.driverDetails?.driverId,
           status,
           createdAt: order.createdAt,
@@ -589,8 +590,8 @@ export const getDeliveryById = async (
       
       // Return a delivery-like object
       return {
-        _id: `generated-${order.orderId}`,
-        orderId: order.orderId,
+        _id: `generated-${order._id}`,
+        orderId: order._id,
         driverId: order.driverDetails?.driverId,
         status,
         createdAt: order.createdAt,
@@ -625,7 +626,7 @@ export const getDeliveryWithOrderDetails = async (
       }
       
       // Get the order first
-      const order = await Order.findOne({ orderId });
+      const order = await Order.findOne({ _id:orderId });
       if (!order) {
         throw new Error("Associated order not found");
       }
@@ -640,8 +641,8 @@ export const getDeliveryWithOrderDetails = async (
       }
       
       delivery = {
-        _id: `generated-${order.orderId}`,
-        orderId: order.orderId,
+        _id: `generated-${order._id}`,
+        orderId: order._id,
         driverId: order.driverDetails?.driverId,
         status,
         createdAt: order.createdAt,
@@ -663,7 +664,7 @@ export const getDeliveryWithOrderDetails = async (
     }
     
     // Find the corresponding order from order service DB
-    const order = await Order.findOne({ orderId });
+    const order = await Order.findOne({ _id: orderId });
     if (!order) {
       throw new Error("Associated order not found");
     }
@@ -694,7 +695,7 @@ export const updateDelivery = async (
       
       // Create a new delivery record for this order
       const deliveryRecord = new Delivery({
-        orderId: order.orderId,
+        orderId: order._id,
         driverId: order.driverDetails?.driverId || updateData.driverId,
         status: updateData.status || "PENDING",
         acceptedAt: updateData.acceptedAt,
