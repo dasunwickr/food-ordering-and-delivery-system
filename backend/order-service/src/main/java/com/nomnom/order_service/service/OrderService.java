@@ -43,19 +43,25 @@ public class OrderService implements IOrderService {
     @Override
     public OrderDTO createOrder(CreateOrderRequest request) {
         try {
-            // Fetch cart items from Cart Service
-            String cartUrl = cartServiceUrl + "/" + request.getCustomerId() + "/" + request.getRestaurantId();
+            // Construct cart URL properly
+            String cartUrl = String.format("%s/%s/%s", cartServiceUrl, request.getCustomerId(), request.getRestaurantId());
             System.out.println("Attempting to fetch cart from URL: " + cartUrl);
             
             ResponseEntity<CartDTO> response;
             try {
                 response = restTemplate.getForEntity(cartUrl, CartDTO.class);
+                System.out.println("Cart service response status: " + response.getStatusCode());
             } catch (Exception e) {
                 System.err.println("Failed to connect to Cart Service: " + e.getMessage());
-                throw new RuntimeException("Failed to connect to Cart Service: " + e.getMessage());
+                e.printStackTrace();
+                throw new RuntimeException("Failed to connect to Cart Service. Please try again later.", e);
             }
             
-            if (response.getBody() == null || response.getBody().getItems().isEmpty()) {
+            if (response.getBody() == null) {
+                throw new RuntimeException("Cart is empty or not found");
+            }
+
+            if (response.getBody().getItems() == null || response.getBody().getItems().isEmpty()) {
                 throw new RuntimeException("Cart is empty");
             }
             CartDTO cartDTO = response.getBody();
@@ -90,7 +96,7 @@ public class OrderService implements IOrderService {
             order.setDeliveryFee(5.0); // Example fixed delivery fee
             order.setTotalAmount(orderTotal + 5.0);
             order.setPaymentType(request.getPaymentType());
-            order.setOrderStatus("Pending");
+            order.setOrderStatus(Order.OrderStatus.PENDING.toString());
 
             // Map driver details
             if (request.getDriverDetails() != null) {
@@ -139,18 +145,17 @@ public class OrderService implements IOrderService {
                 .bodyToMono(Void.class)
                 .doOnSuccess(result -> {
                     System.out.println("Successfully created delivery for order: " + orderId);
-                    // Update order status to "Pending Delivery" to indicate it's ready for a driver pickup
-                    updateOrderStatus(orderId, "Pending Delivery");
+                    updateOrderStatus(orderId, Order.OrderStatus.PENDING_DELIVERY.toString());
                 })
                 .doOnError(error -> {
                     System.err.println("Failed to create delivery record: " + error.getMessage());
-                    updateOrderStatus(orderId, "Delivery Assignment Failed");
+                    updateOrderStatus(orderId, Order.OrderStatus.DELIVERY_ASSIGNMENT_FAILED.toString());
                 })
                 .block();
         } catch (Exception e) {
             System.err.println("Failed to create delivery record: " + e.getMessage());
             e.printStackTrace();
-            updateOrderStatus(orderId, "Delivery Assignment Failed");
+            updateOrderStatus(orderId, Order.OrderStatus.DELIVERY_ASSIGNMENT_FAILED.toString());
         }
     }
 
@@ -225,7 +230,9 @@ public class OrderService implements IOrderService {
     public void updateOrderStatus(String orderId, String status) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Order not found"));
-        order.setOrderStatus(status);
+        // Validate and convert the status string to enum
+        Order.OrderStatus orderStatus = Order.OrderStatus.fromString(status);
+        order.setOrderStatus(orderStatus.toString());
         order.setUpdatedAt(new Date());
         orderRepository.save(order);
     }
@@ -248,10 +255,10 @@ public class OrderService implements IOrderService {
     public void cancelOrder(String orderId) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Order not found"));
-        if (!order.getOrderStatus().equals("Pending")) {
+        if (!order.getOrderStatus().equals(Order.OrderStatus.PENDING.toString())) {
             throw new RuntimeException("Cannot cancel an order that is not Pending");
         }
-        order.setOrderStatus("Cancelled");
+        order.setOrderStatus(Order.OrderStatus.CANCELLED.toString());
         order.setUpdatedAt(new Date());
         orderRepository.save(order);
     }
@@ -265,7 +272,7 @@ public class OrderService implements IOrderService {
                 request.getDriverName(),
                 request.getVehicleNumber()
         ));
-        order.setOrderStatus("Out for Delivery");
+        order.setOrderStatus(Order.OrderStatus.OUT_FOR_DELIVERY.toString());
         order.setUpdatedAt(new Date());
         orderRepository.save(order);
     }
