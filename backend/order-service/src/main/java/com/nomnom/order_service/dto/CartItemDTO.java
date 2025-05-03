@@ -1,5 +1,6 @@
 package com.nomnom.order_service.dto;
 
+import com.nomnom.order_service.shared.enums.PotionSize;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -14,10 +15,5 @@ public class CartItemDTO {
     private PotionSize potionSize;
     private double price;
     private double totalPrice;
-    private String image; // New field
-
-    // Enum for PotionSize
-    public enum PotionSize {
-        Small, Medium, Large
-    }
+    private String image;
 }

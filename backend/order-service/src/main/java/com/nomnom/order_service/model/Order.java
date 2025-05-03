@@ -13,6 +13,35 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 public class Order {
+    public enum OrderStatus {
+        PENDING("Pending"),
+        PENDING_DELIVERY("Pending Delivery"),
+        OUT_FOR_DELIVERY("Out for Delivery"),
+        DELIVERED("Delivered"),
+        CANCELLED("Cancelled"),
+        DELIVERY_ASSIGNMENT_FAILED("Delivery Assignment Failed");
+
+        private final String status;
+
+        OrderStatus(String status) {
+            this.status = status;
+        }
+
+        @Override
+        public String toString() {
+            return status;
+        }
+
+        public static OrderStatus fromString(String status) {
+            for (OrderStatus orderStatus : OrderStatus.values()) {
+                if (orderStatus.status.equalsIgnoreCase(status)) {
+                    return orderStatus;
+                }
+            }
+            throw new IllegalArgumentException("Invalid order status: " + status);
+        }
+    }
+
     @Id
     private String orderId;
     private String customerId;
