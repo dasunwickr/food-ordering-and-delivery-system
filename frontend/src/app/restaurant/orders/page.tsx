@@ -1,7 +1,20 @@
 "use client";
-
 import React, { useEffect, useState, useMemo } from "react";
-import { Search, Filter, Check, X, ChevronDown, Loader2, Clock, Package, Truck, CreditCard, MapPin, Phone, User } from "lucide-react";
+import {
+  Search,
+  Filter,
+  Check,
+  X,
+  ChevronDown,
+  Loader2,
+  Clock,
+  Package,
+  Truck,
+  CreditCard,
+  MapPin,
+  Phone,
+  User,
+} from "lucide-react";
 
 // Define types for the Order data structure
 interface CartItem {
@@ -59,7 +72,6 @@ const StatusBadge = ({ status }: { status: string }) => {
         return "bg-gray-100 text-gray-800 border-gray-200";
     }
   };
-
   const getStatusIcon = () => {
     switch (status) {
       case "Pending":
@@ -74,9 +86,10 @@ const StatusBadge = ({ status }: { status: string }) => {
         return null;
     }
   };
-
   return (
-    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${getStatusStyles()}`}>
+    <span
+      className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${getStatusStyles()}`}
+    >
       {getStatusIcon()}
       {status}
     </span>
@@ -90,9 +103,12 @@ const OrdersPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
-  const [sortBy, setSortBy] = useState<"newest" | "oldest" | "amount">("newest");
+  const [sortBy, setSortBy] = useState<"newest" | "oldest" | "amount" | "my-orders">("newest");
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
   const [processingOrderId, setProcessingOrderId] = useState<string | null>(null);
+
+  // Get restaurantId from localStorage
+  const restaurantIdFromStorage = typeof window !== 'undefined' ? localStorage.getItem("userId") : null;
 
   // Fetch all orders from the backend
   useEffect(() => {
@@ -105,11 +121,9 @@ const OrdersPage = () => {
             "Content-Type": "application/json",
           },
         });
-
         if (!response.ok) {
           throw new Error(`HTTP error! Status: ${response.status}`);
         }
-
         const data: Order[] = await response.json();
         setOrders(data);
       } catch (err) {
@@ -119,16 +133,15 @@ const OrdersPage = () => {
         setLoading(false);
       }
     };
-
     fetchOrders();
   }, []);
 
-  // Function to update the order status
+  // Update order status
   const updateOrderStatus = async (orderId: string, status: string) => {
     try {
       setProcessingOrderId(orderId);
       const response = await fetch(
-        `http://localhost:9090/api/order/update-status/${orderId}?status=${status}`,
+        `http://localhost/api/order-service/order/update-status/${orderId}?status=${status}`,
         {
           method: "PUT",
           headers: {
@@ -136,12 +149,9 @@ const OrdersPage = () => {
           },
         }
       );
-
       if (!response.ok) {
         throw new Error(`HTTP error! Status: ${response.status}`);
       }
-
-      // Update the local state after successful status update
       setOrders((prevOrders) =>
         prevOrders.map((order) =>
           order.orderId === orderId ? { ...order, orderStatus: status } : order
@@ -158,9 +168,9 @@ const OrdersPage = () => {
   // Format date from ISO string
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return new Intl.DateTimeFormat('en-US', { 
-      dateStyle: 'medium', 
-      timeStyle: 'short' 
+    return new Intl.DateTimeFormat("en-US", {
+      dateStyle: "medium",
+      timeStyle: "short",
     }).format(date);
   };
 
@@ -172,7 +182,7 @@ const OrdersPage = () => {
   // Filter and sort orders
   const filteredOrders = useMemo(() => {
     let result = [...orders];
-    
+
     // Apply search filter
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
@@ -183,12 +193,12 @@ const OrdersPage = () => {
           order.customerDetails.contact.includes(term)
       );
     }
-    
+
     // Apply status filter
     if (statusFilter) {
       result = result.filter((order) => order.orderStatus === statusFilter);
     }
-    
+
     // Apply sorting
     result.sort((a, b) => {
       if (sortBy === "newest") {
@@ -197,20 +207,26 @@ const OrdersPage = () => {
         return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
       } else if (sortBy === "amount") {
         return b.totalAmount - a.totalAmount;
+      } else if (sortBy === "my-orders") {
+        // Show orders of current restaurant first
+        const aMatch = a.restaurantId === restaurantIdFromStorage;
+        const bMatch = b.restaurantId === restaurantIdFromStorage;
+        if (aMatch && !bMatch) return -1;
+        if (!aMatch && bMatch) return 1;
+        return 0;
       }
       return 0;
     });
-    
+
     return result;
-  }, [orders, searchTerm, statusFilter, sortBy]);
+  }, [orders, searchTerm, statusFilter, sortBy, restaurantIdFromStorage]);
 
   // Calculate statistics
   const stats = useMemo(() => {
-    const pending = orders.filter(order => order.orderStatus === "Pending").length;
-    const accepted = orders.filter(order => order.orderStatus === "ACCEPTED").length;
-    const rejected = orders.filter(order => order.orderStatus === "REJECTED").length;
+    const pending = orders.filter((order) => order.orderStatus === "Pending").length;
+    const accepted = orders.filter((order) => order.orderStatus === "ACCEPTED").length;
+    const rejected = orders.filter((order) => order.orderStatus === "REJECTED").length;
     const total = orders.length;
-    
     return { pending, accepted, rejected, total };
   }, [orders]);
 
@@ -233,7 +249,7 @@ const OrdersPage = () => {
         <div className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-lg">
           <h3 className="text-red-800 font-medium text-lg mb-2">Error</h3>
           <p className="text-red-600">{error}</p>
-          <button 
+          <button
             className="mt-4 px-4 py-2 bg-red-100 text-red-800 rounded-md hover:bg-red-200"
             onClick={() => window.location.reload()}
           >
@@ -297,7 +313,6 @@ const OrdersPage = () => {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          
           <div className="relative">
             <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
             <select
@@ -312,17 +327,17 @@ const OrdersPage = () => {
             </select>
             <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
           </div>
-          
           <div className="relative">
             <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
             <select
               className="pl-10 pr-4 py-2 border border-gray-300 rounded-md w-full focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent appearance-none"
               value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as "newest" | "oldest" | "amount")}
+              onChange={(e) => setSortBy(e.target.value as "newest" | "oldest" | "amount" | "my-orders")}
             >
               <option value="newest">Newest First</option>
               <option value="oldest">Oldest First</option>
               <option value="amount">Amount (High to Low)</option>
+              <option value="my-orders">My Restaurant's Orders</option>
             </select>
             <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
           </div>
@@ -342,7 +357,7 @@ const OrdersPage = () => {
             className="bg-white shadow rounded-lg overflow-hidden border border-gray-100"
           >
             {/* Order header */}
-            <div 
+            <div
               className="flex flex-col md:flex-row md:items-center justify-between p-4 cursor-pointer hover:bg-gray-50"
               onClick={() => toggleOrderDetails(order.orderId)}
             >
@@ -357,7 +372,6 @@ const OrdersPage = () => {
                   <span className="text-gray-700">{order.customerDetails.name}</span>
                 </div>
               </div>
-              
               <div className="flex flex-col md:flex-row md:items-center space-y-2 md:space-y-0 md:space-x-6 mt-2 md:mt-0">
                 <div className="flex items-center space-x-2">
                   <CreditCard className="text-gray-400" size={16} />
@@ -367,13 +381,15 @@ const OrdersPage = () => {
                   <Clock className="text-gray-400" size={16} />
                   <span className="text-gray-700 text-sm">{formatDate(order.createdAt)}</span>
                 </div>
-                <ChevronDown 
-                  className={`text-gray-400 transition-transform ${expandedOrderId === order.orderId ? 'rotate-180' : ''}`} 
-                  size={18} 
+                <ChevronDown
+                  className={`text-gray-400 transition-transform ${
+                    expandedOrderId === order.orderId ? "rotate-180" : ""
+                  }`}
+                  size={18}
                 />
               </div>
             </div>
-            
+
             {/* Order details (expanded) */}
             {expandedOrderId === order.orderId && (
               <div className="border-t border-gray-100 p-4">
@@ -393,12 +409,13 @@ const OrdersPage = () => {
                       <div className="flex items-start space-x-2">
                         <MapPin className="text-gray-400 mt-0.5" size={16} />
                         <span className="text-gray-700">
-                          Location: {order.customerDetails.latitude.toFixed(4)}, {order.customerDetails.longitude.toFixed(4)}
+                          Location: {order.customerDetails.latitude.toFixed(4)},{" "}
+                          {order.customerDetails.longitude.toFixed(4)}
                         </span>
                       </div>
                     </div>
                   </div>
-                  
+
                   {/* Order information */}
                   <div>
                     <h3 className="text-sm font-medium text-gray-500 mb-3">Order Information</h3>
@@ -410,7 +427,7 @@ const OrdersPage = () => {
                       <div className="flex items-start space-x-2">
                         <Truck className="text-gray-400 mt-0.5" size={16} />
                         <span className="text-gray-700">
-                          {order.driverDetails ? `Driver: ${order.driverDetails.driverName}` : 'No driver assigned'}
+                          {order.driverDetails ? `Driver: ${order.driverDetails.driverName}` : "No driver assigned"}
                         </span>
                       </div>
                       <div className="flex justify-between text-sm">
@@ -428,7 +445,7 @@ const OrdersPage = () => {
                     </div>
                   </div>
                 </div>
-                
+
                 {/* Order items */}
                 <div className="mt-6">
                   <h3 className="text-sm font-medium text-gray-500 mb-3">Order Items</h3>
@@ -456,28 +473,18 @@ const OrdersPage = () => {
                       <tbody className="bg-white divide-y divide-gray-200">
                         {order.cartItems.map((item, index) => (
                           <tr key={index} className="hover:bg-gray-50">
-                            <td className="px-4 py-3 text-sm text-gray-900">
-                              {item.itemName}
-                            </td>
-                            <td className="px-4 py-3 text-sm text-gray-500 text-center">
-                              {item.potionSize}
-                            </td>
-                            <td className="px-4 py-3 text-sm text-gray-500 text-center">
-                              {item.quantity}
-                            </td>
-                            <td className="px-4 py-3 text-sm text-gray-500 text-right">
-                              ${item.price.toFixed(2)}
-                            </td>
-                            <td className="px-4 py-3 text-sm font-medium text-gray-900 text-right">
-                              ${item.totalPrice.toFixed(2)}
-                            </td>
+                            <td className="px-4 py-3 text-sm text-gray-900">{item.itemName}</td>
+                            <td className="px-4 py-3 text-sm text-gray-500 text-center">{item.potionSize}</td>
+                            <td className="px-4 py-3 text-sm text-gray-500 text-center">{item.quantity}</td>
+                            <td className="px-4 py-3 text-sm text-gray-500 text-right">${item.price.toFixed(2)}</td>
+                            <td className="px-4 py-3 text-sm font-medium text-gray-900 text-right">${item.totalPrice.toFixed(2)}</td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
                   </div>
                 </div>
-                
+
                 {/* Action buttons */}
                 {order.orderStatus === "Pending" && (
                   <div className="mt-6 flex justify-end space-x-3">
