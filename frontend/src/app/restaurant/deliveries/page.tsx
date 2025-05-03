@@ -11,7 +11,7 @@ import { Loader2, Search } from "lucide-react"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { DeliveryMap } from "@/components/ui/delivery-map"
 import { getLocalStorageItem } from "@/utils/storage"
-import { getDeliveriesByRestaurantId, getDeliveryWithOrderDetailsAndDriverInfo, IDelivery } from "@/services/delivery-service"
+import { getDeliveriesByRestaurantId, getDeliveryWithOrderDetailsAndDriverInfo, IDelivery, updateDelivery } from "@/services/delivery-service"
 import { userService, User, RestaurantUser as RestaurantUserType, DriverUser } from "@/services/user-service"
 import { toast } from "sonner"
 
@@ -63,6 +63,7 @@ interface FormattedDelivery {
     location: { lat: number; lng: number };
   };
   driver?: {
+    driverId: string;
     name: string;
     phone: string;
     vehicle: string;
@@ -140,33 +141,38 @@ export default function RestaurantDeliveriesPage() {
               const orderDetails = await getDeliveryWithOrderDetailsAndDriverInfo(delivery._id || "")
               
               // Get restaurant info
-              const restaurant = await userService.getUserById(restaurantId) as RestaurantUserType
-              if (restaurant) {
-                restaurantInfo = {
-                  name: restaurant.restaurantName || `${restaurant.firstName} ${restaurant.lastName}'s Restaurant`,
-                  address: restaurant.restaurantAddress || "Address not available",
-                  phone: restaurant.phone || "Phone not available",
-                  location: (() => {
-                    if (!restaurant.location) {
-                      return { lat: 40.7128, lng: -74.006 }; // Default location
-                    }
-                    // Check if location already has lat/lng format
-                    if ('lat' in restaurant.location && 'lng' in restaurant.location) {
-                      return {
-                        lat: Number(restaurant.location.lat),
-                        lng: Number(restaurant.location.lng)
-                      };
-                    }
-                    // Check if location has x/y format
-                    if ('x' in restaurant.location && 'y' in restaurant.location) {
-                      return {
-                        lat: Number(restaurant.location.y), // y coordinate maps to latitude
-                        lng: Number(restaurant.location.x)  // x coordinate maps to longitude
-                      };
-                    }
-                    return { lat: 40.7128, lng: -74.006 }; // Fallback default location
-                  })(),
+              try {
+                const restaurant = await userService.getUserById(restaurantId) as RestaurantUserType
+                if (restaurant) {
+                  restaurantInfo = {
+                    name: restaurant.restaurantName || `${restaurant.firstName} ${restaurant.lastName}'s Restaurant`,
+                    address: restaurant.restaurantAddress || "Address not available",
+                    phone: restaurant.phone || "Phone not available",
+                    location: (() => {
+                      if (!restaurant.location) {
+                        return { lat: 40.7128, lng: -74.006 }; // Default location
+                      }
+                      // Check if location already has lat/lng format
+                      if ('lat' in restaurant.location && 'lng' in restaurant.location) {
+                        return {
+                          lat: Number(restaurant.location.lat),
+                          lng: Number(restaurant.location.lng)
+                        };
+                      }
+                      // Check if location has x/y format
+                      if ('x' in restaurant.location && 'y' in restaurant.location) {
+                        return {
+                          lat: Number(restaurant.location.y), // y coordinate maps to latitude
+                          lng: Number(restaurant.location.x)  // x coordinate maps to longitude
+                        };
+                      }
+                      return { lat: 40.7128, lng: -74.006 }; // Fallback default location
+                    })(),
+                  }
                 }
+              } catch (restaurantError) {
+                console.error("Error fetching restaurant details:", restaurantError);
+                // Continue with default restaurant info
               }
               
               // Get order details to fetch customer and items
@@ -175,17 +181,22 @@ export default function RestaurantDeliveriesPage() {
                 
                 // Get customer info
                 if (order.customerId) {
-                  const customer = await userService.getUserById(order.customerId)
-                  if (customer) {
-                    customerInfo = {
-                      name: `${customer.firstName} ${customer.lastName}`,
-                      address: order.customerDetails?.address || "Customer Address",
-                      phone: customer.phone || "Phone not available",
-                      location: { 
-                        lat: order.customerDetails?.latitude || 40.7282, 
-                        lng: order.customerDetails?.longitude || -73.9942 
-                      },
+                  try {
+                    const customer = await userService.getUserById(order.customerId)
+                    if (customer) {
+                      customerInfo = {
+                        name: `${customer.firstName} ${customer.lastName}`,
+                        address: order.customerDetails?.address || "Customer Address",
+                        phone: customer.phone || "Phone not available",
+                        location: { 
+                          lat: order.customerDetails?.latitude || 40.7282, 
+                          lng: order.customerDetails?.longitude || -73.9942 
+                        },
+                      }
                     }
+                  } catch (customerError) {
+                    console.error("Error fetching customer details:", customerError);
+                    // Continue with default or order-provided customer info
                   }
                 }
                 
@@ -215,20 +226,61 @@ export default function RestaurantDeliveriesPage() {
               
               // Get driver info if assigned
               if (delivery.driverId) {
-                const driver = await userService.getUserById(delivery.driverId) as DriverUser
-                if (driver) {
-                  driverInfo = {
-                    name: `${driver.firstName} ${driver.lastName}`,
-                    phone: driver.phone || "Phone not available",
-                    vehicle: driver.vehicleNumber || "Vehicle Info",
+                console.log(`Fetching driver info for ID: ${delivery.driverId}`);
+                try {
+                  const driver = await userService.getUserById(delivery.driverId) as DriverUser;
+                  if (driver) {
+                    driverInfo = {
+                      driverId: driver.id,
+                      name: `${driver.firstName} ${driver.lastName}`,
+                      phone: driver.phone || "Phone not available",
+                      vehicle: driver.vehicleNumber || "Vehicle Info",
+                    };
+                    console.log(`Retrieved driver details: ${driver.firstName} ${driver.lastName}`);
+                  } else {
+                    // Driver record exists in delivery but not in user service
+                    console.warn(`Driver with ID ${delivery.driverId} exists in delivery record but couldn't be found in user service`);
+                    driverInfo = {
+                      driverId: delivery.driverId,
+                      name: "Driver data unavailable",
+                      phone: "Phone not available",
+                      vehicle: "Vehicle information unavailable",
+                    };
                   }
+                } catch (driverError) {
+                  console.error("Error fetching driver details:", driverError);
+                  // Continue without driver info if fetching fails
+                  driverInfo = {
+                    driverId: delivery.driverId,
+                    name: "Driver information unavailable",
+                    phone: "Phone not available",
+                    vehicle: "Vehicle information unavailable",
+                  };
                 }
               }
               
               // Get driver's real-time location if available
-              let driverLocation = undefined
-              if (orderDetails.driverLocation) {
-                driverLocation = orderDetails.driverLocation
+              let driverLocation = undefined;
+              try {
+                if (orderDetails.driverLocation) {
+                  driverLocation = orderDetails.driverLocation;
+                } else if (delivery.driverId) {
+                  // Try to get location directly from driver service as fallback
+                  try {
+                    const driverLocationData = await userService.getDriverCurrentLocation(delivery.driverId);
+                    if (driverLocationData) {
+                      driverLocation = driverLocationData;
+                      console.log(`Retrieved driver location for ${delivery.driverId}:`, driverLocationData);
+                    }
+                  } catch (locError) {
+                    console.warn(`Could not get current location for driver ${delivery.driverId}:`, locError);
+                    // Use default location as fallback
+                    driverLocation = { lat: 40.7128, lng: -74.006 };
+                  }
+                }
+              } catch (locationError) {
+                console.error("Error fetching driver location:", locationError);
+                // Continue without driver location if fetching fails
               }
               
               // Calculate estimated delivery times
@@ -286,6 +338,39 @@ export default function RestaurantDeliveriesPage() {
 
   const handleViewDetails = (id: string) => {
     setActiveDelivery(id)
+  }
+
+  // New handler for the Hand to Driver button
+  const handleHandToDriver = async (deliveryId: string) => {
+    try {
+      const delivery = deliveries.find(d => d.id === deliveryId)
+      if (!delivery) {
+        throw new Error("Delivery not found")
+      }
+      
+      if (!delivery.driver) {
+        toast.error("No driver assigned to this delivery")
+        return
+      }
+      
+      // Update delivery status to IN_PROGRESS
+      await updateDelivery(deliveryId, { status: "IN_PROGRESS" })
+      
+      // Update status locally
+      setDeliveries(
+        deliveries.map((d) =>
+          d.id === deliveryId ? { ...d, status: "IN_PROGRESS" as DeliveryStatus } : d
+        ),
+      )
+      
+      toast.success(`Order handed to ${delivery.driver.name} successfully`)
+      
+      // Refresh the deliveries list
+      fetchDeliveries()
+    } catch (error) {
+      console.error("Failed to update delivery status:", error)
+      toast.error("Failed to update delivery status")
+    }
   }
 
   const filteredDeliveries = deliveries.filter(
@@ -347,25 +432,25 @@ export default function RestaurantDeliveriesPage() {
               {/* Delivery Map */}
               <DeliveryMap
                 driverLocation={{
-                  lat: activeDeliveryData.driverLocation?.lat ?? 0,
-                  lng: activeDeliveryData.driverLocation?.lng ?? 0,
+                  lat: activeDeliveryData.driverLocation?.lat || 0,
+                  lng: activeDeliveryData.driverLocation?.lng || 0,
                   label: activeDeliveryData.driver?.name || "Driver",
                   icon: "driver",
                 }}
                 pickupLocation={{
-                  lat: activeDeliveryData.restaurant.location.lat,
-                  lng: activeDeliveryData.restaurant.location.lng,
+                  lat: Number(activeDeliveryData.restaurant.location.lat) || 40.7128,
+                  lng: Number(activeDeliveryData.restaurant.location.lng) || -74.006,
                   label: activeDeliveryData.restaurant.name,
                   icon: "restaurant",
                 }}
                 dropoffLocation={{
-                  lat: activeDeliveryData.customer.location.lat,
-                  lng: activeDeliveryData.customer.location.lng,
+                  lat: Number(activeDeliveryData.customer.location.lat) || 40.7303,
+                  lng: Number(activeDeliveryData.customer.location.lng) || -74.0054,
                   label: activeDeliveryData.customer.name,
                   icon: "customer",
                 }}
                 className="h-[400px]"
-                driverId={activeDeliveryData.driver ? activeDeliveryData.orderId : undefined}
+                driverId={activeDeliveryData.driver?.driverId || undefined}
                 enableLiveTracking={Boolean(activeDeliveryData.driver) && 
                   ["ACCEPTED", "IN_PROGRESS"].includes(activeDeliveryData.status)}
               />
@@ -459,6 +544,7 @@ export default function RestaurantDeliveriesPage() {
                         createdAt={delivery.createdAt}
                         viewType="restaurant"
                         onViewDetails={handleViewDetails}
+                        onHandToDriver={handleHandToDriver}
                       />
                     ))}
                 </div>
@@ -515,6 +601,7 @@ export default function RestaurantDeliveriesPage() {
                       createdAt={delivery.createdAt}
                       viewType="restaurant"
                       onViewDetails={handleViewDetails}
+                      onHandToDriver={handleHandToDriver}
                     />
                   ))}
                 </div>

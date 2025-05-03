@@ -227,10 +227,22 @@ export const userService = {
  
   getUserById: async (id: string): Promise<User | null> => {
     try {
+      // Check if the user ID is valid
+      if (!id || typeof id !== 'string' || id.trim() === '') {
+        console.warn('Invalid user ID provided to getUserById:', id);
+        return null;
+      }
+
+      console.log(`Fetching user with ID: ${id}`);
       const response = await api.get<User>(`${USER_URL}/users/${id}`);
       return response.data;
     } catch (error: any) {
-      console.error(`Error fetching user with ID ${id}:`, error);
+      // Log the error but make it a bit quieter for 404s which are expected in some cases
+      if (error.response?.status === 404) {
+        console.warn(`User with ID ${id} not found. This is normal in some workflows.`);
+      } else {
+        console.error(`Error fetching user with ID ${id}:`, error);
+      }
       return null;
     }
   },

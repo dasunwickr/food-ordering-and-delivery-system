@@ -42,6 +42,14 @@ export function DriverLocationSharing({ driverId, deliveryId }: DriverLocationSh
           
           // Also update location in the database for persistence
           updateDriverLocation(driverId, { lat, lng })
+            .then(() => {
+              console.log("Location updated in database");
+              // If we have a deliveryId, also update the order with location info
+              if (deliveryId) {
+                // We could update the order with this location as well if needed
+                console.log(`Delivery ${deliveryId} associated with this location update`);
+              }
+            })
             .catch(err => console.error('Error updating location in database:', err));
           
           setLastUpdateTime(new Date().toLocaleTimeString())
@@ -64,7 +72,7 @@ export function DriverLocationSharing({ driverId, deliveryId }: DriverLocationSh
         maximumAge: 0
       }
     )
-  }, [driverId, isSharing, toast])
+  }, [driverId, isSharing, toast, deliveryId])
 
   // Toggle location sharing
   const toggleLocationSharing = () => {
