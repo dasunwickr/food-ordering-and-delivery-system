@@ -13,7 +13,7 @@ import { ProfileImageUploader } from "@/components/shared/profile-image-uploader
 import { ResetPasswordModal } from "@/components/user-service/profile/reset-password"
 import { getLocalStorageItem } from "@/utils/storage"
 import { userService } from "@/services/user-service"
-import { toast } from "react-toastify"
+import { toast } from "sonner"
 
 // Sample restaurant data
 const RESTAURANT_DATA = {

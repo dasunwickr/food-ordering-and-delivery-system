@@ -15,6 +15,7 @@ import { userService, User, RestaurantUser, DriverUser } from "@/services/user-s
 import { getLocalStorageItem } from "@/utils/storage"
 import { toast } from "sonner"
 import axios from "axios"
+import { subscribeToDriverLocation, unsubscribeFromDriverLocation } from "@/lib/socket"
 
 // Item interface
 interface OrderItem {
@@ -344,8 +345,7 @@ export default function CustomerOrdersPage() {
                   createdAt: order.createdAt || new Date().toISOString(),
                   timestamps: {
                     createdAt: order.createdAt || new Date().toISOString(),
-                    acceptedAt: order.updatedAt, // May need adjustment based on status history
-                    // We would need additional status history data to accurately set these timestamps
+                    acceptedAt: order.updatedAt, 
                     pickedUpAt: undefined,
                     deliveredAt: order.orderStatus === "Delivered" ? order.updatedAt : undefined
                   }
@@ -356,17 +356,14 @@ export default function CustomerOrdersPage() {
               }
             });
             
-            // Resolve all the promises for restaurant and driver details
             const formattedOrders = await Promise.all(formattedOrdersPromises);
             
-            // Filter out any null values from failed transformations
             setOrders(formattedOrders.filter(Boolean) as FormattedDelivery[]);
             setLoading(false);
             return;
           }
         } catch (orderErr) {
           console.error("Error fetching orders from order service:", orderErr);
-          // Continue to fallback method
         }
         
         // Fall back to the delivery service if no orders found
@@ -515,7 +512,6 @@ export default function CustomerOrdersPage() {
                   createdAt: delivery.createdAt || new Date().toISOString(),
                   acceptedAt: delivery.acceptedAt,
                   deliveredAt: delivery.deliveredAt,
-                  // We add pickedUpAt if there's a time between acceptedAt and deliveredAt
                   pickedUpAt: delivery.acceptedAt && delivery.deliveredAt 
                     ? new Date((new Date(delivery.acceptedAt).getTime() + 
                       new Date(delivery.deliveredAt).getTime()) / 2).toISOString()
@@ -683,6 +679,10 @@ export default function CustomerOrdersPage() {
                     icon: "customer",
                   }}
                   className="h-[400px]"
+                  // Enable live tracking if we have a driver assigned
+                  driverId={activeOrderData.driver ? activeOrderData.orderId : undefined}
+                  enableLiveTracking={Boolean(activeOrderData.driver) && 
+                    ["ACCEPTED", "IN_PROGRESS"].includes(activeOrderData.status)}
                 />
               )}
 
