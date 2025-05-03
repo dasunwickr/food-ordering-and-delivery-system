@@ -37,11 +37,11 @@ export default function Navbar() {
 
         {/* CTA Buttons */}
         <div className="flex items-center space-x-4">
-          <Link href="/login" className="hidden md:block text-primary hover:underline">
+          <Link href="/sign-in" className="hidden md:block text-primary hover:underline">
             Login
           </Link>
           <Link
-            href="/register"
+            href="/sign-up"
             className="px-5 py-2 bg-primary text-white rounded-md hover:bg-primary/90 transition-colors"
           >
             Sign Up

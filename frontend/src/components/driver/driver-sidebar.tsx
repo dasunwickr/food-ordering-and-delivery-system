@@ -74,40 +74,9 @@ export function DriverSidebar({ className, open, onClose, ...props }: DriverSide
             Delivery History
           </Link>
 
-          <Link
-            href="/driver/earnings"
-            className={cn(
-              "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground",
-              pathname === "/driver/earnings" ? "bg-accent text-accent-foreground" : "transparent",
-            )}
-          >
-            <DollarSign className="h-5 w-5" />
-            Earnings
-          </Link>
-
           <div className="my-2 h-px bg-border" />
 
-          <Link
-            href="/driver/vehicle"
-            className={cn(
-              "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground",
-              pathname === "/driver/vehicle" ? "bg-accent text-accent-foreground" : "transparent",
-            )}
-          >
-            <Car className="h-5 w-5" />
-            Vehicle Information
-          </Link>
-
-          <Link
-            href="/driver/availability"
-            className={cn(
-              "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground",
-              pathname === "/driver/availability" ? "bg-accent text-accent-foreground" : "transparent",
-            )}
-          >
-            <Clock className="h-5 w-5" />
-            Availability
-          </Link>
+          
 
           <Link
             href="/driver/profile"
