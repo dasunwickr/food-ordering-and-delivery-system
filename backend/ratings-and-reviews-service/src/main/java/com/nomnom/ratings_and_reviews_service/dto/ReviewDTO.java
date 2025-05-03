@@ -5,9 +5,8 @@ import lombok.Data;
 
 @Data
 public class ReviewDTO {
-    private Long customerId;
-    private Long targetId;
-    private Review.TargetType targetType;
+    private String customerId;
+    private String targetId;
     private Integer rating;
     private String review;
 }

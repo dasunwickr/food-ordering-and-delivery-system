@@ -23,17 +23,16 @@ public class ReviewController {
         return ResponseEntity.ok(reviewService.addReview(reviewDTO));
     }
 
-    // Get reviews by target (menu item, order, restaurant, delivery person)
-    @GetMapping("/target/{targetId}/{targetType}")
-    public ResponseEntity<List<Review>> getReviewsByTarget(
-            @PathVariable Long targetId,
-            @PathVariable Review.TargetType targetType) {
-        return ResponseEntity.ok(reviewService.getReviewsByTarget(targetId, targetType));
+    @GetMapping("/customer/{customerId}")
+    public ResponseEntity<List<Review>> getReviewsByCustomerId(@PathVariable String customerId) {
+        List<Review> reviews = reviewService.getReviewsByCustomerId(customerId);
+        return ResponseEntity.ok(reviews);
     }
+
 
     // Get a single review by ID
     @GetMapping("/{id}")
-    public ResponseEntity<Review> getReviewById(@PathVariable Long id) {
+    public ResponseEntity<Review> getReviewById(@PathVariable String id) {
         return reviewService.getReviewById(id)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
@@ -41,13 +40,13 @@ public class ReviewController {
 
     // Update a review
     @PutMapping("/{id}")
-    public ResponseEntity<Review> updateReview(@PathVariable Long id, @RequestBody ReviewDTO reviewDTO) {
+    public ResponseEntity<Review> updateReview(@PathVariable String id, @RequestBody ReviewDTO reviewDTO) {
         return ResponseEntity.ok(reviewService.updateReview(id, reviewDTO));
     }
 
     // Delete a review
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteReview(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteReview(@PathVariable String id) {
         reviewService.deleteReview(id);
         return ResponseEntity.noContent().build();
     }

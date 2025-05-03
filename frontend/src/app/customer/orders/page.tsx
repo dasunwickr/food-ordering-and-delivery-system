@@ -10,7 +10,6 @@ import { Loader2, Search, Star } from "lucide-react"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { DeliveryMap } from "@/components/ui/delivery-map"
 
-// Mapping function for status enum
 const mapOrderStatus = (status: string): DeliveryStatus => {
   switch (status) {
     case 'Pending':
@@ -37,9 +36,9 @@ export default function CustomerOrdersPage() {
   useEffect(() => {
     const fetchOrders = async () => {
       try {
+        const customerId = "customer123"
         const response = await fetch("http://localhost:8081/api/order/customer/customer123")
         if (!response.ok) throw new Error("Failed to fetch orders")
-
         const data = await response.json()
 
         const mappedOrders = data.map((order: any) => ({
@@ -47,14 +46,14 @@ export default function CustomerOrdersPage() {
           status: mapOrderStatus(order.orderStatus),
           orderId: order.orderId,
           restaurant: {
-            name: "Goalden Meal", // You can use a placeholder until you integrate with restaurant service
-            address: "No.2, colombo 2",
-            phone: "077465333",
+            name: `Restaurant #${order.restaurantId.slice(-4)}`, // Placeholder name from ID
+            address: "Unavailable",
+            phone: "N/A",
             location: { lat: 0, lng: 0 },
           },
           customer: {
             name: order.customerDetails.name,
-            address: "colombo 7",
+            address: "Unknown",
             phone: order.customerDetails.contact,
             location: {
               lat: order.customerDetails.latitude,
@@ -64,19 +63,17 @@ export default function CustomerOrdersPage() {
           driver: order.driverDetails
             ? {
                 name: order.driverDetails.driverName,
-                phone: "0774432511",
+                phone: "N/A",
                 vehicle: order.driverDetails.vehicleNumber,
               }
             : undefined,
           driverLocation: order.driverDetails
-            ? {
-                lat: 40.72,
-                lng: -74.0,
-              }
+            ? { lat: 0, lng: 0 } // Replace with actual location if available
             : undefined,
-          estimatedTime: "15 min", // Placeholder
-          distance: "2.3 mi", // Placeholder
+          estimatedTime: "15 min", // Optional dynamic value
+          distance: "2.3 mi",     // Optional dynamic value
           amount: order.totalAmount.toFixed(2),
+          deliveryFee: order.deliveryFee,
           items: order.cartItems.map((item: any) => ({
             name: item.itemName,
             quantity: item.quantity,
@@ -113,13 +110,8 @@ export default function CustomerOrdersPage() {
 
   const activeOrderData = orders.find((order) => order.id === activeOrder)
 
-  const handleRateDelivery = () => {
-    setShowRating(true)
-  }
-
-  const submitRating = () => {
-    setShowRating(false)
-  }
+  const handleRateDelivery = () => setShowRating(true)
+  const submitRating = () => setShowRating(false)
 
   if (loading) {
     return (
@@ -211,27 +203,13 @@ export default function CustomerOrdersPage() {
                 <DeliveryTimeline status={activeOrderData.status} timestamps={activeOrderData.timestamps} />
               </>
             )}
-
             <Button variant="outline" className="w-full" onClick={() => setActiveOrder(null)}>
               Back to Orders
             </Button>
           </div>
 
           <div>
-            <DeliveryCard
-              id={activeOrderData.id}
-              status={activeOrderData.status}
-              orderId={activeOrderData.orderId}
-              restaurant={activeOrderData.restaurant}
-              customer={activeOrderData.customer}
-              driver={activeOrderData.driver}
-              estimatedTime={activeOrderData.estimatedTime}
-              distance={activeOrderData.distance}
-              amount={activeOrderData.amount}
-              createdAt={activeOrderData.createdAt}
-              viewType="customer"
-              className="mb-4"
-            />
+            <DeliveryCard {...activeOrderData} viewType="customer" className="mb-4" />
 
             <div className="rounded-lg border">
               <div className="border-b p-4">
@@ -249,14 +227,14 @@ export default function CustomerOrdersPage() {
                 <div className="mt-4 border-t pt-4">
                   <div className="flex justify-between text-sm">
                     <span>Subtotal</span>
-                    <span>${(Number.parseFloat(activeOrderData.amount) - 5).toFixed(2)}</span>
+                    <span>${(Number.parseFloat(activeOrderData.amount) - activeOrderData.deliveryFee).toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span>Delivery Fee</span>
-                    <span>$5.00</span>
+                    <span>${activeOrderData.deliveryFee.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span>Tax</span>
+                    <span>Tax (10%)</span>
                     <span>${(Number.parseFloat(activeOrderData.amount) * 0.1).toFixed(2)}</span>
                   </div>
                   <div className="mt-2 flex justify-between font-medium">
@@ -276,93 +254,36 @@ export default function CustomerOrdersPage() {
             <TabsTrigger value="all">All Orders</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="active" className="mt-4 space-y-4">
-            {filteredOrders.filter((d) => ["PENDING", "IN_PROGRESS"].includes(d.status)).length === 0 ? (
-              <div className="flex h-[200px] flex-col items-center justify-center rounded-lg border">
-                <p className="text-muted-foreground">No active orders</p>
-              </div>
-            ) : (
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {filteredOrders
-                  .filter((d) => ["PENDING", "IN_PROGRESS"].includes(d.status))
-                  .map((order) => (
-                    <DeliveryCard
-                      key={order.id}
-                      id={order.id}
-                      status={order.status}
-                      orderId={order.orderId}
-                      restaurant={order.restaurant}
-                      customer={order.customer}
-                      driver={order.driver}
-                      estimatedTime={order.estimatedTime}
-                      distance={order.distance}
-                      amount={order.amount}
-                      createdAt={order.createdAt}
-                      viewType="customer"
-                      onViewDetails={handleViewDetails}
-                    />
-                  ))}
-              </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="completed" className="mt-4 space-y-4">
-            {filteredOrders.filter((d) => ["DELIVERED", "CANCELLED"].includes(d.status)).length === 0 ? (
-              <div className="flex h-[200px] flex-col items-center justify-center rounded-lg border">
-                <p className="text-muted-foreground">No completed orders</p>
-              </div>
-            ) : (
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {filteredOrders
-                  .filter((d) => ["DELIVERED", "CANCELLED"].includes(d.status))
-                  .map((order) => (
-                    <DeliveryCard
-                      key={order.id}
-                      id={order.id}
-                      status={order.status}
-                      orderId={order.orderId}
-                      restaurant={order.restaurant}
-                      customer={order.customer}
-                      driver={order.driver}
-                      estimatedTime={order.estimatedTime}
-                      distance={order.distance}
-                      amount={order.amount}
-                      createdAt={order.createdAt}
-                      viewType="customer"
-                      onViewDetails={handleViewDetails}
-                    />
-                  ))}
-              </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="all" className="mt-4 space-y-4">
-            {filteredOrders.length === 0 ? (
-              <div className="flex h-[200px] flex-col items-center justify-center rounded-lg border">
-                <p className="text-muted-foreground">No orders found</p>
-              </div>
-            ) : (
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {filteredOrders.map((order) => (
-                  <DeliveryCard
-                    key={order.id}
-                    id={order.id}
-                    status={order.status}
-                    orderId={order.orderId}
-                    restaurant={order.restaurant}
-                    customer={order.customer}
-                    driver={order.driver}
-                    estimatedTime={order.estimatedTime}
-                    distance={order.distance}
-                    amount={order.amount}
-                    createdAt={order.createdAt}
-                    viewType="customer"
-                    onViewDetails={handleViewDetails}
-                  />
-                ))}
-              </div>
-            )}
-          </TabsContent>
+          {["active", "completed", "all"].map((tab) => (
+            <TabsContent key={tab} value={tab} className="mt-4 space-y-4">
+              {filteredOrders.filter((d) => {
+                if (tab === "active") return ["PENDING", "IN_PROGRESS"].includes(d.status)
+                if (tab === "completed") return ["DELIVERED", "CANCELLED"].includes(d.status)
+                return true
+              }).length === 0 ? (
+                <div className="flex h-[200px] flex-col items-center justify-center rounded-lg border">
+                  <p className="text-muted-foreground">No {tab} orders</p>
+                </div>
+              ) : (
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {filteredOrders
+                    .filter((d) => {
+                      if (tab === "active") return ["PENDING", "IN_PROGRESS"].includes(d.status)
+                      if (tab === "completed") return ["DELIVERED", "CANCELLED"].includes(d.status)
+                      return true
+                    })
+                    .map((order) => (
+                      <DeliveryCard
+                        key={order.id}
+                        {...order}
+                        viewType="customer"
+                        onViewDetails={handleViewDetails}
+                      />
+                    ))}
+                </div>
+              )}
+            </TabsContent>
+          ))}
         </Tabs>
       )}
     </div>

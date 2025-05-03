@@ -29,7 +29,7 @@ export function CustomerTopNavbar({ onMenuClick }: CustomerTopNavbarProps) {
       </Button>
 
       <div className="ml-auto flex items-center gap-4">
-      <Link href={`/customer/cart/customer123/680de11f93c9b50c2da63146}`}>
+      <Link href={`/customer/cart/customer123}`}>
           <Button variant="ghost" size="icon" className="relative">
             <ShoppingCart className="h-5 w-5" />
             {cartItemCount > 0 && (

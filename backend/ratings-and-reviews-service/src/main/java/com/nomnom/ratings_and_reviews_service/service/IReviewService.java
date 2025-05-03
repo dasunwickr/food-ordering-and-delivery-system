@@ -8,8 +8,9 @@ import java.util.Optional;
 
 public interface IReviewService {
     Review addReview(ReviewDTO reviewDTO); // Create
-    List<Review> getReviewsByTarget(Long targetId, Review.TargetType targetType); // Read (by target)
-    Optional<Review> getReviewById(Long id); // Read (by ID)
-    Review updateReview(Long id, ReviewDTO reviewDTO); // Update
-    void deleteReview(Long id); // Delete
+    Optional<Review> getReviewById(String id); // Read (by ID)
+    Review updateReview(String id, ReviewDTO reviewDTO); // Update
+    void deleteReview(String id); // Delete
+    List<Review> getReviewsByCustomerId(String customerId);
+
 }

@@ -8,7 +8,8 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface ReviewRepository extends JpaRepository<Review, Long> {
-    List<Review> findByTargetIdAndTargetType(Long targetId, Review.TargetType targetType);
-    Optional<Review> findByTargetId(Long id);
+public interface ReviewRepository extends JpaRepository<Review, String> {
+    Optional<Review> findByTargetId(String targetId);
+    List<Review> findAllByCustomerId(String customerId);
+
 }

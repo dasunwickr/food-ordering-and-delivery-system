@@ -15,14 +15,10 @@ public class Review {
     private Long id;
 
     @Column(nullable = false)
-    private Long customerId;
+    private String customerId;
 
     @Column(nullable = false)
-    private Long targetId;
-
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private TargetType targetType;
+    private String targetId;
 
     @Column(nullable = false)
     private Integer rating;
@@ -30,10 +26,20 @@ public class Review {
     @Column(columnDefinition = "TEXT")
     private String review;
 
-    @Column(updatable = false)
-    private LocalDateTime createdAt = LocalDateTime.now();
+    @Column(nullable = false, updatable = false)
+    private LocalDateTime createdAt;
 
-    public enum TargetType {
-        MENU_ITEM, ORDER, RESTAURANT, DELIVERY_PERSON
+    @Column(nullable = false)
+    private LocalDateTime updatedAt;
+
+    @PrePersist
+    protected void onCreate() {
+        createdAt = updatedAt = LocalDateTime.now();
     }
+
+    @PreUpdate
+    protected void onUpdate() {
+        updatedAt = LocalDateTime.now();
+    }
+
 }

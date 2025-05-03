@@ -20,30 +20,29 @@ public class ReviewService implements IReviewService {
         Review review = new Review();
         review.setCustomerId(reviewDTO.getCustomerId());
         review.setTargetId(reviewDTO.getTargetId());
-        review.setTargetType(reviewDTO.getTargetType());
         review.setRating(reviewDTO.getRating());
         review.setReview(reviewDTO.getReview());
         return reviewRepository.save(review);
     }
 
     @Override
-    public List<Review> getReviewsByTarget(Long targetId, Review.TargetType targetType) {
-        return reviewRepository.findByTargetIdAndTargetType(targetId, targetType);
+    public List<Review> getReviewsByCustomerId(String customerId) {
+        return reviewRepository.findAllByCustomerId(customerId);
     }
 
+
     @Override
-    public Optional<Review> getReviewById(Long id) {
+    public Optional<Review> getReviewById(String id) {
         return reviewRepository.findById(id);
     }
 
     @Override
-    public Review updateReview(Long id, ReviewDTO reviewDTO) {
+    public Review updateReview(String id, ReviewDTO reviewDTO) {
         Optional<Review> optionalReview = reviewRepository.findById(id);
         if (optionalReview.isPresent()) {
             Review review = optionalReview.get();
             review.setCustomerId(reviewDTO.getCustomerId());
             review.setTargetId(reviewDTO.getTargetId());
-            review.setTargetType(reviewDTO.getTargetType());
             review.setRating(reviewDTO.getRating());
             review.setReview(reviewDTO.getReview());
             return reviewRepository.save(review);
@@ -53,7 +52,7 @@ public class ReviewService implements IReviewService {
     }
 
     @Override
-    public void deleteReview(Long id) {
+    public void deleteReview(String id) {
         reviewRepository.deleteById(id);
     }
 }

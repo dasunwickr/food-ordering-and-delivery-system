@@ -86,55 +86,9 @@ public class OrderService implements IOrderService {
         order.setCreatedAt(new Date());
         order.setUpdatedAt(new Date());
 
-            // Save order
-            System.out.println("Saving order to database: " + order.getOrderId());
-            Order savedOrder = orderRepository.save(order);
-
-            // Create a delivery for this order - this won't block the order creation
-            try {
-                createDeliveryForOrder(savedOrder.getOrderId());
-            } catch (Exception e) {
-                System.err.println("Failed to create delivery, but order was created: " + e.getMessage());
-                // Continue with order creation even if delivery creation fails
-            }
-
-            return mapToOrderDTO(savedOrder);
-        } catch (Exception e) {
-            System.err.println("Error creating order: " + e.getMessage());
-            e.printStackTrace();
-            throw e;
-        }
-    }
-
-    private void createDeliveryForOrder(String orderId) {
-        try {
-            System.out.println("Attempting to create delivery for order: " + orderId);
-            System.out.println("Delivery service URL: " + DELIVERY_SERVICE_URL);
-            
-            // Use the DTO class instead of anonymous class
-            CreateDeliveryDTO request = new CreateDeliveryDTO(orderId);
-            
-            webClientBuilder.build()
-                .post()
-                .uri(DELIVERY_SERVICE_URL + "/api/deliveries")
-                .bodyValue(request)
-                .retrieve()
-                .bodyToMono(Void.class)
-                .doOnSuccess(result -> {
-                    System.out.println("Successfully created delivery for order: " + orderId);
-                    // Update order status to "Pending Delivery" to indicate it's ready for a driver pickup
-                    updateOrderStatus(orderId, "Pending Delivery");
-                })
-                .doOnError(error -> {
-                    System.err.println("Failed to create delivery record: " + error.getMessage());
-                    updateOrderStatus(orderId, "Delivery Assignment Failed");
-                })
-                .block();
-        } catch (Exception e) {
-            System.err.println("Failed to create delivery record: " + e.getMessage());
-            e.printStackTrace();
-            updateOrderStatus(orderId, "Delivery Assignment Failed");
-        }
+        // Save order
+        Order savedOrder = orderRepository.save(order);
+        return mapToOrderDTO(savedOrder);
     }
 
     private Order.CartItem.PotionSize mapPotionSize(PotionSize potionSize) {
