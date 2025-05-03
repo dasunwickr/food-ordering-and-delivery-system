@@ -1,22 +1,37 @@
+"use client";
+import { useEffect, useState } from "react";
 import axios from "axios";
 import MenuItems, { MenuItem } from "@/components/restaurant/menu-items";
 
-// Fetch menu items on the server side using Axios
-async function fetchMenuItems(): Promise<MenuItem[]> {
-  try {
-    const response = await axios.get<MenuItem[]>(
-      "http://localhost/api/menu-service/menu/all"
-    );
+export default function MenuPage() {
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+  const [loading, setLoading] = useState(true);
 
-    return response.data;
-  } catch (error) {
-    console.error("Failed to fetch menu items:", error);
-    throw new Error("Failed to fetch menu items");
-  }
-}
+  useEffect(() => {
+    const fetchMenuItems = async () => {
+      const restaurantId = localStorage.getItem("userId"); // Make sure this is correct key
+      if (!restaurantId) {
+        console.error("Restaurant ID not found");
+        setLoading(false);
+        return;
+      }
 
-export default async function MenuPage() {
-  const menuItems = await fetchMenuItems();
+      try {
+        const response = await axios.get<MenuItem[]>(
+          `http://localhost/api/menu-service/menu/restaurant/${restaurantId}`
+        );
+        setMenuItems(response.data);
+      } catch (error) {
+        console.error("Failed to fetch menu items:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchMenuItems();
+  }, []);
+
+  if (loading) return <p>Loading menu...</p>;
 
   return (
     <div>
