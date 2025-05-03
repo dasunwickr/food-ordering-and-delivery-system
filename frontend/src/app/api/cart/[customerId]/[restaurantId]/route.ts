@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 
 // Base URL for the backend API
-const BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8082/api/cart";
+const BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost/api/cart-service/cart";
 
 export async function GET(request: NextRequest, { params }: { params: { customerId: string; restaurantId: string } }) {
   const { customerId, restaurantId } = params;

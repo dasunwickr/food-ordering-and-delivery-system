@@ -61,16 +61,7 @@ export function CustomerSidebar({ className, open, onClose, ...props }: Customer
             Dashboard
           </Link>
 
-          <Link
-            href="/customer/explore"
-            className={cn(
-              "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground",
-              pathname === "/customer/explore" ? "bg-accent text-accent-foreground" : "transparent",
-            )}
-          >
-            <Search className="h-5 w-5" />
-            Explore
-          </Link>
+          
 
           <Link
             href="/customer/orders"
@@ -84,39 +75,18 @@ export function CustomerSidebar({ className, open, onClose, ...props }: Customer
           </Link>
 
           <Link
-            href="/customer/favorites"
+            href="/customer/deliveries"
             className={cn(
               "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground",
               pathname === "/customer/favorites" ? "bg-accent text-accent-foreground" : "transparent",
             )}
           >
             <Heart className="h-5 w-5" />
-            Favorites
+            Deliveries
           </Link>
 
           <div className="my-2 h-px bg-border" />
 
-          <Link
-            href="/customer/addresses"
-            className={cn(
-              "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground",
-              pathname === "/customer/addresses" ? "bg-accent text-accent-foreground" : "transparent",
-            )}
-          >
-            <MapPin className="h-5 w-5" />
-            My Addresses
-          </Link>
-
-          <Link
-            href="/customer/payment"
-            className={cn(
-              "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground",
-              pathname === "/customer/payment" ? "bg-accent text-accent-foreground" : "transparent",
-            )}
-          >
-            <CreditCard className="h-5 w-5" />
-            Payment Methods
-          </Link>
 
           <Link
             href="/customer/profile"
