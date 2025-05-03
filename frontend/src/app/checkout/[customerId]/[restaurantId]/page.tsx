@@ -16,7 +16,7 @@ import { toast } from "@/components/ui/use-toast"
 import { Skeleton } from "@/components/ui/skeleton"
 import { OrderSummary } from "@/components/order/order-summary"
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8081/api"
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost/api/order-service"
 
 interface CartItem {
   itemId: string
