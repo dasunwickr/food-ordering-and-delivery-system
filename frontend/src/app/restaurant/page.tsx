@@ -10,31 +10,47 @@ import {
   ArrowDown,
   TrendingUp,
 } from "lucide-react";
-import Head from "next/head";
-import DisplayCategories from "@/components/common/categories/categories"; // Adjust the import path as needed
 import axios from "axios";
+import DisplayCategoriesFood from "@/components/common/categories/categories";
 
 // Types
 interface MenuItem {
   id: number;
-  itemName: string; // Changed from name -> itemName
+  itemName: string;
   category: string;
+  availabilityStatus: boolean;
   price: number;
-  availabilityStatus: boolean; // Changed from available -> availabilityStatus
 }
 
-interface OrderSummary {
-  today: number;
-  thisWeek: number;
-  thisMonth: number;
-  percentChange: number;
+interface CartItem {
+  itemId: string;
+  itemName: string;
+  quantity: number;
+  potionSize: string; // typo intentional? should be portionSize?
+  price: number;
+  totalPrice: number;
 }
 
-interface RevenueSummary {
-  today: number;
-  thisWeek: number;
-  thisMonth: number;
-  percentChange: number;
+interface CustomerDetails {
+  name: string;
+  contact: string;
+  longitude: number;
+  latitude: number;
+}
+
+interface Order {
+  orderId: string;
+  customerId: string;
+  restaurantId: string;
+  customerDetails: CustomerDetails;
+  cartItems: CartItem[];
+  orderTotal: number;
+  deliveryFee: number;
+  totalAmount: number;
+  paymentType: string;
+  orderStatus: string;
+  createdAt: string;
+  updatedAt: string | null;
 }
 
 interface CategoryCount {
@@ -43,7 +59,6 @@ interface CategoryCount {
   icon: React.ReactNode;
 }
 
-// Dashboard component
 const Dashboard: React.FC = () => {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [menuStats, setMenuStats] = useState({
@@ -54,20 +69,8 @@ const Dashboard: React.FC = () => {
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  const [orderSummary, setOrderSummary] = useState<OrderSummary>({
-    today: 0,
-    thisWeek: 0,
-    thisMonth: 0,
-    percentChange: 0,
-  });
-  const [revenueSummary, setRevenueSummary] = useState<RevenueSummary>({
-    today: 0,
-    thisWeek: 0,
-    thisMonth: 0,
-    percentChange: 0,
-  });
-  const [categoryStats, setCategoryStats] = useState<CategoryCount[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [ordersLoading, setOrdersLoading] = useState(true);
 
   // Dummy data left unchanged
   const dummyOrderData = {
@@ -83,8 +86,8 @@ const Dashboard: React.FC = () => {
     percentChange: 12.3,
   };
 
+  // Fetch menu items on mount
   useEffect(() => {
-    // Fetch menu items from backend
     const fetchMenuItems = async () => {
       try {
         const response = await axios.get<MenuItem[]>(
@@ -92,14 +95,13 @@ const Dashboard: React.FC = () => {
         );
         const fetchedItems = response.data;
 
-        // Set menu items state
         setMenuItems(fetchedItems);
 
-        // Calculate menu stats
+        // Calculate stats
         const available = fetchedItems.filter((item) => item.availabilityStatus).length;
         setMenuStats({
           total: fetchedItems.length,
-          available: available,
+          available,
           unavailable: fetchedItems.length - available,
         });
 
@@ -133,58 +135,88 @@ const Dashboard: React.FC = () => {
       } finally {
         setLoading(false);
       }
+
+      // Clock update
+      const timer = setInterval(() => {
+        setCurrentTime(new Date());
+      }, 1000);
+      return () => clearInterval(timer);
     };
 
     fetchMenuItems();
-
-    // Set clock timer
-    const timer = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 1000);
-
-    return () => clearInterval(timer);
   }, []);
 
-  // Format time for the clock display
-  const formatTime = (date: Date): string => {
-    return date.toLocaleTimeString("en-US", {
+  // Format date
+  const formatDate = (dateString: string): string => {
+    const date = new Date(dateString);
+    return date.toLocaleTimeString([], {
       hour: "2-digit",
       minute: "2-digit",
-      second: "2-digit",
-      hour12: true,
     });
   };
 
-  // Format date
-  const formatDate = (date: Date): string => {
-    return date.toLocaleDateString("en-US", {
-      weekday: "long",
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
+  // Status badge component
+  const StatusBadge = ({ status }: { status: string }) => {
+    const getStatusStyles = () => {
+      switch (status) {
+        case "Pending":
+          return "bg-yellow-100 text-yellow-800";
+        case "ACCEPTED":
+          return "bg-green-100 text-green-800";
+        case "REJECTED":
+          return "bg-red-100 text-red-800";
+        case "COMPLETED":
+          return "bg-blue-100 text-blue-800";
+        default:
+          return "bg-gray-100 text-gray-800";
+      }
+    };
+
+    return (
+      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusStyles()}`}>
+        {status}
+      </span>
+    );
   };
 
+  // Fetch orders on mount
+  useEffect(() => {
+    const fetchOrders = async () => {
+      try {
+        const response = await axios.get<Order[]>("http://localhost/api/order-service/order/getAll");
+        setOrders(response.data);
+      } catch (err) {
+        console.error("Error fetching orders:", err);
+      } finally {
+        setOrdersLoading(false);
+      }
+    };
+
+    fetchOrders();
+  }, []);
+
+  // State for category stats
+  const [categoryStats, setCategoryStats] = useState<CategoryCount[]>([]);
+
+  // Loading state
   if (loading) return <p>Loading menu data...</p>;
   if (error) return <p style={{ color: "red" }}>{error}</p>;
 
   return (
     <>
-      <Head>
-        <title>Restaurant Dashboard</title>
-      </Head>
+      {/* Existing JSX */}
       <div className="min-h-screen bg-gray-100 p-4 md:p-6">
         <div className="max-w-7xl mx-auto">
           {/* Header with Clock */}
           <div className="bg-white rounded-lg shadow p-4 mb-6 flex justify-between items-center">
             <div>
               <h1 className="text-2xl font-bold text-gray-800">Restaurant Dashboard</h1>
-              <p className="text-gray-500">{formatDate(currentTime)}</p>
+              <p className="text-gray-500">{new Date().toLocaleDateString()}</p>
             </div>
             <div className="text-right">
               <div className="flex items-center text-gray-700 mb-1">
                 <Clock className="mr-2" size={20} />
-                <span className="text-xl font-mono">{formatTime(currentTime)}</span>
+                <span className="text-xl font-mono">{currentTime.toLocaleTimeString()}</span>
               </div>
               <p className="text-sm text-gray-500">Restaurant is Open</p>
             </div>
@@ -259,19 +291,15 @@ const Dashboard: React.FC = () => {
               <div className="grid grid-cols-3 gap-2">
                 <div className="text-center">
                   <p className="text-gray-500 text-sm">Today</p>
-                  <p className="text-2xl font-bold">${dummyRevenueData.today.toLocaleString()}</p>
+                  <p className="text-2xl font-bold">${dummyRevenueData.today.toFixed(2)}</p>
                 </div>
                 <div className="text-center">
                   <p className="text-gray-500 text-sm">This Week</p>
-                  <p className="text-xl font-bold">
-                    ${dummyRevenueData.thisWeek.toLocaleString()}
-                  </p>
+                  <p className="text-xl font-bold">${dummyRevenueData.thisWeek.toFixed(2)}</p>
                 </div>
                 <div className="text-center">
                   <p className="text-gray-500 text-sm">This Month</p>
-                  <p className="text-xl font-bold">
-                    ${dummyRevenueData.thisMonth.toLocaleString()}
-                  </p>
+                  <p className="text-xl font-bold">${dummyRevenueData.thisMonth.toFixed(2)}</p>
                 </div>
               </div>
               <div className="mt-3 flex items-center justify-end">
@@ -294,77 +322,80 @@ const Dashboard: React.FC = () => {
           {/* Available Items by Category */}
           <h2 className="text-lg font-semibold text-gray-700 mb-4">Available Items by Category</h2>
           <div>
-            <DisplayCategories/>
+            <DisplayCategoriesFood/>
           </div>
 
           {/* Recent Orders Table */}
-          <div className="bg-white rounded-lg shadow overflow-hidden mt-6">
-            <div className="p-4 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-700">Recent Orders</h2>
-            </div>
+          <h2 className="text-lg font-semibold text-gray-700 mt-8 mb-4">Recent Orders</h2>
+          <div className="bg-white rounded-lg shadow overflow-hidden">
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Order ID
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Customer
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Items
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Total
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Status
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Time
                     </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {[
-                    { id: "#1425", customer: "John Smith", items: 3, total: 34.97, status: "Completed", time: "10 mins ago" },
-                    { id: "#1424", customer: "Sarah Johnson", items: 2, total: 22.98, status: "Preparing", time: "15 mins ago" },
-                    { id: "#1423", customer: "Michael Brown", items: 4, total: 47.96, status: "Delivering", time: "25 mins ago" },
-                    { id: "#1422", customer: "Emily Davis", items: 1, total: 15.99, status: "Completed", time: "35 mins ago" },
-                    { id: "#1421", customer: "David Wilson", items: 2, total: 24.98, status: "Completed", time: "45 mins ago" }
-                  ].map((order, index) => (
-                    <tr key={index} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {order.id}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {order.customer}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {order.items} items
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        ${order.total.toFixed(2)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span
-                          className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                            order.status === "Completed"
-                              ? "bg-green-100 text-green-800"
-                              : order.status === "Preparing"
-                              ? "bg-yellow-100 text-yellow-800"
-                              : "bg-purple-100 text-purple-800"
-                          }`}
-                        >
-                          {order.status}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {order.time}
+                  {ordersLoading && (
+                    <tr>
+                      <td colSpan={6} className="text-center py-4">
+                        Loading orders...
                       </td>
                     </tr>
-                  ))}
+                  )}
+
+                  {!ordersLoading && orders.length === 0 && (
+                    <tr>
+                      <td colSpan={6} className="text-center py-4 text-gray-500">
+                        No recent orders
+                      </td>
+                    </tr>
+                  )}
+
+                  {!ordersLoading &&
+                    orders.slice(0, 5).map((order, idx) => (
+                      <tr key={idx} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          #{order.orderId}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {order.customerDetails.name}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {order.cartItems.reduce(
+                            (acc, curr) => acc + curr.quantity,
+                            0
+                          )}{" "}
+                          items
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          ${order.totalAmount.toFixed(2)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <StatusBadge status={order.orderStatus} />
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {formatDate(order.createdAt)}
+                        </td>
+                      </tr>
+                    ))}
                 </tbody>
               </table>
             </div>

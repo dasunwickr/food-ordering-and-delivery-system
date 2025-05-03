@@ -22,6 +22,7 @@ const PUBLIC_ROUTES = [
   '/about',
   '/customer',
   '/restaurant',
+  '/landing',
   '/contact',
   '/api',
   '/browse',
