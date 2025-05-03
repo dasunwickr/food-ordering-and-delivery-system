@@ -21,7 +21,7 @@ export default function TranscriptPage() {
   useEffect(() => {
     async function fetchData() {
       try {
-        const res = await fetch('http://localhost:4242/user-restaurant/payments');
+        const res = await fetch('/api/user-restaurant-payments');
         const json = await res.json();
 
         const payments: Payment[] = json.payments;
