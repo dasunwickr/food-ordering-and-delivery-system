@@ -34,7 +34,16 @@ export function Sidebar({ className, open, onClose, ...props }: SidebarProps) {
     <div className={cn("flex h-full flex-col", className)} {...props}>
       <div className="flex h-16 items-center border-b px-4">
         <Link href="/admin" className="flex items-center gap-2 font-semibold">
-          <Image src="/logo-dark.svg" alt="FoodAdmin logo" width={120} height={120} className="rounded-full" />
+          <div className="relative w-32 h-10">
+            <Image 
+              src="/logo-dark.svg" 
+              alt="FoodAdmin logo" 
+              fill
+              priority
+              sizes="128px"
+              className="object-contain" 
+            />
+          </div>
         </Link>
         {isMobile && (
           <Button variant="ghost" size="icon" className="ml-auto" onClick={onClose}>

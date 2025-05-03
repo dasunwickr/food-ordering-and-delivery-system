@@ -28,7 +28,7 @@ const RestaurantsSlider = () => {
     const fetchRestaurants = async () => {
       try {
         const response = await axios.get<Restaurant[]>(
-          "http://localhost:8085/api/users/restaurants"
+          "http://localhost/api/user-service/users/type/RESTAURANT"
         );
         if (response.status === 200) {
           setRestaurants(response.data); // Assuming the backend returns an array of restaurants

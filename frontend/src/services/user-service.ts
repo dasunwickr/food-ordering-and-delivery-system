@@ -129,6 +129,49 @@ export interface ExtendedUserData extends Partial<User> {
   [key: string]: any;
 }
 
+/**
+ * Geocode an address to get lat/long coordinates
+ */
+export const geocodeAddress = async (address: string): Promise<{lat: number, lng: number} | null> => {
+  if (!address || address.trim() === '') {
+    return null;
+  }
+  
+  try {
+    // Use the OpenStreetMap Nominatim geocoding service
+    const encodedAddress = encodeURIComponent(address);
+    const response = await fetch(
+      `https://nominatim.openstreetmap.org/search?q=${encodedAddress}&format=json&limit=1`,
+      {
+        headers: {
+          'Accept': 'application/json',
+          // Adding a user-agent to comply with Nominatim usage policy
+          'User-Agent': 'food-ordering-and-delivery-system'
+        }
+      }
+    );
+    
+    if (!response.ok) {
+      throw new Error(`Geocoding failed: ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    
+    if (data && data.length > 0) {
+      const result = data[0];
+      return {
+        lat: parseFloat(result.lat),
+        lng: parseFloat(result.lon)
+      };
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Geocoding error:', error);
+    return null;
+  }
+};
+
 export const userService = {
   // Get the current user profile
   getCurrentUser: async (): Promise<User | null> => {

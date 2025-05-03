@@ -252,45 +252,68 @@ export default function AdminDeliveriesPage() {
             // Restaurant info from order details
             if (orderDetails.order?.restaurantId) {
               try {
-                const restaurant = await fetchRestaurantDetails(orderDetails.order.restaurantId);
+                // Try to get restaurant details from user service directly
+                const restaurant = await userService.getUserById(orderDetails.order.restaurantId);
                 if (restaurant) {
-                  restaurantInfo = restaurant;
+                  restaurantInfo = {
+                    name: (restaurant as any).restaurantName || `${restaurant.firstName} ${restaurant.lastName}'s Restaurant`,
+                    address: (restaurant as any).restaurantAddress || (restaurant as any).address || "Restaurant Address",
+                    phone: (restaurant as any).contactNumber || restaurant.phone || "Restaurant Phone",
+                    location: (restaurant as any).location ? 
+                      {
+                        // Handle both {lat, lng} and {x, y} coordinate formats
+                        lat: (restaurant as any).location.lat || (restaurant as any).location.y || 40.7128,
+                        lng: (restaurant as any).location.lng || (restaurant as any).location.x || -74.006 
+                      } : 
+                      { lat: 40.7128, lng: -74.006 }
+                  };
+                  console.log("Retrieved restaurant details:", restaurantInfo);
                 }
               } catch (restaurantError) {
-                console.error("Error fetching restaurant details:", restaurantError)
+                console.error("Error fetching restaurant details:", restaurantError);
               }
-            } else if (orderDetails.order?.customerDetails?.address) {
-              // If we have customer address but no restaurant info, try to use customer details for geocoding
-              const customerAddress = orderDetails.order.customerDetails.address;
-              // Skip geocoding since userService doesn't have geocodeAddress method
-              // Just use default coordinates for customer location
-              console.log("Using default coordinates for customer location");
-              // If we needed geocoding, we would implement a separate geocoding service
-              // or add the method to userService
             }
             
             // Customer details from order details
             if (orderDetails.order?.customerId) {
               try {
-                const customer = await fetchCustomerDetails(orderDetails.order.customerId);
+                // Try to get customer details from user service directly
+                const customer = await userService.getUserById(orderDetails.order.customerId);
                 if (customer) {
-                  customerInfo = customer;
+                  customerInfo = {
+                    name: `${customer.firstName} ${customer.lastName}`,
+                    address: (customer as any).address || (customer as any).customerAddress || "Customer Address",
+                    phone: (customer as any).contactNumber || (customer as any).phone || "Customer Phone",
+                    location: (customer as any).location ? 
+                      {
+                        // Handle both {lat, lng} and {x, y} coordinate formats
+                        lat: (customer as any).location.lat || (customer as any).location.y || 40.7282,
+                        lng: (customer as any).location.lng || (customer as any).location.x || -73.9942
+                      } : 
+                      { lat: 40.7282, lng: -73.9942 }
+                  };
+                  console.log("Retrieved customer details:", customerInfo);
                 }
               } catch (customerError) {
                 console.error("Error fetching customer details:", customerError);
               }
-            } else if (orderDetails.order?.customerDetails) {
-              // If we have customer details but couldn't fetch from user service
+            } 
+            
+            // Fallback to order data if user service fetch failed
+            if (orderDetails.order?.customerDetails) {
               const customerDetails = orderDetails.order.customerDetails;
-              customerInfo = {
-                name: customerDetails.name || "Customer",
-                address: customerDetails.address || "Customer Address",
-                phone: customerDetails.contact || "Customer Phone",
-                location: { 
-                  lat: customerDetails.latitude || 40.7128, 
-                  lng: customerDetails.longitude || -73.99
-                }
-              };
+              // Only use these values if we didn't already get details from user service
+              if (customerInfo.name === "Customer Name") {
+                customerInfo = {
+                  name: customerDetails.name || "Customer",
+                  address: customerDetails.address || "Customer Address",
+                  phone: customerDetails.contact || "Customer Phone",
+                  location: { 
+                    lat: customerDetails.latitude || 40.7128, 
+                    lng: customerDetails.longitude || -73.99
+                  }
+                };
+              }
             }
             
             // Get order items if available

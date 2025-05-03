@@ -583,3 +583,27 @@ export const geocodeAddress = async (address: string): Promise<{lat: number, lng
     return null;
   }
 };
+
+/**
+ * Update driver's current location in the database
+ */
+export const updateDriverLocation = async (
+  driverId: string, 
+  location: { lat: number, lng: number }
+): Promise<void> => {
+  try {
+    // Save the location update to the database via API
+    await api.post(`/delivery-service/driver/${driverId}/location`, {
+      location: {
+        latitude: location.lat,
+        longitude: location.lng,
+        timestamp: new Date().toISOString()
+      }
+    });
+    console.log('Driver location updated in database:', { driverId, location });
+  } catch (error) {
+    console.error('Failed to update driver location in database:', error);
+    // Don't throw here - we still want the socket update to work even if
+    // the database update fails, so socket-based location sharing still works
+  }
+};

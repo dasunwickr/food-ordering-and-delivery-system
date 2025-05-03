@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { sendDriverLocationUpdate } from "@/lib/socket"
+import { updateDriverLocation } from "@/services/delivery-service"
 import { MapPin, AlertCircle, CheckCircle2 } from "lucide-react"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Switch } from "@/components/ui/switch"
@@ -36,7 +37,13 @@ export function DriverLocationSharing({ driverId, deliveryId }: DriverLocationSh
         
         // Only send location update if sharing is enabled
         if (isSharing) {
+          // Send location update via socket for real-time updates
           sendDriverLocationUpdate(driverId, { lat, lng })
+          
+          // Also update location in the database for persistence
+          updateDriverLocation(driverId, { lat, lng })
+            .catch(err => console.error('Error updating location in database:', err));
+          
           setLastUpdateTime(new Date().toLocaleTimeString())
           
           // Show success toast
