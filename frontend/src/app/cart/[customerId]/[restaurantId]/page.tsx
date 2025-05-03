@@ -1,11 +1,9 @@
 "use client"
-
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
 import axios from "axios"
 import { Trash2, Plus, Minus, ArrowLeft, ShoppingBag } from "lucide-react"
-
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
@@ -65,7 +63,6 @@ export default function CartPage({ params }: { params: { customerId: string; res
         newQuantity,
       })
 
-      // Update local state to avoid refetching
       if (cart) {
         const updatedItems = cart.items.map((item) => {
           if (item.itemId === itemId) {
@@ -79,10 +76,7 @@ export default function CartPage({ params }: { params: { customerId: string; res
           return item
         })
 
-        // If quantity is 0, remove the item
         const filteredItems = updatedItems.filter((item) => item.quantity > 0)
-
-        // Calculate new total price
         const newTotalPrice = filteredItems.reduce((sum, item) => sum + item.totalPrice, 0)
 
         setCart({
@@ -110,7 +104,6 @@ export default function CartPage({ params }: { params: { customerId: string; res
     try {
       await axios.delete(`/api/cart/remove/${customerId}/${restaurantId}/${itemId}`)
 
-      // Update local state
       if (cart) {
         const updatedItems = cart.items.filter((item) => item.itemId !== itemId)
         const newTotalPrice = updatedItems.reduce((sum, item) => sum + item.totalPrice, 0)
@@ -140,11 +133,9 @@ export default function CartPage({ params }: { params: { customerId: string; res
     if (!window.confirm("Are you sure you want to clear your cart?")) {
       return
     }
-
     try {
       await axios.delete(`/api/cart/clear/${customerId}/${restaurantId}`)
 
-      // Update local state
       if (cart) {
         setCart({
           ...cart,
@@ -206,10 +197,16 @@ export default function CartPage({ params }: { params: { customerId: string; res
     )
   }
 
+  // Calculate delivery fee
+  const deliveryFee = cart?.totalPrice ? cart.totalPrice * 0.05 : 0
+  const tax = cart?.totalPrice ? cart.totalPrice * 0.08 : 0
+  const totalAmount = cart?.totalPrice
+    ? cart.totalPrice + deliveryFee + tax
+    : deliveryFee + tax
+
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-8 text-center">Your Cart</h1>
-
       <div className="max-w-3xl mx-auto">
         {!cart || cart.items.length === 0 ? (
           <div className="text-center py-12">
@@ -236,7 +233,6 @@ export default function CartPage({ params }: { params: { customerId: string; res
                             className="object-cover"
                             unoptimized={!item.image.startsWith("/")}
                             onError={(e) => {
-                              // Fallback to placeholder if image fails to load
                               e.currentTarget.src = "/placeholder.svg"
                             }}
                           />
@@ -246,7 +242,6 @@ export default function CartPage({ params }: { params: { customerId: string; res
                           </div>
                         )}
                       </div>
-
                       <div className="flex-1">
                         <h3 className="font-semibold">{item.itemName}</h3>
                         <p className="text-sm text-muted-foreground">Size: {item.potionSize}</p>
@@ -254,7 +249,6 @@ export default function CartPage({ params }: { params: { customerId: string; res
                           ${item.price.toFixed(2)} × {item.quantity} = ${item.totalPrice.toFixed(2)}
                         </p>
                       </div>
-
                       <div className="flex items-center gap-2">
                         <Button
                           variant="outline"
@@ -295,34 +289,29 @@ export default function CartPage({ params }: { params: { customerId: string; res
                     <span>${cart.totalPrice.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Delivery Fee</span>
-                    <span>$0.00</span>
+                    <span className="text-muted-foreground">Delivery Fee (5%)</span>
+                    <span>${deliveryFee.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Tax</span>
-                    <span>${(cart.totalPrice * 0.08).toFixed(2)}</span>
+                    <span className="text-muted-foreground">Tax (8%)</span>
+                    <span>${tax.toFixed(2)}</span>
                   </div>
                 </div>
-
                 <Separator className="my-4" />
-
                 <div className="flex justify-between font-semibold text-lg">
                   <span>Total</span>
-                  <span>${(cart.totalPrice * 1.08).toFixed(2)}</span>
+                  <span>${totalAmount.toFixed(2)}</span>
                 </div>
               </CardContent>
-
               <CardFooter className="p-6 pt-0 flex flex-col gap-4">
                 <Button className="w-full" size="lg" onClick={handleCheckout}>
                   Proceed to Checkout
                 </Button>
-
                 <div className="flex justify-between w-full gap-4">
                   <Button variant="outline" className="flex-1" onClick={handleContinueShopping}>
                     <ArrowLeft className="mr-2 h-4 w-4" />
                     Continue Shopping
                   </Button>
-
                   <Button
                     variant="outline"
                     className="flex-1 text-red-500 hover:text-red-700 hover:bg-red-50 border-red-200 hover:border-red-300"

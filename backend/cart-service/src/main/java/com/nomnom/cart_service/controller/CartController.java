@@ -86,6 +86,14 @@ public class CartController {
         return ResponseEntity.ok(cartDTOs);
     }
 
+    @GetMapping("/customer/{customerId}")
+    public ResponseEntity<List<CartDTO>> getCartsByCustomerId(@PathVariable String customerId) {
+        List<Cart> carts = cartService.getCartsByCustomerId(customerId);
+        List<CartDTO> cartDTOs = carts.stream()
+                .map(this::mapToCartDTO)
+                .toList();
+        return ResponseEntity.ok(cartDTOs);
+    }
 
     private CartDTO mapToCartDTO(com.nomnom.cart_service.model.Cart cart) {
         return new CartDTO(

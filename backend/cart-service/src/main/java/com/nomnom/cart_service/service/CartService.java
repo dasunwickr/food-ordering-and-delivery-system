@@ -98,6 +98,11 @@ public class CartService implements ICart {
         return cartRepository.findAll();
     }
 
+    @Override
+    public List<Cart> getCartsByCustomerId(String customerId) {
+        return cartRepository.findByCustomerId(customerId);
+    }
+
     private double calculateItemPrice(String itemName, int quantity) {
         double basePrice = switch (itemName.toLowerCase()) {
             case "pizza" -> 10.99;

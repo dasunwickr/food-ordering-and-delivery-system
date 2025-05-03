@@ -1,7 +1,7 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { useRouter } from "next/navigation"; 
+import { useRouter } from "next/navigation";
 import { useForm, FormProvider } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -36,10 +36,8 @@ const addMenuSchema = z.object({
   ),
 });
 
-// Infer the type from the schema
 type AddMenuFormValues = z.infer<typeof addMenuSchema>;
 
-// Define the Category interface
 interface Category {
   id: number;
   name: string;
@@ -53,11 +51,13 @@ const AddMenuForm = () => {
     { portionSize: string; price: number }[]
   >([{ portionSize: "", price: 0 }]);
 
-  // Initialize form with react-hook-form and Zod validation
+  // Fetch restaurantId from localStorage
+  const storedUserId = typeof window !== "undefined" ? localStorage.getItem("userId") : null;
+
   const formMethods = useForm<AddMenuFormValues>({
     resolver: zodResolver(addMenuSchema),
     defaultValues: {
-      restaurantId: "",
+      restaurantId: storedUserId || "",
       itemName: "",
       description: "",
       category: "",
@@ -68,47 +68,44 @@ const AddMenuForm = () => {
     },
   });
 
+  useEffect(() => {
+    if (storedUserId) {
+      formMethods.setValue("restaurantId", storedUserId);
+    }
+  }, [storedUserId, formMethods]);
+
   // Fetch categories from the backend
   useEffect(() => {
     const fetchCategories = async () => {
       try {
         const response = await axios.get<Category[]>("http://localhost/api/menu-service/categories");
         if (response.status === 200) {
-          setCategories(response.data); // Set the fetched categories
+          setCategories(response.data);
         }
       } catch (err) {
         console.error("Error fetching categories:", err);
       }
     };
-
     fetchCategories();
   }, []);
 
-  // Handle file input changes
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files[0]) {
-      formMethods.setValue("image", files[0]); // Update form state with the selected file
-      setPreview(URL.createObjectURL(files[0])); // Update preview
+      formMethods.setValue("image", files[0]);
+      setPreview(URL.createObjectURL(files[0]));
     }
   };
 
-  // Handle form submission
   const onSubmit = async (values: AddMenuFormValues) => {
     const formDataToSend = new FormData();
-
     Object.entries(values).forEach(([key, value]) => {
-      if (value === undefined || value === null) {
-        console.warn(`Skipping field '${key}' because it is undefined or null.`);
-        return; // Skip undefined or null values
-      }
-
+      if (value === undefined || value === null) return;
       if (value instanceof File) {
         formDataToSend.append(key, value);
       } else if (typeof value === "boolean") {
         formDataToSend.append(key, value.toString());
       } else if (key === "portions") {
-        // Convert portions array to JSON string
         formDataToSend.append(key, JSON.stringify(value));
       } else {
         formDataToSend.append(key, value.toString());
@@ -119,28 +116,25 @@ const AddMenuForm = () => {
       const API_URL = "http://localhost/api/menu-service";
       const response = await axios.post(`${API_URL}/menu/add`, formDataToSend, {
         headers: {
-        "Content-Type": "multipart/form-data",
-    },
-  });
-
-  if (response.status === 201 || response.status === 200) {
-    alert("Menu item added successfully!");
-    router.push("/restaurant/menu");
-  } else {
-    alert("Failed to add menu item.");
-  }
+          "Content-Type": "multipart/form-data",
+        },
+      });
+      if (response.status === 201 || response.status === 200) {
+        alert("Menu item added successfully!");
+        router.push("/restaurant/menu");
+      } else {
+        alert("Failed to add menu item.");
+      }
     } catch (error) {
       console.error("Error adding menu item:", error);
       alert("An error occurred while adding the menu item.");
     }
   };
 
-  // Add a portion field
   const addPortionField = () => {
     setPortionFields([...portionFields, { portionSize: "", price: 0 }]);
   };
 
-  // Remove a portion field
   const removePortionField = (index: number) => {
     const updatedFields = portionFields.filter((_, i) => i !== index);
     setPortionFields(updatedFields);
@@ -162,48 +156,28 @@ const AddMenuForm = () => {
       </CardHeader>
       <CardContent className="p-6">
         <FormProvider {...formMethods}>
-          <form
-            onSubmit={formMethods.handleSubmit(onSubmit)}
-            className="space-y-6"
-          >
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Restaurant ID */}
-              <FormField
-                control={formMethods.control}
-                name="restaurantId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="font-medium">Restaurant ID</FormLabel>
-                    <FormControl>
-                      <Input 
-                        type="number" 
-                        {...field} 
-                        className="border border-input focus:ring-ring" 
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+          <form onSubmit={formMethods.handleSubmit(onSubmit)} className="space-y-6">
+            {/* Hidden Restaurant ID Field */}
+            <FormField
+              control={formMethods.control}
+              name="restaurantId"
+              render={({ field }) => <input type="hidden" {...field} />}
+            />
 
-              {/* Item Name */}
-              <FormField
-                control={formMethods.control}
-                name="itemName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="font-medium">Item Name</FormLabel>
-                    <FormControl>
-                      <Input 
-                        {...field} 
-                        className="border border-input focus:ring-ring" 
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+            {/* Item Name */}
+            <FormField
+              control={formMethods.control}
+              name="itemName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="font-medium">Item Name</FormLabel>
+                  <FormControl>
+                    <Input {...field} className="border border-input focus:ring-ring" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             {/* Description */}
             <FormField
