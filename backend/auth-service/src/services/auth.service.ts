@@ -4,6 +4,7 @@ import { UserModel } from '../models/User';
 import { createSession } from '../utils/sessionClient';
 import { OtpModel } from '../models/Otp';
 import { sendEmail } from '../utils/email';
+import mongoose from 'mongoose';
 
 const USER_SERVICE_URL = process.env.USER_SERVICE_URL || 'http://user-service:8085/api/users';
 
@@ -30,26 +31,26 @@ export const registerUser = async (
   };
 
   try {
-    // Save in User Service
     const { data: createdUser } = await axios.post(USER_SERVICE_URL, fullUserData);
-    console.log('RegisterUser Created User:', createdUser); // Debugging log
+    console.log('RegisterUser Created User:', createdUser); 
 
-    // Ensure userType and userId are saved in the local auth database
+   
     const localUser = new UserModel({
+      _id: new mongoose.Types.ObjectId(createdUser.id),
       email,
       password: hashedPassword,
-      userType, // Save userType explicitly
-      userId: createdUser.id // Save userId explicitly
+      userType, 
+      userId: createdUser.id 
     });
 
     await localUser.save();
-    console.log('Local auth user created with userType and userId:', localUser._id);
+    console.log('Local auth user created with userType and userId:', localUser.userId);
 
     return { 
-      userId: createdUser.id
+      userId: createdUser.userId
     };
   } catch (userServiceError: any) {
-    console.error('RegisterUser Error:', userServiceError); // Debugging log
+    console.error('RegisterUser Error:', userServiceError); 
 
     // Specific error handling for debugging
     if (userServiceError.response) {
@@ -85,16 +86,16 @@ export const loginUser = async (
   // Create a session for the user
   try {
     const sessionResult = await createSession(user._id.toString(), ipAddress, device);
-    console.log('LoginUser Session Result:', sessionResult); // Debugging log
+    console.log('LoginUser Session Result:', sessionResult); 
     
     return { 
       userId: user._id.toString(),
       sessionId: sessionResult.sessionId, 
       sessionToken: sessionResult.token,
-      userType: user.userType // Make sure to return the userType
+      userType: user.userType 
     };
   } catch (error: any) {
-    console.error('LoginUser Error:', error); // Debugging log
+    console.error('LoginUser Error:', error); 
     throw new Error('Failed to create session');
   }
 };

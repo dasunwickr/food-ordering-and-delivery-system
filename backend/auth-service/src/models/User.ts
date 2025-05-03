@@ -5,6 +5,7 @@ const USER_TYPES = ['admin', 'customer', 'driver', 'restaurant'] as const;
 type UserType = typeof USER_TYPES[number];
 
 const userSchema = new mongoose.Schema({
+  userId: { type: String, required: true, unique: true },
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   userType: { 

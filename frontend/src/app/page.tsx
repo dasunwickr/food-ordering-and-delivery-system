@@ -15,7 +15,7 @@ import Footer from "@/components/common/footer";
 // Example auth functions — replace with your real logic
 const isAuthenticated = () => {
   // Replace with actual auth check
-  return false;
+  return true;
 };
 
 const getUserType = () => {
@@ -29,32 +29,32 @@ export default function Home() {
   const [isSticky, setIsSticky] = useState(false);
 
   // Redirect based on authentication
-  useEffect(() => {
-    if (isAuthenticated()) {
-      const userType = getUserType();
-      if (userType) {
-        switch (userType.toLowerCase()) {
-          case "admin":
-            router.push("/admin");
-            break;
-          case "customer":
-            router.push("/customer");
-            break;
-          default:
-            router.push("/");
-        }
-      }
-    }
+  // useEffect(() => {
+  //   if (isAuthenticated()) {
+  //     const userType = getUserType();
+  //     if (userType) {
+  //       switch (userType.toLowerCase()) {
+  //         case "admin":
+  //           router.push("/admin");
+  //           break;
+  //         case "customer":
+  //           router.push("/customer");
+  //           break;
+  //         default:
+  //           router.push("/");
+  //       }
+  //     }
+  //   }
 
-    const handleScroll = () => {
-      setIsSticky(window.scrollY > 100);
-    };
+  //   const handleScroll = () => {
+  //     setIsSticky(window.scrollY > 100);
+  //   };
 
-    window.addEventListener("scroll", handleScroll);
-    return () => {
-      window.removeEventListener("scroll", handleScroll);
-    };
-  }, [router]);
+  //   window.addEventListener("scroll", handleScroll);
+  //   return () => {
+  //     window.removeEventListener("scroll", handleScroll);
+  //   };
+  // }, [router]);
 
   return (
     <main className="bg-white px-4 sm:px-6 lg:px-8 py-6">

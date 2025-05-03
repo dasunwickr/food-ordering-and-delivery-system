@@ -396,7 +396,7 @@ export const userService = {
         if (checkError.message && checkError.message.includes('No account found')) {
           throw checkError;
         }
-        // Otherwise continue with login attempt - this handles cases where the email check endpoint fails
+        
       }
 
       const clientInfo = await getClientIdentifier();
