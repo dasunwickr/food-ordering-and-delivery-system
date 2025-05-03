@@ -6,9 +6,9 @@ import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 
 // Define the type for a restaurant
 interface Restaurant {
-  id: number;
-  restaurantName: string; // Updated to match the database field
-  imageUrl?: string; // Optional Cloudinary image URL
+  id: string;
+  restaurantName: string; // Matches the backend field
+  profilePictureUrl?: string | null; // Matches the backend field
 }
 
 const RestaurantsSlider = () => {
@@ -16,7 +16,7 @@ const RestaurantsSlider = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Default image URL (replace with your desired default image URL)
+  // Default image URL (fallback if no profile picture)
   const defaultImageUrl =
     "http://res.cloudinary.com/dwi1xi0qp/image/upload/v1745685680/ji3cwtwu7ehlh4b6k5gk.jpg";
 
@@ -31,7 +31,7 @@ const RestaurantsSlider = () => {
           "http://localhost/api/user-service/users/type/RESTAURANT"
         );
         if (response.status === 200) {
-          setRestaurants(response.data); // Assuming the backend returns an array of restaurants
+          setRestaurants(response.data);
           console.log(response.data);
         }
       } catch (err) {
@@ -81,11 +81,6 @@ const RestaurantsSlider = () => {
 
   return (
     <div className="max-w-8xl mx-auto p-6 bg-white overflow-hidden">
-      {/* Removed vertical scrollbar */}
-      <h1 className="text-2xl font-bold text-amber-700 mb-6">
-        Explore Restaurants
-      </h1>
-
       {/* Horizontal Slider Container */}
       <div className="relative overflow-hidden">
         {/* Navigation Buttons */}
@@ -105,7 +100,7 @@ const RestaurantsSlider = () => {
         {/* Restaurant Cards */}
         <div
           ref={containerRef}
-          className="flex gap-6 overflow-x-hidden ml-10 overflow-y-hidden" // Hide both horizontal and vertical scrollbars
+          className="flex gap-6 overflow-x-hidden ml-10"
         >
           {restaurants.map((restaurant) => (
             <Link
@@ -113,16 +108,16 @@ const RestaurantsSlider = () => {
               href={`/customer/restaurant/${restaurant.id}`}
               className="group min-w-[200px] flex-shrink-0 bg-gray-100 rounded-lg shadow-md overflow-hidden transition-transform hover:scale-105 cursor-pointer"
             >
-              {/* Image Section */}
+              {/* Use profilePictureUrl instead of imageUrl */}
               <img
-                src={restaurant.imageUrl || defaultImageUrl} // Use defaultImageUrl as fallback
-                alt={`Restaurant: ${restaurant.restaurantName}`} // Updated to use restaurantName
+                src={restaurant.profilePictureUrl || defaultImageUrl}
+                alt={`Restaurant: ${restaurant.restaurantName}`}
                 className="w-full h-32 object-cover group-hover:opacity-90 transition-opacity"
               />
               {/* Name Section */}
               <div className="p-3">
                 <h2 className="text-sm font-semibold text-gray-800 line-clamp-2">
-                  {restaurant.restaurantName} {/* Updated to use restaurantName */}
+                  {restaurant.restaurantName}
                 </h2>
               </div>
             </Link>

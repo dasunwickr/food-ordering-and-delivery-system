@@ -84,29 +84,6 @@ services:
       dockerfile: Dockerfile
     ports:
       - "8083:8083"
-    environment:
-      - SPRING_DATASOURCE_URL=jdbc:mysql://menu-db:3306/menudb?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
-      - SPRING_DATASOURCE_USERNAME=menuuser
-      - SPRING_DATASOURCE_PASSWORD=menupassword
-      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
-    depends_on:
-      - menu-db
-    restart: unless-stopped
-    networks:
-      - nomnom-network
-
-  # Menu Database
-  menu-db:
-    image: mysql:8.0
-    ports:
-      - "3310:3306"
-    environment:
-      - MYSQL_DATABASE=menudb
-      - MYSQL_USER=menuuser
-      - MYSQL_PASSWORD=menupassword
-      - MYSQL_ROOT_PASSWORD=rootpassword
-    volumes:
-      - menu-db-data:/var/lib/mysql
     restart: unless-stopped
     networks:
       - nomnom-network
@@ -172,5 +149,3 @@ networks:
   nomnom-network:
     driver: bridge
 
-volumes:
-  menu-db-data:

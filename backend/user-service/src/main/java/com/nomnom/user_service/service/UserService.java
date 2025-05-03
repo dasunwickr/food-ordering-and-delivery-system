@@ -73,7 +73,7 @@ public class UserService {
 
     public List<User> getUsersByType(String type) {
         return userRepository.findAll().stream()
-                .filter(user -> user.getUserType().equalsIgnoreCase(type))
+                .filter(user -> user.getUserType() != null && user.getUserType().equalsIgnoreCase(type))
                 .collect(Collectors.toList());
     }
 
