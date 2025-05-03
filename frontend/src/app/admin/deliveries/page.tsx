@@ -30,6 +30,12 @@ import {
 } from "@/services/delivery-service"
 import api from "@/lib/axios"
 import { userService } from "@/services/user-service"
+import dynamic from 'next/dynamic';
+
+const MultiDeliveryMapDynamic = dynamic(() => import('@/components/ui/multi-delivery-map'), {
+  ssr: false,
+  loading: () => <div className="h-[500px] flex items-center justify-center bg-muted">Loading map...</div>
+});
 
 // Analytics data for dashboard metrics
 const ANALYTICS_DATA = {
@@ -111,6 +117,9 @@ export default function AdminDeliveriesPage() {
 
   // Set up real-time location tracking for all active drivers
   useEffect(() => {
+    // Skip this entire effect during server-side rendering
+    if (typeof window === 'undefined') return;
+
     const activeDrivers = deliveries
       .filter(d => ["ACCEPTED", "IN_PROGRESS"].includes(d.status) && d.driver)
       .map(d => d.driver?.name?.split(' ')[0] || d.driver?.vehicle?.split('(')[1]?.split(')')[0])
@@ -120,35 +129,58 @@ export default function AdminDeliveriesPage() {
     if (activeDrivers.length > 0) {
       console.log("Setting up location tracking for drivers:", activeDrivers);
       
-      // Import socket functions
-      import('@/lib/socket').then(({ subscribeToDriverLocation, unsubscribeFromDriverLocation }) => {
-        // Setup listeners for each driver
-        activeDrivers.forEach(driverId => {
-          console.log(`Setting up listener for driver: ${driverId}`);
-          subscribeToDriverLocation(driverId, (location) => {
-            if (location && typeof location.lat === 'number' && typeof location.lng === 'number') {
-              console.log(`Received live location for driver ${driverId}:`, location);
-              setLiveDriverLocations(prev => ({
-                ...prev,
-                [driverId]: {
-                  lat: location.lat,
-                  lng: location.lng
-                }
-              }));
-            }
+      // Import socket functions - make sure we're only doing this on client side
+      const setupDriverTracking = async () => {
+        try {
+          // Dynamically import the socket module only on the client side
+          const socketModule = await import('@/lib/socket');
+          const { subscribeToDriverLocation, unsubscribeFromDriverLocation } = socketModule;
+          
+          // Setup listeners for each driver
+          activeDrivers.forEach(driverId => {
+            if (!driverId) return; // Skip if driverId is undefined
+            console.log(`Setting up listener for driver: ${driverId}`);
+            subscribeToDriverLocation(driverId, (location) => {
+              if (location && typeof location.lat === 'number' && typeof location.lng === 'number') {
+                console.log(`Received live location for driver ${driverId}:`, location);
+                setLiveDriverLocations(prev => ({
+                  ...prev,
+                  [driverId]: {
+                    lat: location.lat,
+                    lng: location.lng
+                  }
+                }));
+              }
+            });
           });
-        });
-        
-        // Cleanup function to unsubscribe when component unmounts
-        return () => {
-          import('@/lib/socket').then(({ unsubscribeFromDriverLocation }) => {
+        } catch (error) {
+          console.error("Error setting up driver location tracking:", error);
+        }
+      };
+      
+      setupDriverTracking();
+      
+      // Cleanup function to unsubscribe when component unmounts
+      return () => {
+        const cleanupDriverTracking = async () => {
+          if (typeof window === 'undefined') return; // Safety check
+          
+          try {
+            const socketModule = await import('@/lib/socket');
+            const { unsubscribeFromDriverLocation } = socketModule;
+            
             activeDrivers.forEach(driverId => {
+              if (!driverId) return; // Skip if driverId is undefined
               console.log(`Cleaning up listener for driver: ${driverId}`);
               unsubscribeFromDriverLocation(driverId);
             });
-          });
+          } catch (error) {
+            console.error("Error cleaning up driver tracking:", error);
+          }
         };
-      });
+        
+        cleanupDriverTracking();
+      };
     }
   }, [deliveries]);
 
@@ -602,40 +634,46 @@ export default function AdminDeliveriesPage() {
 
   // Format deliveries for map display
   const getMapDeliveries = (): DeliveryMapItem[] => {
-    return deliveries.map(delivery => ({
-      id: delivery.id,
-      status: delivery.status,
-      restaurant: {
-        name: delivery.restaurant.name,
-        location: {
-          lat: delivery.restaurant.location.lat,
-          lng: delivery.restaurant.location.lng,
-          label: delivery.restaurant.name,
-          icon: "restaurant"
-        }
-      },
-      customer: {
-        name: delivery.customer.name,
-        location: {
-          lat: delivery.customer.location.lat,
-          lng: delivery.customer.location.lng,
-          label: delivery.customer.name,
-          icon: "customer"
-        }
-      },
-      ...(delivery.driver ? {
-        driver: {
-          id: delivery.driver.name.split(' ')[0] || delivery.id, // Use first name or id as driver id
-          name: delivery.driver.name,
+    // Only calculate this on the client side
+    if (typeof window === 'undefined') return [];
+    
+    // Filter to show only active and pending deliveries on the map
+    return deliveries
+      .filter(delivery => ["PENDING", "ACCEPTED", "IN_PROGRESS"].includes(delivery.status))
+      .map(delivery => ({
+        id: delivery.id,
+        status: delivery.status,
+        restaurant: {
+          name: delivery.restaurant.name,
           location: {
-            lat: liveDriverLocations[delivery.driver.name.split(' ')[0]]?.lat || delivery.driverLocation.lat,
-            lng: liveDriverLocations[delivery.driver.name.split(' ')[0]]?.lng || delivery.driverLocation.lng,
-            label: delivery.driver.name,
-            icon: "driver"
+            lat: delivery.restaurant.location.lat,
+            lng: delivery.restaurant.location.lng,
+            label: delivery.restaurant.name,
+            icon: "restaurant"
           }
-        }
-      } : {})
-    }));
+        },
+        customer: {
+          name: delivery.customer.name,
+          location: {
+            lat: delivery.customer.location.lat,
+            lng: delivery.customer.location.lng,
+            label: delivery.customer.name,
+            icon: "customer"
+          }
+        },
+        ...(delivery.driver ? {
+          driver: {
+            id: delivery.driver.name.split(' ')[0] || delivery.id, // Use first name or id as driver id
+            name: delivery.driver.name,
+            location: {
+              lat: liveDriverLocations[delivery.driver.name.split(' ')[0]]?.lat || delivery.driverLocation.lat,
+              lng: liveDriverLocations[delivery.driver.name.split(' ')[0]]?.lng || delivery.driverLocation.lng,
+              label: delivery.driver.name,
+              icon: "driver"
+            }
+          }
+        } : {})
+      }));
   };
 
   // Handle map delivery selection
@@ -739,8 +777,8 @@ export default function AdminDeliveriesPage() {
             </CardHeader>
             <CardContent className="p-0">
               <div className="h-[500px]">
-                {deliveries.length > 0 && (
-                  <MultiDeliveryMap
+                {deliveries.length > 0 && typeof window !== 'undefined' && (
+                  <MultiDeliveryMapDynamic
                     deliveries={getMapDeliveries()}
                     enableLiveTracking={true}
                     zoom={12}

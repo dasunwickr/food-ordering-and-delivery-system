@@ -164,25 +164,47 @@ export const initializeSocket = (server: HTTPServer): void => {
 export const broadcastNewOrder = (orderId: string, orderData: any): void => {
   console.log(`Broadcasting new order ${orderId} to ${connectedDrivers.size} drivers`);
   
-  // Store the order in pending orders
-  pendingOrders.set(orderId, {
+  // Add additional timestamps and debug info
+  const enhancedOrderData = {
     ...orderData,
+    orderId, // Ensure orderId is included in the payload
     timestamp: new Date().toISOString(),
-    rejectedBy: []
-  });
+    rejectedBy: [],
+    broadcastId: `${orderId}-${Date.now()}` // Add a unique broadcast ID for debugging
+  };
+  
+  // Store the order in pending orders
+  pendingOrders.set(orderId, enhancedOrderData);
+  
+  // Count how many drivers we broadcast to for logging
+  let availableDriversCount = 0;
   
   // Broadcast to all available drivers
   connectedDrivers.forEach((driver) => {
-    if (driver.available && (!orderData.rejectedBy || !orderData.rejectedBy.includes(driver.driverId))) {
-      driver.socket.emit('order:request', {
-        ...orderData,
-        timestamp: new Date().toISOString()
+    if (driver.available) {
+      console.log(`Broadcasting order ${orderId} to driver ${driver.driverId}`);
+      availableDriversCount++;
+      
+      // Emit with a callback to ensure delivery
+      driver.socket.emit('order:request', enhancedOrderData, (error: any) => {
+        if (error) {
+          console.error(`Error sending order request to driver ${driver.driverId}:`, error);
+        } else {
+          console.log(`Successfully sent order request to driver ${driver.driverId}`);
+        }
       });
     }
   });
   
+  console.log(`Broadcast complete: Order ${orderId} sent to ${availableDriversCount}/${connectedDrivers.size} drivers`);
+  
+  // If no drivers are available, log this information
+  if (availableDriversCount === 0) {
+    console.log(`No available drivers to deliver order ${orderId}. Will retry when drivers become available.`);
+  }
+  
   // Schedule periodic rebroadcasts of unassigned orders
-  scheduleOrderRebroadcast(orderId, orderData);
+  scheduleOrderRebroadcast(orderId, enhancedOrderData);
 };
 
 /**
@@ -195,17 +217,24 @@ const scheduleOrderRebroadcast = (orderId: string, orderData: any): void => {
       const order = pendingOrders.get(orderId);
       console.log(`Rebroadcasting order ${orderId} to available drivers`);
       
+      let availableDriversCount = 0;
+      
       // Only broadcast to drivers who haven't rejected it
       connectedDrivers.forEach((driver) => {
         if (driver.available && (!order.rejectedBy || !order.rejectedBy.includes(driver.driverId))) {
+          availableDriversCount++;
           driver.socket.emit('order:request', {
             ...order,
+            rebroadcast: true, // Flag this as a rebroadcast for debugging
             timestamp: new Date().toISOString()
           });
         }
       });
+      
+      console.log(`Rebroadcast complete: Order ${orderId} sent to ${availableDriversCount} available drivers`);
     } else {
       // Order has been assigned, cancel the interval
+      console.log(`Order ${orderId} is no longer pending, cancelling rebroadcast interval`);
       clearInterval(interval);
     }
   }, 30000); // Rebroadcast every 30 seconds
@@ -215,6 +244,7 @@ const scheduleOrderRebroadcast = (orderId: string, orderData: any): void => {
     clearInterval(interval);
     // Remove from pending orders if still there after 30 minutes
     if (pendingOrders.has(orderId)) {
+      console.log(`Order ${orderId} expired after 30 minutes without being accepted`);
       pendingOrders.delete(orderId);
       global.io?.emit('order:expired', { orderId });
     }

@@ -1,7 +1,7 @@
 #!/bin/bash
 # Script to set up a Kind Kubernetes cluster for local development and testing
 
-echo "=== Setting up Kind Kubernetes Cluster for Food Ordering System ==="
+echo "=== Setting up Kind Kubernetes Cluster for Food Ordering System (Backend Only) ==="
 
 # Check if kind is installed
 if ! command -v kind &> /dev/null; then
@@ -87,11 +87,13 @@ data:
 EOF
 
 echo
-echo "=== Ready to Deploy Food Ordering System ==="
+echo "=== Ready to Deploy Food Ordering System Backend Services ==="
 echo "You can now build and push images to localhost:5000 and deploy them to your Kind cluster."
 echo
-echo "To deploy the food ordering system, run:"
+echo "To deploy the backend services, run:"
 echo "   ./deploy-to-kind.sh"
+echo
+echo "Note: This setup is for backend services only. The frontend will be deployed separately."
 echo
 
 # Clean up temporary files
