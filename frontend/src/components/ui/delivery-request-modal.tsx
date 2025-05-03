@@ -41,18 +41,57 @@ interface DeliveryRequestModalProps {
 
 export function DeliveryRequestModal({ open, onOpenChange, delivery, onAccept, onDecline }: DeliveryRequestModalProps) {
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  const handleAccept = () => {
+  const handleAccept = async () => {
     setIsLoading(true)
-    // Simulate API call
-    setTimeout(() => {
-      onAccept(delivery.id)
-      setIsLoading(false)
-    }, 1000)
+    setError(null)
+    try {
+      const idToUse = delivery.orderId || delivery.id;
+      
+      console.log('Attempting to accept delivery with:', { 
+        providedId: idToUse, 
+        deliveryObject: {
+          id: delivery.id,
+          orderId: delivery.orderId
+        }
+      });
+      
+      if (!idToUse || idToUse === 'undefined' || idToUse === 'null') {
+        console.error('Invalid order ID', { 
+          id: delivery.id, 
+          orderId: delivery.orderId 
+        });
+        throw new Error('Invalid order ID - please try again or refresh the page');
+      }
+      
+      await onAccept(idToUse);
+    } catch (error) {
+      console.error("Error accepting delivery:", error);
+      setError(error instanceof Error ? error.message : 'Failed to accept delivery');
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   const handleDecline = () => {
-    onDecline(delivery.id)
+    try {
+      // Use the same ID fallback logic as in handleAccept
+      const idToUse = delivery.id || delivery.orderId;
+      
+      if (!idToUse || idToUse === 'undefined' || idToUse === 'null') {
+        console.error('Both delivery.id and delivery.orderId are invalid', { 
+          id: delivery.id, 
+          orderId: delivery.orderId 
+        });
+        throw new Error('Invalid delivery ID - please try again or refresh the page');
+      }
+      
+      onDecline(idToUse);
+    } catch (error) {
+      console.error("Error declining delivery:", error);
+      setError(error instanceof Error ? error.message : 'Failed to decline delivery');
+    }
   }
 
   // Calculate driver's initial position (halfway between restaurant and customer)
@@ -146,6 +185,12 @@ export function DeliveryRequestModal({ open, onOpenChange, delivery, onAccept, o
             </ul>
           </div>
         </div>
+
+        {error && (
+          <div className="rounded-md bg-red-50 p-3 text-sm text-red-600">
+            {error}
+          </div>
+        )}
 
         <DialogFooter className="flex-col gap-2 sm:flex-row">
           <Button variant="outline" className="sm:flex-1" onClick={handleDecline} disabled={isLoading}>

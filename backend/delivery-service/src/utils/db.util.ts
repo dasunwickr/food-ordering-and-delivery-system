@@ -1,26 +1,32 @@
-import mongoose from "mongoose";
+import mongoose from 'mongoose';
 
-// Default to the delivery service database if not specified
-const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017/nomnom-delivery-db";
-
-// This will define which database to use
-// We'll use the same MongoDB instance but will specify different databases
-// when creating models using mongoose.model('ModelName', schema, 'collectionName')
-if (!MONGO_URI) {
-  console.error("MongoDB URI is not defined in the environment variables.");
-  process.exit(1);
-}
-
+/**
+ * Connect to MongoDB databases
+ * We're connecting to two databases:
+ * 1. delivery-service database (for backward compatibility)
+ * 2. order-service database (as the source of truth for delivery data)
+ */
 export const connectToDatabase = async (): Promise<void> => {
   try {
-    // Connect to the main database
-    await mongoose.connect(MONGO_URI);
-    console.log("MongoDB connected");
+    // Connect to delivery-service database for backward compatibility
+    const deliveryDbUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/delivery-service';
     
-    // Set up global configuration for Mongoose
-    mongoose.set('strictQuery', true);
+    await mongoose.connect(deliveryDbUri, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true
+    } as mongoose.ConnectOptions);
+    
+    console.log('Successfully connected to delivery service database');
+    
+    // Note: Connection to order-service database is established in the Order model
+    // directly using a separate connection to avoid conflicts
+    
+    mongoose.connection.on('error', (error) => {
+      console.error('MongoDB connection error:', error);
+    });
+    
   } catch (error) {
-    console.error("Error connecting to MongoDB:", error);
+    console.error('Failed to connect to MongoDB:', error);
     process.exit(1);
   }
 };
