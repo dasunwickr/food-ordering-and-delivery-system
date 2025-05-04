@@ -1,5 +1,5 @@
 #!/bin/bash
-# Script to deploy the food ordering system to Kubernetes
+# Script to deploy the food ordering system backend services to Kubernetes
 
 # Set error handling
 set -e
@@ -8,7 +8,7 @@ set -o pipefail
 # Directory where Kubernetes YAML files are located
 KUBE_DIR="$(dirname "$0")"
 
-echo "=== Starting deployment of Food Ordering & Delivery System to Kubernetes ==="
+echo "=== Starting deployment of Food Ordering & Delivery System Backend Services to Kubernetes ==="
 echo "Deploying resources from directory: $KUBE_DIR"
 echo
 
@@ -100,5 +100,6 @@ echo "=== API Gateway Access Information ==="
 kubectl get service api-gateway -n nomnom-system
 
 echo
-echo "You can access the Food Ordering & Delivery System through the External IP/Port of the API Gateway"
+echo "You can access the Food Ordering & Delivery System Backend API through the External IP/Port of the API Gateway"
 echo "Note: If using Minikube, run 'minikube service api-gateway -n nomnom-system' to access the application"
+echo "Note: This deployment only includes backend services. The frontend needs to be deployed separately."

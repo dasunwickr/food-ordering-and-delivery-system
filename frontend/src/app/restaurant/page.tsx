@@ -86,12 +86,13 @@ const Dashboard: React.FC = () => {
     percentChange: 12.3,
   };
 
+  const restaurantId = typeof window !== 'undefined' ? localStorage.getItem("userId") : null;
   // Fetch menu items on mount
   useEffect(() => {
     const fetchMenuItems = async () => {
       try {
         const response = await axios.get<MenuItem[]>(
-          "http://localhost/api/menu-service/menu/all"
+          `http://localhost/api/menu-service/menu/restaurant/${restaurantId}`
         );
         const fetchedItems = response.data;
 

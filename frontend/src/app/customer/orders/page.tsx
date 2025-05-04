@@ -330,7 +330,7 @@ export default function CustomerOrdersPage() {
                 const estimatedTime = order.orderStatus === "Delivered" ? "0 min" : "15 min"
                 const distance = "2.5 mi" // Placeholder
                 
-                return {
+                const formattedOrder = {
                   id: order.orderId,
                   status: status,
                   orderId: order.orderId,
@@ -350,6 +350,37 @@ export default function CustomerOrdersPage() {
                     deliveredAt: order.orderStatus === "Delivered" ? order.updatedAt : undefined
                   }
                 };
+                
+                // Subscribe to real-time driver location updates when there's an active delivery
+                if (order.driverDetails?.driverId && ["confirmed", "out for delivery"].includes(order.orderStatus?.toLowerCase())) {
+                  // Use a consistent driverId format
+                  const driverIdString = String(order.driverDetails.driverId);
+                  console.log(`Setting up location subscription for driver: ${driverIdString} on order: ${order.orderId}`);
+                  
+                  // Subscribe to real-time location updates via socket
+                  subscribeToDriverLocation(driverIdString, (location) => {
+                    if (location && location.lat && location.lng) {
+                      console.log(`Received location update for driver ${driverIdString}:`, location);
+                      
+                      // Update the orders state with the new driver location
+                      setOrders(prev => prev.map(prevOrder => {
+                        // Match by orderId since that's what we track in the UI
+                        if (prevOrder.orderId === order.orderId) {
+                          return {
+                            ...prevOrder,
+                            driverLocation: {
+                              lat: location.lat,
+                              lng: location.lng
+                            }
+                          };
+                        }
+                        return prevOrder;
+                      }));
+                    }
+                  });
+                }
+                
+                return formattedOrder;
               } catch (error) {
                 console.error("Error formatting order:", error)
                 return null
@@ -366,7 +397,7 @@ export default function CustomerOrdersPage() {
           console.error("Error fetching orders from order service:", orderErr);
         }
         
-        // Fall back to the delivery service if no orders found
+        // Rest of the code remains unchanged...
         const deliveries = await getDeliveriesByCustomerId(userId)
         
         if (deliveries && deliveries.length > 0) {
@@ -495,7 +526,8 @@ export default function CustomerOrdersPage() {
               const estimatedTime = delivery.status === "DELIVERED" ? "0 min" : "15 min"
               const distance = "2.5 mi" // Placeholder - would be calculated based on coordinates
               
-              return {
+              // Format the delivery data
+              const formattedDelivery = {
                 id: delivery._id || '',
                 status: delivery.status as DeliveryStatus,
                 orderId: delivery.orderId,
@@ -518,6 +550,39 @@ export default function CustomerOrdersPage() {
                     : undefined
                 }
               }
+
+              // Subscribe to real-time driver location updates when there's an active, in-progress delivery
+              if (delivery.driverId && ["ACCEPTED", "IN_PROGRESS"].includes(delivery.status)) {
+                try {
+                  // Convert driverId to string and ensure it's not undefined
+                  const driverIdString = String(delivery.driverId);
+                  
+                  // Subscribe to real-time driver location updates
+                  subscribeToDriverLocation(driverIdString, (location) => {
+                    if (location && location.lat && location.lng) {
+                      console.log(`Got real-time location update for driver ${driverIdString}:`, location);
+                      // Update the driver location in our state
+                      setOrders(prev => 
+                        prev.map(order => 
+                          order.id === delivery._id 
+                            ? { 
+                                ...order, 
+                                driverLocation: { 
+                                  lat: location.lat, 
+                                  lng: location.lng 
+                                } 
+                              } 
+                            : order
+                        )
+                      );
+                    }
+                  });
+                } catch (locationError) {
+                  console.error("Error subscribing to driver location:", locationError);
+                }
+              }
+              
+              return formattedDelivery;
             } catch (error) {
               console.error("Error formatting delivery:", error)
               return null
@@ -542,7 +607,29 @@ export default function CustomerOrdersPage() {
     }
     
     fetchOrders()
-  }, [userId, userProfile])
+    
+    // Clean up function to unsubscribe from all driver location updates
+    return () => {
+      // Get all unique driver IDs from orders with active deliveries
+      const activeDriverIds = new Set<string>();
+      
+      orders.forEach(order => {
+        if (order.driver && ["ACCEPTED", "IN_PROGRESS"].includes(order.status)) {
+          // Try to extract driver ID from the order data
+          const driverIdFromOrder = order.orderId.split('-')[0]; // This is just one possible format
+          if (driverIdFromOrder) {
+            activeDriverIds.add(driverIdFromOrder);
+          }
+        }
+      });
+      
+      // Unsubscribe from all active driver location updates
+      activeDriverIds.forEach(driverId => {
+        console.log(`Unsubscribing from location updates for driver: ${driverId}`);
+        unsubscribeFromDriverLocation(driverId);
+      });
+    };
+  }, [userId, userProfile]);
 
   const handleViewDetails = (id: string) => {
     setActiveOrder(id)
@@ -554,7 +641,59 @@ export default function CustomerOrdersPage() {
       order.restaurant.name.toLowerCase().includes(searchQuery.toLowerCase()),
   )
 
+  // Define activeOrderData before using it in the useEffect hook
   const activeOrderData = orders.find((order) => order.id === activeOrder)
+
+  // Add a useEffect to handle location updates for the active order
+  useEffect(() => {
+    if (activeOrder && activeOrderData) {
+      // If there's an active order being viewed and it has driver details
+      if (activeOrderData.driver && ["ACCEPTED", "IN_PROGRESS"].includes(activeOrderData.status)) {
+        // Try different ways to get the driverId
+        let driverId: string | undefined;
+        
+        // Attempt to get driverId from the order data structure
+        if (activeOrderData.orderId) {
+          // In some systems, the orderId might contain or be prefixed with the driverId
+          const possibleDriverId = activeOrderData.orderId.split('-')[0];
+          
+          if (possibleDriverId) {
+            driverId = possibleDriverId;
+            console.log(`Using driver ID from orderId: ${driverId}`);
+          }
+        }
+        
+        if (driverId) {
+          // Subscribe to real-time location updates for this specific driver
+          subscribeToDriverLocation(driverId, (location) => {
+            if (location && location.lat && location.lng) {
+              console.log(`Active order: received location update for driver ${driverId}:`, location);
+              
+              // Update only the active order's driver location
+              setOrders(prev => 
+                prev.map(order => 
+                  order.id === activeOrderData.id 
+                    ? {
+                        ...order,
+                        driverLocation: {
+                          lat: location.lat,
+                          lng: location.lng
+                        }
+                      }
+                    : order
+                )
+              );
+            }
+          });
+          
+          // Clean up subscription when the active order changes or component unmounts
+          return () => {
+            unsubscribeFromDriverLocation(driverId!);
+          };
+        }
+      }
+    }
+  }, [activeOrder, activeOrderData]);
 
   const handleRateDelivery = () => {
     setShowRating(true)
@@ -679,8 +818,8 @@ export default function CustomerOrdersPage() {
                     icon: "customer",
                   }}
                   className="h-[400px]"
-                  // Enable live tracking if we have a driver assigned
-                  driverId={activeOrderData.driver ? activeOrderData.orderId : undefined}
+                  // Pass the actual driver ID from the delivery data instead of trying to extract it from the order ID
+                  driverId={activeOrderData.driver ? String(activeOrderData.orderId).split('-')[0] : undefined}
                   enableLiveTracking={Boolean(activeOrderData.driver) && 
                     ["ACCEPTED", "IN_PROGRESS"].includes(activeOrderData.status)}
                 />

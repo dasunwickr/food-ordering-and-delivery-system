@@ -29,6 +29,10 @@ export function SignInForm({ onSubmit, isLoading = false }: SignInFormProps) {
   const [isCheckingEmail, setIsCheckingEmail] = useState(false)
   const [emailNotRegistered, setEmailNotRegistered] = useState(false)
   const [emailDebounceTimer, setEmailDebounceTimer] = useState<NodeJS.Timeout | null>(null)
+  
+  // Use stable IDs for form elements to prevent hydration mismatches
+  const emailFieldId = "signin-email"
+  const passwordFieldId = "signin-password"
 
   // Check email existence when email changes, with debounce
   useEffect(() => {
@@ -216,7 +220,7 @@ export function SignInForm({ onSubmit, isLoading = false }: SignInFormProps) {
       
       <motion.div variants={itemVariants}>
         <FormInput
-          id="email"
+          id={emailFieldId}
           label="Email"
           type="email"
           placeholder="name@example.com"
@@ -242,7 +246,7 @@ export function SignInForm({ onSubmit, isLoading = false }: SignInFormProps) {
 
       <motion.div variants={itemVariants}>
         <div className="flex justify-between">
-          <label htmlFor="password" className="text-sm font-medium">
+          <label htmlFor={passwordFieldId} className="text-sm font-medium">
             Password
           </label>
           <Link href="/forgot-password" className="text-sm text-primary hover:underline">
@@ -251,7 +255,7 @@ export function SignInForm({ onSubmit, isLoading = false }: SignInFormProps) {
         </div>
         <div className="relative">
           <PasswordInput 
-            id="password" 
+            id={passwordFieldId} 
             label="" 
             value={password} 
             onChange={setPassword} 

@@ -1,7 +1,7 @@
 #!/bin/bash
-# Script to build, push, and deploy the food ordering system to a local Kind cluster
+# Script to build, push, and deploy the food ordering system backend services to a local Kind cluster
 
-echo "=== Building and Deploying Food Ordering System to Kind ==="
+echo "=== Building and Deploying Food Ordering System Backend Services to Kind ==="
 echo
 
 # Check if Kind cluster exists
@@ -102,14 +102,12 @@ if [ -d "ratings-and-reviews-service" ]; then
     build_and_push ratings-and-reviews-service ratings-and-reviews-service
 fi
 
-# Build and push frontend
-if [ -d "../frontend" ]; then
-    build_and_push ../frontend frontend
-fi
+# Remove frontend build and push as it's not needed
+# Frontend will be deployed separately
 
 cd ../kubernetes
 
-echo "All images built and pushed successfully."
+echo "All backend images built and pushed successfully."
 echo
 
 # Deploy to Kubernetes
@@ -220,11 +218,13 @@ kubectl apply -f temp_k8s/ingress.yaml
 
 echo
 echo "=== Access Information ==="
-echo "Your Food Ordering System is now accessible at:"
+echo "Your Food Ordering System Backend API is now accessible at:"
 echo "  http://localhost/"
 echo
 echo "For debugging, you can check pod logs with:"
 echo "  kubectl logs -n nomnom-system [pod-name]"
+echo
+echo "Note: This deployment only includes backend services. The frontend needs to be deployed separately."
 echo
 
 # Optional cleanup

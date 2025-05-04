@@ -29,8 +29,17 @@ export function RestaurantSidebar({ className, open, onClose, ...props }: Restau
   const sidebarContent = (
     <div className={cn("flex h-full flex-col", className)} {...props}>
       <div className="flex h-16 items-center border-b px-4">
-      <Link href="/restaurant" className="flex items-center gap-2 font-semibold">
-          <Image src="/logo-dark.svg" alt="NomNom-logo" width={120} height={120} className="rounded-full" />
+        <Link href="/restaurant" className="flex items-center gap-2 font-semibold">
+          <div className="relative w-32 h-10">
+            <Image 
+              src="/logo-dark.svg" 
+              alt="NomNom-logo" 
+              fill
+              priority
+              sizes="128px"
+              className="object-contain" 
+            />
+          </div>
         </Link>
         {isMobile && (
           <Button variant="ghost" size="icon" className="ml-auto" onClick={onClose}>
@@ -75,37 +84,27 @@ export function RestaurantSidebar({ className, open, onClose, ...props }: Restau
           </Link>
 
           <Link
-            href="/restaurant/hours"
+            href="/restaurant/deliveries"
             className={cn(
               "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground",
               pathname === "/restaurant/hours" ? "bg-accent text-accent-foreground" : "transparent",
             )}
           >
             <Clock className="h-5 w-5" />
-            Business Hours
+            Delivery Status
           </Link>
 
           <Link
-            href="/restaurant/delivery-zones"
+            href="/restaurant/payments"
             className={cn(
               "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground",
               pathname === "/restaurant/delivery-zones" ? "bg-accent text-accent-foreground" : "transparent",
             )}
           >
             <MapPin className="h-5 w-5" />
-            Delivery Zones
+            Payments and Transactions
           </Link>
 
-          <Link
-            href="/restaurant/analytics"
-            className={cn(
-              "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground",
-              pathname === "/restaurant/analytics" ? "bg-accent text-accent-foreground" : "transparent",
-            )}
-          >
-            <BarChart3 className="h-5 w-5" />
-            Analytics
-          </Link>
 
           <div className="my-2 h-px bg-border" />
 

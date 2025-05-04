@@ -37,6 +37,7 @@ export interface DeliveryCardProps {
   onPickup?: (id: string) => void
   onDeliver?: (id: string) => void
   onCancel?: (id: string) => void
+  onHandToDriver?: (id: string) => void
   viewType?: "driver" | "restaurant" | "customer" | "admin"
 }
 
@@ -58,6 +59,7 @@ export function DeliveryCard({
   onPickup,
   onDeliver,
   onCancel,
+  onHandToDriver,
   viewType = "driver",
 }: DeliveryCardProps) {
   const formatTime = (timestamp?: string) => {
@@ -144,7 +146,7 @@ export function DeliveryCard({
         )}
 
         {status === "ACCEPTED" && viewType === "restaurant" && (
-          <Button size="sm" className="flex-1" onClick={() => onPickup?.(id)}>
+          <Button size="sm" className="flex-1" onClick={() => onHandToDriver?.(id)}>
             Hand to Driver
           </Button>
         )}

@@ -1,31 +1,63 @@
 import { io, Socket } from 'socket.io-client';
 
-// Use environment variable for the socket URL or default to localhost
 const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:5003';
 
 let socket: Socket | null = null;
+let reconnectAttempts = 0;
+const MAX_RECONNECT_ATTEMPTS = 10;
 
-// Function to initialize and get the socket connection
+
 export const getSocket = (): Socket => {
   if (!socket) {
+    console.log(`Initializing socket connection to ${SOCKET_URL}`);
+    
     socket = io(SOCKET_URL, {
-      transports: ['websocket', 'polling'],
-      reconnectionAttempts: 5,
+      transports: ['websocket', 'polling'], 
+      reconnectionAttempts: MAX_RECONNECT_ATTEMPTS,
       reconnectionDelay: 1000,
-      withCredentials: true // Enable CORS credentials
+      reconnectionDelayMax: 5000,
+      timeout: 20000,
+      withCredentials: true 
     });
 
     // Log connection events
     socket.on('connect', () => {
-      console.log('Socket connected:', socket?.id);
+      console.log('Socket connected successfully:', socket?.id);
+      reconnectAttempts = 0; 
     });
 
-    socket.on('disconnect', () => {
-      console.log('Socket disconnected');
+    socket.on('disconnect', (reason) => {
+      console.log('Socket disconnected. Reason:', reason);
+      
+     
+      if (reason === 'io server disconnect') {
+        console.log('Server disconnected the socket. Attempting to reconnect...');
+        socket?.connect();
+      }
     });
 
-    socket.on('error', (err) => {
-      console.error('Socket error:', err);
+    socket.on('connect_error', (err) => {
+      console.error('Socket connection error:', err.message);
+      reconnectAttempts++;
+      
+      if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+        console.error(`Failed to connect after ${MAX_RECONNECT_ATTEMPTS} attempts. Will retry manually.`);
+        
+        // Try a manual reconnection after a delay
+        setTimeout(() => {
+          console.log('Attempting manual reconnection...');
+          socket?.connect();
+          reconnectAttempts = 0;
+        }, 5000);
+      }
+    });
+    
+    socket.on('reconnect', (attemptNumber) => {
+      console.log(`Socket reconnected after ${attemptNumber} attempts`);
+    });
+    
+    socket.on('reconnect_error', (err) => {
+      console.error('Socket reconnection error:', err.message);
     });
   }
 
@@ -58,8 +90,14 @@ export const subscribeToOrderRequests = (
 ): () => void => {
   const socket = getSocket();
   
+  // Remove any existing listeners to prevent duplicates
+  socket.off('order:request');
+  
   // Listen for new order requests
-  socket.on('order:request', callback);
+  socket.on('order:request', (orderData) => {
+    console.log('Received order request:', orderData);
+    callback(orderData);
+  });
   
   // Return a cleanup function
   return () => socket.off('order:request', callback);
@@ -71,7 +109,13 @@ export const subscribeToOrderTaken = (
 ): () => void => {
   const socket = getSocket();
   
-  socket.on('order:taken', callback);
+  // Remove any existing listeners to prevent duplicates
+  socket.off('order:taken');
+  
+  socket.on('order:taken', (data) => {
+    console.log('Received order taken notification:', data);
+    callback(data);
+  });
   
   return () => socket.off('order:taken', callback);
 };
@@ -108,8 +152,8 @@ export const unsubscribeFromDriverLocation = (driverId: string): void => {
   // Unsubscribe from driver location updates
   socket.emit('unsubscribe:driverLocation', { driverId });
   
-  // Remove all listeners for this driver
-  socket.off(`driver:${driverId}:locationUpdate`);
+  // Remove all listeners for this driver - fix event name to match the one we're subscribing to
+  socket.off(`driver:${driverId}:location`);
 };
 
 // Send driver location update

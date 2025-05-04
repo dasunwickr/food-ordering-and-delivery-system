@@ -307,6 +307,15 @@ export default function OrderSuccessPage({ params }: { params: { orderId: string
                         <ArrowRight className="ml-2 h-4 w-4" />
                       </Link>
                     </Button>
+                    {/* New Payment Button */}
+                    <Button asChild variant="default" className="w-full bg-blue-600 hover:bg-blue-700">
+                      <Link
+                        href={`/payment?orderId=${order.orderId}&customerId=${order.customerId}&restaurantId=${order.restaurantId}&amount=${order.totalAmount}&deliveryFee=${order.deliveryFee}&driverId=${order.driverDetails?.driverId || ''}`}
+                      >
+                        Proceed to Payment
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </Link>
+                    </Button>
                     <Button asChild variant="outline">
                       <Link href={`/customer/restaurant/${order.restaurantId}`}>Continue Shopping</Link>
                     </Button>

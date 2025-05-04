@@ -1,0 +1,126 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ratings-reviews-service-secrets
+  namespace: nomnom-system
+type: Opaque
+stringData:
+  SPRING_PROFILES_ACTIVE: "prod"
+  SERVER_PORT: "8087"
+  SPRING_DATASOURCE_URL: "jdbc:mysql://mysql-ratings:3306/ratingsdb"
+  SPRING_DATASOURCE_USERNAME: "ratings_user"
+  SPRING_DATASOURCE_PASSWORD: "ratings_password"
+  # Add other required environment variables
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql-ratings
+  namespace: nomnom-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mysql-ratings
+  template:
+    metadata:
+      labels:
+        app: mysql-ratings
+    spec:
+      containers:
+      - name: mysql
+        image: mysql:8.0
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          value: "rootpassword"
+        - name: MYSQL_DATABASE
+          value: "ratingsdb"
+        - name: MYSQL_USER
+          value: "ratings_user"
+        - name: MYSQL_PASSWORD
+          value: "ratings_password"
+        ports:
+        - containerPort: 3306
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        volumeMounts:
+        - name: mysql-ratings-data
+          mountPath: /var/lib/mysql
+      volumes:
+      - name: mysql-ratings-data
+        persistentVolumeClaim:
+          claimName: mysql-ratings-pvc
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mysql-ratings-pvc
+  namespace: nomnom-system
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql-ratings
+  namespace: nomnom-system
+spec:
+  selector:
+    app: mysql-ratings
+  ports:
+  - port: 3306
+    targetPort: 3306
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ratings-reviews-service
+  namespace: nomnom-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ratings-reviews-service
+  template:
+    metadata:
+      labels:
+        app: ratings-reviews-service
+    spec:
+      containers:
+      - name: ratings-reviews-service
+        image: localhost:5000/ratings-and-reviews-service:latest
+        ports:
+        - containerPort: 8087
+        envFrom:
+        - secretRef:
+            name: ratings-reviews-service-secrets
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
+            memory: "512Mi"
+            cpu: "300m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ratings-reviews-service
+  namespace: nomnom-system
+spec:
+  selector:
+    app: ratings-reviews-service
+  ports:
+  - port: 8087
+    targetPort: 8087
+  type: ClusterIP

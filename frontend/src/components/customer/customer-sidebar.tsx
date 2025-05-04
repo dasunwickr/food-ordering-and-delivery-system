@@ -29,8 +29,17 @@ export function CustomerSidebar({ className, open, onClose, ...props }: Customer
   const sidebarContent = (
     <div className={cn("flex h-full flex-col", className)} {...props}>
       <div className="flex h-16 items-center border-b px-4">
-      <Link href="/restaurant" className="flex items-center gap-2 font-semibold">
-          <Image src="/logo-dark.svg" alt="NomNom-logo" width={120} height={120} className="rounded-full" />
+        <Link href="/customer" className="flex items-center gap-2 font-semibold">
+          <div className="relative w-32 h-10">
+            <Image 
+              src="/logo-dark.svg" 
+              alt="NomNom-logo" 
+              fill
+              priority
+              sizes="128px"
+              className="object-contain" 
+            />
+          </div>
         </Link>
         {isMobile && (
           <Button variant="ghost" size="icon" className="ml-auto" onClick={onClose}>
@@ -52,16 +61,7 @@ export function CustomerSidebar({ className, open, onClose, ...props }: Customer
             Dashboard
           </Link>
 
-          <Link
-            href="/customer/explore"
-            className={cn(
-              "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground",
-              pathname === "/customer/explore" ? "bg-accent text-accent-foreground" : "transparent",
-            )}
-          >
-            <Search className="h-5 w-5" />
-            Explore
-          </Link>
+          
 
           <Link
             href="/customer/orders"
@@ -75,39 +75,18 @@ export function CustomerSidebar({ className, open, onClose, ...props }: Customer
           </Link>
 
           <Link
-            href="/customer/favorites"
+            href="/customer/deliveries"
             className={cn(
               "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground",
               pathname === "/customer/favorites" ? "bg-accent text-accent-foreground" : "transparent",
             )}
           >
             <Heart className="h-5 w-5" />
-            Favorites
+            Deliveries
           </Link>
 
           <div className="my-2 h-px bg-border" />
 
-          <Link
-            href="/customer/addresses"
-            className={cn(
-              "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground",
-              pathname === "/customer/addresses" ? "bg-accent text-accent-foreground" : "transparent",
-            )}
-          >
-            <MapPin className="h-5 w-5" />
-            My Addresses
-          </Link>
-
-          <Link
-            href="/customer/payment"
-            className={cn(
-              "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground",
-              pathname === "/customer/payment" ? "bg-accent text-accent-foreground" : "transparent",
-            )}
-          >
-            <CreditCard className="h-5 w-5" />
-            Payment Methods
-          </Link>
 
           <Link
             href="/customer/profile"

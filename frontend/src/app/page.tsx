@@ -15,7 +15,7 @@ import Footer from "@/components/common/footer";
 // Example auth functions — replace with your real logic
 const isAuthenticated = () => {
   // Replace with actual auth check
-  return false;
+  return true;
 };
 
 const getUserType = () => {
@@ -29,32 +29,32 @@ export default function Home() {
   const [isSticky, setIsSticky] = useState(false);
 
   // Redirect based on authentication
-  useEffect(() => {
-    if (isAuthenticated()) {
-      const userType = getUserType();
-      if (userType) {
-        switch (userType.toLowerCase()) {
-          case "admin":
-            router.push("/admin");
-            break;
-          case "customer":
-            router.push("/customer");
-            break;
-          default:
-            router.push("/");
-        }
-      }
-    }
+  // useEffect(() => {
+  //   if (isAuthenticated()) {
+  //     const userType = getUserType();
+  //     if (userType) {
+  //       switch (userType.toLowerCase()) {
+  //         case "admin":
+  //           router.push("/admin");
+  //           break;
+  //         case "customer":
+  //           router.push("/customer");
+  //           break;
+  //         default:
+  //           router.push("/");
+  //       }
+  //     }
+  //   }
 
-    const handleScroll = () => {
-      setIsSticky(window.scrollY > 100);
-    };
+  //   const handleScroll = () => {
+  //     setIsSticky(window.scrollY > 100);
+  //   };
 
-    window.addEventListener("scroll", handleScroll);
-    return () => {
-      window.removeEventListener("scroll", handleScroll);
-    };
-  }, [router]);
+  //   window.addEventListener("scroll", handleScroll);
+  //   return () => {
+  //     window.removeEventListener("scroll", handleScroll);
+  //   };
+  // }, [router]);
 
   return (
     <main className="bg-white px-4 sm:px-6 lg:px-8 py-6">
@@ -104,7 +104,7 @@ export default function Home() {
           <div className="md:w-1/2 flex justify-center">
             <div className="relative h-80 w-60">
               <Image
-                src=""
+                src="https://res.cloudinary.com/dwi1xi0qp/image/upload/v1745664463/ddrsyyrnb5vldmfvq8sq.jpg"
                 alt="Food Delivery App"
                 fill
                 style={{ objectFit: "contain" }}
@@ -151,46 +151,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Download App Section */}
-      <section className="py-16 bg-primary text-white rounded-lg mb-12">
-        <div className="container mx-auto px-4 flex flex-col md:flex-row items-center justify-between">
-          <div className="md:w-1/2 mb-8 md:mb-0">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Download Our Mobile App</h2>
-            <p className="text-lg mb-8 max-w-lg">
-              Get exclusive deals and faster ordering with our mobile app. Available on iOS and Android.
-            </p>
-            <div className="flex flex-wrap gap-4">
-              <Link href="#" className="block">
-                <Image
-                  src="/images/app-store.png"
-                  alt="Download on App Store"
-                  width={150}
-                  height={50}
-                />
-              </Link>
-              <Link href="#" className="block">
-                <Image
-                  src="/images/google-play.png"
-                  alt="Get it on Google Play"
-                  width={150}
-                  height={50}
-                />
-              </Link>
-            </div>
-          </div>
-          <div className="md:w-1/2 flex justify-center">
-            <div className="relative h-80 w-60">
-              <Image
-                src="/images/app-mockup.png"
-                alt="Nom Nom App"
-                fill
-                style={{ objectFit: "contain" }}
-              />
-            </div>
-          </div>
-        </div>
-      </section>
-
+      
       {/* Newsletter Section */}
       <section className="py-12 bg-gray-50 rounded-lg mb-12">
         <div className="container mx-auto px-4 max-w-3xl text-center">

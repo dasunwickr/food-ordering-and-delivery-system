@@ -29,8 +29,17 @@ export function DriverSidebar({ className, open, onClose, ...props }: DriverSide
   const sidebarContent = (
     <div className={cn("flex h-full flex-col", className)} {...props}>
       <div className="flex h-16 items-center border-b px-4">
-      <Link href="/restaurant" className="flex items-center gap-2 font-semibold">
-          <Image src="/logo-dark.svg" alt="NomNom-logo" width={120} height={120} className="rounded-full" />
+        <Link href="/driver" className="flex items-center gap-2 font-semibold">
+          <div className="relative w-32 h-10">
+            <Image 
+              src="/logo-dark.svg" 
+              alt="NomNom-logo" 
+              fill
+              priority
+              sizes="128px"
+              className="object-contain" 
+            />
+          </div>
         </Link>
         {isMobile && (
           <Button variant="ghost" size="icon" className="ml-auto" onClick={onClose}>
@@ -74,40 +83,9 @@ export function DriverSidebar({ className, open, onClose, ...props }: DriverSide
             Delivery History
           </Link>
 
-          <Link
-            href="/driver/earnings"
-            className={cn(
-              "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground",
-              pathname === "/driver/earnings" ? "bg-accent text-accent-foreground" : "transparent",
-            )}
-          >
-            <DollarSign className="h-5 w-5" />
-            Earnings
-          </Link>
-
           <div className="my-2 h-px bg-border" />
 
-          <Link
-            href="/driver/vehicle"
-            className={cn(
-              "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground",
-              pathname === "/driver/vehicle" ? "bg-accent text-accent-foreground" : "transparent",
-            )}
-          >
-            <Car className="h-5 w-5" />
-            Vehicle Information
-          </Link>
-
-          <Link
-            href="/driver/availability"
-            className={cn(
-              "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground",
-              pathname === "/driver/availability" ? "bg-accent text-accent-foreground" : "transparent",
-            )}
-          >
-            <Clock className="h-5 w-5" />
-            Availability
-          </Link>
+          
 
           <Link
             href="/driver/profile"
