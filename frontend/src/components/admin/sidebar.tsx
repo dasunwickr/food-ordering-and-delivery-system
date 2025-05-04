@@ -156,7 +156,7 @@ export function Sidebar({ className, open, onClose, ...props }: SidebarProps) {
             
                 
                 <Link
-                  href="admin/deliveryGraphs"
+                  href="/admin/deliveryGraphs"
                   className={cn(
                     "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground",
                     pathname === "/admin/deliveryGraphs" ? "bg-accent text-accent-foreground" : "transparent",
