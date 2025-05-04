@@ -80,7 +80,13 @@ export default function OrderSuccessPage({ params }: { params: { orderId: string
     try {
       setIsLoading(true)
       const response = await axios.get<Order>(`/api/order/${orderId}`)
-      setOrder(response.data)
+      setOrder(response.data);
+      const orderData = response.data
+      await sendNotification(orderData)
+      toast({
+        title: "Notification Sent",
+        description: "Customer has been notified about their order.",
+      })
     } catch (error) {
       console.error("Error fetching order:", error)
       toast({
@@ -90,6 +96,40 @@ export default function OrderSuccessPage({ params }: { params: { orderId: string
       })
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const sendNotification = async (order: Order) => {
+    try {
+      // Get user profile from localStorage
+      const userProfileString = localStorage.getItem("userProfile")
+      if (!userProfileString) {
+        throw new Error("User profile not found in localStorage")
+      }
+
+      const userProfile = JSON.parse(userProfileString)
+      const contactNumber = 94781896658
+      const notificationPayload = {
+        message: `Your order ${order.orderId} has been Successfull!`,
+        phoneNumber: userProfile.contact || contactNumber,
+        email: userProfile.email,
+        userId: userProfile.id,
+        orderId: order.orderId,
+        deliveryId: order.driverDetails?.driverId || "D123456", // fallback ID
+        isSms: true,
+        isEmail: true
+      }
+
+      // Send POST request to notification service
+      await axios.post('http://localhost/api/notification-service/notification', notificationPayload)
+
+    } catch (error) {
+      console.error("Error sending notification:", error)
+      toast({
+        title: "Notification Error",
+        description: "Could not notify the customer.",
+        variant: "destructive",
+      })
     }
   }
 

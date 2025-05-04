@@ -45,11 +45,11 @@ export const signIn = async (req: Request, res: Response) => {
   try {
     const { email, password, device, ipAddress } = SignInSchema.parse(req.body);
 
-    console.log('SignIn Request Data:', { email, password, device, ipAddress }); 
+    console.log('SignIn Request Data:', { email, password, device, ipAddress }); // Debugging log
 
     const result = await AuthService.loginUser(email, password, device, ipAddress);
 
-    console.log('SignIn Result:', result);
+    console.log('SignIn Result:', result); // Debugging log
 
     res.status(200).json({ 
       message: 'Logged in successfully', 
@@ -59,7 +59,7 @@ export const signIn = async (req: Request, res: Response) => {
       userType: result.userType 
     });
   } catch (err: any) {
-    console.error('SignIn error:', err); 
+    console.error('SignIn error:', err); // Debugging log
     res.status(400).json({ error: err.message });
   }
 };

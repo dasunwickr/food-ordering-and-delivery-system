@@ -66,7 +66,7 @@ export const createDelivery = async (
       const delivery = await deliveryService.createDeliveryForNewOrder(orderId);
       res.status(201).json(delivery);
     } else {
-      // Create a pending delivery entry with status PENDING_DELIVERY
+      // Create a pending delivery entry
       const delivery = await deliveryService.createPendingDelivery(orderId);
       
       // Get necessary order details to broadcast to drivers
@@ -446,8 +446,7 @@ export const getPendingOrders = async (
             { orderStatus: "PAID" },
             { orderStatus: "Ready for Pickup" },
             { orderStatus: "Preparing" },
-            { orderStatus: "Pending Delivery" },
-            { orderStatus: "PENDING_DELIVERY" }
+            { orderStatus: "Pending Delivery" } 
           ]
         },
         {
