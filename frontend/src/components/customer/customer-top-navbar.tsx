@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
 import { getLocalStorageItem } from "@/utils/storage"
+import { toast } from "@/components/ui/use-toast"
 
 interface CustomerTopNavbarProps {
   onMenuClick: () => void
@@ -42,7 +43,19 @@ export function CustomerTopNavbar({ onMenuClick }: CustomerTopNavbarProps) {
         profilePicture: profilePictureUrl
       })
     }
+    
   }, [])
+
+  const customerId = localStorage.getItem("userId");
+  
+    if (!customerId) {
+      toast({
+        title: "Authentication Required",
+        description: "Please log in to add items to your cart.",
+        variant: "destructive",
+      });
+      return;
+    }
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background px-4 md:px-6">
@@ -52,7 +65,7 @@ export function CustomerTopNavbar({ onMenuClick }: CustomerTopNavbarProps) {
       </Button>
 
       <div className="ml-auto flex items-center gap-4">
-        <Link href="/customer/cart">
+      <Link href={`/customer/cart/${customerId}`}>
           <Button variant="ghost" size="icon" className="relative">
             <ShoppingCart className="h-5 w-5" />
             {cartItemCount > 0 && (

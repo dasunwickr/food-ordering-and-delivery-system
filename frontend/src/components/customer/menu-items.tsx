@@ -204,24 +204,7 @@ const MenuItems = ({ menuItems, restaurantId }: MenuItemsProps) => {
               <h2 className="text-lg font-semibold text-card-foreground">{item.itemName}</h2>
               <p className="text-muted-foreground">{item.description}</p>
               <p className="text-sm text-accent-foreground">Category: {item.category}</p>
-
-              {/* Rating Stars */}
-              <div className="flex items-center gap-1 mt-1">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <Star
-                    key={star}
-                    className={`w-4 h-4 cursor-pointer ${
-                      (ratings[item.id] || item.rating || 0) >= star
-                        ? "fill-yellow-400 text-yellow-400"
-                        : "text-gray-300"
-                    }`}
-                    onClick={() => handleRating(item.id, star)}
-                  />
-                ))}
-                <span className="text-xs ml-1 text-muted-foreground">
-                  {ratings[item.id] || item.rating || "Rate this item"}
-                </span>
-              </div>
+              
 
               <p className="text-xl font-bold text-primary">
                 Starting at $
