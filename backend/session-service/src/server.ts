@@ -13,8 +13,17 @@ dotenv.config();
 // Create Express application
 const app = express();
 
+// Configure CORS with more permissive settings
+const corsOptions = {
+  origin: ['http://localhost:3000', 'http://localhost'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+  credentials: true,
+  optionsSuccessStatus: 204
+};
+
 // Apply middleware
-app.use(cors());
+// app.use(cors(corsOptions));
 app.use(morgan('dev'));
 app.use(express.json());
 

@@ -14,6 +14,9 @@ router.post('/verify-otp', AuthController.verifyOtp as RequestHandler);
 router.post('/reset-password', AuthController.resetPassword as RequestHandler);
 router.post('/change-password', AuthController.changePassword as RequestHandler);
 
+// Google OAuth routes
+router.post('/google-signin', AuthController.googleSignIn as RequestHandler);
+router.post('/google-signup', AuthController.googleSignUp as RequestHandler);
 
 router.get('/email/:email/exists', AuthController.checkEmailExists as RequestHandler);
 

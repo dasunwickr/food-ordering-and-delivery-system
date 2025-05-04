@@ -7,20 +7,23 @@ import Link from "next/link"
 import { motion } from "framer-motion"
 import { ArrowRight, Mail, Loader2, AlertCircle, ShieldAlert } from "lucide-react"
 import { toast } from "sonner"
+import { useRouter } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
 import { FormInput } from "./form-input"
 import { PasswordInput } from "./password-input"
 import { SocialSignIn } from "./sign-up/social-sign-in"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { checkEmailExists } from "@/services/auth-service"
+import { checkEmailExists, googleSignIn } from "@/services/auth-service"
+import { processGoogleAuth } from "@/utils/google-auth"
 
 interface SignInFormProps {
   onSubmit: (email: string, password: string) => void
+  onGoogleSignIn?: (userData: any) => void
   isLoading?: boolean
 }
 
-export function SignInForm({ onSubmit, isLoading = false }: SignInFormProps) {
+export function SignInForm({ onSubmit, onGoogleSignIn, isLoading = false }: SignInFormProps) {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({})
@@ -29,6 +32,7 @@ export function SignInForm({ onSubmit, isLoading = false }: SignInFormProps) {
   const [isCheckingEmail, setIsCheckingEmail] = useState(false)
   const [emailNotRegistered, setEmailNotRegistered] = useState(false)
   const [emailDebounceTimer, setEmailDebounceTimer] = useState<NodeJS.Timeout | null>(null)
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false)
   
   // Use stable IDs for form elements to prevent hydration mismatches
   const emailFieldId = "signin-email"
@@ -160,6 +164,44 @@ export function SignInForm({ onSubmit, isLoading = false }: SignInFormProps) {
     }
   }
 
+  const handleGoogleSignIn = async (tokenResponse: any) => {
+    if (!onGoogleSignIn) return;
+    
+    setIsGoogleLoading(true);
+    try {
+      // Process Google authentication data
+      const googleUserData = await processGoogleAuth(tokenResponse);
+      console.log("Google user data processed:", googleUserData);
+      
+      // Attempt to sign in with Google
+      const signInResult = await googleSignIn(googleUserData);
+      
+      if (signInResult.error && signInResult.error.includes("No account found")) {
+        // No account exists, redirect to signup with Google data
+        await onGoogleSignIn({
+          ...googleUserData,
+          newUser: true
+        });
+      } else if (signInResult.token) {
+        // Successful sign-in, proceed with the normal flow
+        await onGoogleSignIn(googleUserData);
+      } else {
+        // Other error occurred
+        toast.error("Sign in failed", {
+          description: signInResult.error || "Unable to sign in with Google. Please try again.",
+        });
+      }
+    } catch (error: any) {
+      console.error("Google sign in error:", error);
+      toast.error("Google Sign-In Failed", {
+        description: error?.message || "Unable to sign in with Google. Please try again.",
+        position: "top-center",
+      });
+    } finally {
+      setIsGoogleLoading(false);
+    }
+  };
+
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -228,7 +270,7 @@ export function SignInForm({ onSubmit, isLoading = false }: SignInFormProps) {
           onChange={setEmail}
           error={errors.email}
           icon={<Mail className="h-4 w-4" />}
-          disabled={isLoading || isCheckingEmail}
+          disabled={isLoading || isCheckingEmail || isGoogleLoading}
           hasError={isCredentialError}
         />
         {emailNotRegistered && (
@@ -260,7 +302,7 @@ export function SignInForm({ onSubmit, isLoading = false }: SignInFormProps) {
             value={password} 
             onChange={setPassword} 
             error={errors.password} 
-            disabled={isLoading}
+            disabled={isLoading || isGoogleLoading}
             hasError={isCredentialError}
           />
         </div>
@@ -270,7 +312,7 @@ export function SignInForm({ onSubmit, isLoading = false }: SignInFormProps) {
         <Button 
           type="submit" 
           className="w-full" 
-          disabled={isLoading}
+          disabled={isLoading || isGoogleLoading}
         >
           {isLoading ? (
             <>
@@ -287,7 +329,7 @@ export function SignInForm({ onSubmit, isLoading = false }: SignInFormProps) {
       </motion.div>
 
       <motion.div variants={itemVariants}>
-        <SocialSignIn onGoogleSignIn={() => console.log("Google sign in")} />
+        <SocialSignIn onGoogleSignIn={handleGoogleSignIn} />
       </motion.div>
 
       <motion.div className="text-center text-sm" variants={itemVariants}>

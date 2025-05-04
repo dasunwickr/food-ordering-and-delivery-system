@@ -141,10 +141,6 @@ export const invalidateSession = async (sessionId: string) => {
   try {
     const result = await SessionModel.deleteOne({ sessionId });
     
-    if (result.deletedCount === 0) {
-      throw new Error('Session not found');
-    }
-    
     logger.info(`Invalidated session ${sessionId}`);
     return { success: true };
   } catch (error: any) {
