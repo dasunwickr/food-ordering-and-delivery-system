@@ -20,13 +20,23 @@ mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log('✅ MongoDB connected'))
   .catch((err) => console.error('MongoDB connection error:', err));
 
-// 🎯 Create Stripe Checkout Session and Save Payment Data
-app.post('/create-checkout-session', async (req, res) => {
-  const { amount, currency = 'usd', name = 'Cart Items', quantity = 1, customerId, orderId, restaurantId, deliveryFee, driverId, paymentType = 'card' } = req.body;
+  
+  // backend/app.post('/create-checkout-session', ...)
 
-  if (!amount || isNaN(amount)) {
-    return res.status(400).json({ error: 'Invalid or missing amount' });
-  }
+
+app.post('/create-checkout-session', async (req, res) => {
+  const { 
+    amount, 
+    currency = 'usd', 
+    name = 'Cart Items', 
+    quantity = 1, 
+    customerId, 
+    orderId, 
+    restaurantId, 
+    deliveryFee, 
+    driverId, 
+    paymentType = 'card' 
+  } = req.body;
 
   try {
     const session = await stripe.checkout.sessions.create({
@@ -36,26 +46,25 @@ app.post('/create-checkout-session', async (req, res) => {
           price_data: {
             currency,
             product_data: { name },
-            unit_amount: Math.round(amount * 100),
+            unit_amount: Math.round(amount * 100), // Convert to cents
           },
           quantity,
         },
       ],
       mode: 'payment',
-      success_url: `${YOUR_DOMAIN}?success=true`,
-      cancel_url: `${YOUR_DOMAIN}?canceled=true`,
+      success_url: `http://localhost:3000/customer`, 
+      cancel_url: `http://localhost:3000/payment/disclaimer?orderId=${orderId}`,
     });
 
-    // Save payment to nomnom-userrestaurantpayment-db
+    // Save payment data as before
     await UserRestaurantPayment.create({
       customerId,
       orderId,
       restaurantId,
       orderTotal: amount,
-      sessionUrl: session.url, // ➡️ save the URL
+      sessionUrl: session.url,
     });
 
-    // Save delivery fee to nomnom-driverpayment-db
     await DriverPayment.create({
       driverId,
       deliveryFee,
