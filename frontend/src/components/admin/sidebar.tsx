@@ -97,6 +97,26 @@ export function Sidebar({ className, open, onClose, ...props }: SidebarProps) {
                 >
                   Customers
                 </Link>
+            
+                <Link
+                  href="/admin/transactions"
+                  className={cn(
+                    "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground",
+                    pathname === "/admin/transactions" ? "bg-accent text-accent-foreground" : "transparent",
+                  )}
+                >
+                Transactions
+                </Link>
+                <Link
+                  href="/admin/deliveryreports"
+                  className={cn(
+                    "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground",
+                    pathname === "/admin/deliveryreports" ? "bg-accent text-accent-foreground" : "transparent",
+                  )}
+                >
+                  Delivery Reports
+                </Link>
+                
                 <Link
                   href="/admin/users/drivers"
                   className={cn(
@@ -105,6 +125,28 @@ export function Sidebar({ className, open, onClose, ...props }: SidebarProps) {
                   )}
                 >
                   Drivers
+                </Link>
+
+            
+                
+                <Link
+                  href="admin/deliveryGraphs"
+                  className={cn(
+                    "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground",
+                    pathname === "/admin/deliveryGraphs" ? "bg-accent text-accent-foreground" : "transparent",
+                  )}
+                >
+                  Delivery Earnings Analytics
+                 
+                </Link>
+                <Link
+                  href="admin/orderGraphs"
+                  className={cn(
+                    "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground",
+                    pathname === "/admin/orderGraphs" ? "bg-accent text-accent-foreground" : "transparent",
+                  )}
+                >
+                   Order Transaction Analytics
                 </Link>
               </div>
             )}

@@ -268,16 +268,25 @@ export default function OrderSuccessPage({ params }: { params: { orderId: string
           </CardContent>
 
           <CardFooter className="flex flex-col space-y-4">
-            <Button asChild className="w-full">
-              <Link href={`/order/track/${order.orderId}`}>
-                Track Order
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
-            </Button>
-            <Button asChild variant="outline">
-              <Link href="/menu">Continue Shopping</Link>
-            </Button>
-          </CardFooter>
+  <Button asChild className="w-full">
+    <Link href={`/order/track/${order.orderId}`}>
+      Track Order
+      <ArrowRight className="ml-2 h-4 w-4" />
+    </Link>
+  </Button>
+  {/* New Payment Button */}
+  <Button asChild variant="default" className="w-full bg-blue-600 hover:bg-blue-700">
+  <Link
+    href={`/payment?orderId=${order.orderId}&customerId=${order.customerId}&restaurantId=${order.restaurantId}&amount=${order.totalAmount}&deliveryFee=${order.deliveryFee}&driverId=${order.driverDetails?.driverId || ''}`}
+  >
+    Proceed to Payment
+    <ArrowRight className="ml-2 h-4 w-4" />
+  </Link>
+</Button>
+  <Button asChild variant="outline">
+    <Link href="/menu">Continue Shopping</Link>
+  </Button>
+</CardFooter>
         </Card>
       </div>
     </div>
