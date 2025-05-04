@@ -17,11 +17,16 @@ export const signUp = async (req: Request, res: Response) => {
     }
     
     const { email, password, userType, profile } = validationResult.data;
+    let userPassword = password;
 
-    console.log('SignUp Request Data:', { email, password, userType, profile }); // Debugging log
+    if (userPassword != undefined && userPassword.length < 1) {
+      userPassword = undefined;
+    }
+
+    console.log('SignUp Request Data:', { email, userPassword, userType, profile }); // Debugging log
 
     // Register the user and get the result containing userId
-    const result = await AuthService.registerUser(email, password, userType, profile);
+    const result = await AuthService.registerUser(email, userPassword, userType, profile);
 
     console.log('SignUp Result:', result); // Debugging log
 
@@ -203,6 +208,98 @@ export const deleteUser = async (req: Request, res: Response) => {
     res.status(500).json({ 
       success: false, 
       error: `Failed to delete user: ${error.message}` 
+    });
+  }
+};
+
+/**
+ * Handle Google OAuth sign-in
+ * This endpoint validates Google tokens and creates a session
+ */
+export const googleSignIn = async (req: Request, res: Response) => {
+  try {
+    const { googleToken, googleId, email, device, ipAddress } = req.body;
+    
+    if (!googleToken || !googleId || !email) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Missing required fields: googleToken, googleId, email' 
+      });
+    }
+    
+    // Call the service to handle Google sign-in
+    const result = await AuthService.googleLogin(googleToken, googleId, email, device, ipAddress);
+    
+    res.status(200).json({ 
+      message: 'Google sign-in successful', 
+      userId: result.userId,
+      sessionId: result.sessionId,
+      token: result.sessionToken,
+      userType: result.userType 
+    });
+  } catch (error: any) {
+    console.error('Google sign-in error:', error);
+    
+    // Handle specific error cases with appropriate status codes
+    if (error.message.includes('User not found') || error.message.includes('No account found')) {
+      return res.status(404).json({ error: error.message });
+    }
+    if (error.message.includes('Invalid token') || error.message.includes('Authentication failed')) {
+      return res.status(401).json({ error: error.message });
+    }
+    
+    res.status(400).json({ 
+      success: false, 
+      error: `Failed to authenticate with Google: ${error.message}` 
+    });
+  }
+};
+
+/**
+ * Handle Google OAuth sign-up
+ * This endpoint validates Google tokens and creates a new user account
+ */
+export const googleSignUp = async (req: Request, res: Response) => {
+  try {
+    const { googleToken, googleId, email, userType, profile, device, ipAddress } = req.body;
+    
+    if (!googleToken || !googleId || !email || !userType) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Missing required fields: googleToken, googleId, email, userType' 
+      });
+    }
+    
+    // Call the service to handle Google sign-up
+    const result = await AuthService.registerWithGoogle(
+      googleToken, 
+      googleId, 
+      email, 
+      userType, 
+      profile || {}, 
+      device, 
+      ipAddress
+    );
+    
+    res.status(201).json({ 
+      message: 'Google sign-up successful', 
+      userId: result.userId,
+      userType 
+    });
+  } catch (error: any) {
+    console.error('Google sign-up error:', error);
+    
+    // Handle specific error cases with appropriate status codes
+    if (error.message.includes('already exists') || error.message.includes('already registered')) {
+      return res.status(409).json({ error: error.message });
+    }
+    if (error.message.includes('Invalid token') || error.message.includes('Authentication failed')) {
+      return res.status(401).json({ error: error.message });
+    }
+    
+    res.status(400).json({ 
+      success: false, 
+      error: `Failed to register with Google: ${error.message}` 
     });
   }
 };

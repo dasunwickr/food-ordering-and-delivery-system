@@ -2,22 +2,42 @@
 
 import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
-import { User, Phone } from "lucide-react"
+import { User, Phone, InfoIcon } from "lucide-react"
 import { ProfileImageUploader } from "@/components/user-service/profile/profile-image-uploader"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 
 interface PersonalDetailsStepProps {
   onSubmit: (firstName: string, lastName: string, phone: string, profileImage: string | null) => void
+  initialData?: {
+    firstName?: string
+    lastName?: string
+    phone?: string
+    profilePictureUrl?: string | null
+  }
+  isGoogleAuth?: boolean
 }
 
-export function PersonalDetailsStep({ onSubmit }: PersonalDetailsStepProps) {
-  const [firstName, setFirstName] = useState("")
-  const [lastName, setLastName] = useState("")
-  const [phone, setPhone] = useState("")
-  const [profileImage, setProfileImage] = useState<string | null>(null)
+export function PersonalDetailsStep({ 
+  onSubmit, 
+  initialData = {}, 
+  isGoogleAuth = false 
+}: PersonalDetailsStepProps) {
+  const [firstName, setFirstName] = useState(initialData.firstName || "")
+  const [lastName, setLastName] = useState(initialData.lastName || "")
+  const [phone, setPhone] = useState(initialData.phone || "")
+  const [profileImage, setProfileImage] = useState<string | null>(initialData.profilePictureUrl || null)
   const [errors, setErrors] = useState<{ [key: string]: string }>({})
+
+  // Update state if initialData changes (e.g., when pre-filled with Google data)
+  useEffect(() => {
+    if (initialData.firstName) setFirstName(initialData.firstName)
+    if (initialData.lastName) setLastName(initialData.lastName)
+    if (initialData.phone) setPhone(initialData.phone)
+    if (initialData.profilePictureUrl) setProfileImage(initialData.profilePictureUrl)
+  }, [initialData])
 
   const validateForm = () => {
     const newErrors: { [key: string]: string } = {}
@@ -94,13 +114,30 @@ export function PersonalDetailsStep({ onSubmit }: PersonalDetailsStepProps) {
       animate="visible"
       exit="exit"
     >
+      {isGoogleAuth && (
+        <motion.div variants={itemVariants}>
+          <Alert className="bg-blue-50 border-blue-200">
+            <InfoIcon className="h-4 w-4 text-blue-500" />
+            <AlertDescription className="text-sm">
+              <span className="font-medium">Google account connected!</span> We've pre-filled your information.
+              Please verify and continue.
+            </AlertDescription>
+          </Alert>
+        </motion.div>
+      )}
+      
       <motion.div className="flex flex-col items-center space-y-4" variants={itemVariants}>
         <Label className="text-sm font-medium">Profile Picture</Label>
         <ProfileImageUploader 
           currentImage={profileImage || "/placeholder.svg"} 
           onImageUpdate={handleProfileImageUpdate} 
+          disabled={isGoogleAuth && !!profileImage}
         />
-        <p className="text-xs text-muted-foreground">Upload a profile picture (optional)</p>
+        <p className="text-xs text-muted-foreground">
+          {isGoogleAuth && profileImage 
+            ? "Profile picture imported from Google" 
+            : "Upload a profile picture (optional)"}
+        </p>
       </motion.div>
 
       <motion.div className="grid grid-cols-2 gap-4" variants={itemVariants}>

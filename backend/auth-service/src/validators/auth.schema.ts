@@ -3,7 +3,7 @@ import { z } from 'zod';
 export const SignUpSchema = z.object({
   // Common fields
   email: z.string().email(),
-  password: z.string().min(6),
+  password: z.string().optional(),
   userType: z.string(),
   profile: z.object({
     firstName: z.string(),

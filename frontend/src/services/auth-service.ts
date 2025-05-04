@@ -83,7 +83,7 @@ export async function signIn(data: LoginFormData): Promise<AuthResponse> {
       });
       
       if (userType) {
-        setCookie('userType', userType.toLowerCase(), { 
+        setCookie('userType', userType!.toLowerCase(), { 
           maxAge: 30 * 24 * 60 * 60,
           path: '/' 
         });
@@ -238,6 +238,7 @@ export function signOut(): void {
     localStorage.removeItem('userId');
     localStorage.removeItem('userType');
     localStorage.removeItem('sessionId'); 
+    localStorage.removeItem('authProvider');
   }
 
   // Clear cookies
@@ -245,6 +246,7 @@ export function signOut(): void {
   deleteCookie('userId');
   deleteCookie('userType');
   deleteCookie('sessionId'); 
+  deleteCookie('authProvider');
   
   // Show toast notification for sign out
   toast.success('You have been signed out successfully');
@@ -292,10 +294,12 @@ export const hasUserType = (requiredType: string | string[]): boolean => {
   if (!currentUserType) return false;
   
   if (Array.isArray(requiredType)) {
-    return requiredType.map(t => t.toLowerCase()).includes(currentUserType.toLowerCase());
+    // Fix: Add non-null assertion since we already checked currentUserType is truthy above
+    return requiredType.map(t => t.toLowerCase()).includes(currentUserType!.toLowerCase());
   }
   
-  return currentUserType.toLowerCase() === requiredType.toLowerCase();
+  // Fix: Add non-null assertion since we already checked currentUserType is truthy above
+  return currentUserType!.toLowerCase() === requiredType.toLowerCase();
 };
 
 /**
@@ -373,4 +377,208 @@ export const canAccessRoute = (route: string): boolean => {
   }
   
   return userType === requiredType;
+};
+
+/**
+ * Google sign-in for existing users
+ * @param googleData - Data from Google authentication
+ */
+export async function googleSignIn(googleData: any): Promise<AuthResponse> {
+  try {
+    // Get IP address and device info using our client service
+    const device = navigator.userAgent;
+    const ipAddress = await getClientIpAddress();
+
+    // Prepare the request payload
+    const payload = {
+      googleToken: googleData.accessToken,
+      googleId: googleData.googleId,
+      email: googleData.email,
+      device,
+      ipAddress
+    };
+
+    console.log('Google sign-in request payload:', {
+      ...payload,
+      googleToken: '***hidden***'
+    });
+
+    // Update endpoint from auth/google/signin to auth/google-signin to match backend route
+    const response = await axios.post<AuthResponse>(`${AUTH_API}/auth/google-signin`, payload);
+
+    console.log('Google Auth API Response:', {
+      token: response.data.token || response.data.sessionToken, 
+      userId: response.data.userId,
+      sessionId: response.data.sessionId,
+      userType: response.data.userType
+    });
+
+    // Extract token properly from response
+    const token = response.data.token || response.data.sessionToken;
+    const userId = response.data.userId;
+    const sessionId = response.data.sessionId;
+    const userType = response.data.userType;
+
+    // Store auth data in localStorage if we have the essential data
+    if (token && userId) {
+      // First, store the auth data
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('authToken', token);
+        localStorage.setItem('userId', userId);
+        localStorage.setItem('authProvider', 'google');
+        
+        if (userType) {
+          localStorage.setItem('userType', userType.toLowerCase());
+        }
+        
+        // Also store sessionId if available
+        if (sessionId) {
+          localStorage.setItem('sessionId', sessionId);
+        }
+      }
+
+      // Also set cookies for server-side auth (middleware)
+      setCookie('authToken', token, { 
+        maxAge: 30 * 24 * 60 * 60, // 30 days
+        path: '/' 
+      });
+      setCookie('userId', userId, { 
+        maxAge: 30 * 24 * 60 * 60,
+        path: '/' 
+      });
+      setCookie('authProvider', 'google', {
+        maxAge: 30 * 24 * 60 * 60,
+        path: '/'
+      });
+      
+      if (userType) {
+        setCookie('userType', userType.toLowerCase(), { 
+          maxAge: 30 * 24 * 60 * 60,
+          path: '/' 
+        });
+      }
+      
+      // Store sessionId in cookie if available
+      if (sessionId) {
+        setCookie('sessionId', sessionId, { 
+          maxAge: 30 * 24 * 60 * 60,
+          path: '/' 
+        });
+      }
+
+      // Fetch and store user profile data
+      try {
+        const api = (await import('@/lib/axios')).default;
+        const userResponse = await api.get(`${USER_URL}/users/email/${googleData.email}`);
+        
+        if (userResponse.data) {
+          localStorage.setItem('userProfile', JSON.stringify(userResponse.data));
+        }
+      } catch (profileError) {
+        console.error('Error fetching user profile:', profileError);
+      }
+    }
+
+    return {
+      ...response.data,
+      token: token
+    };
+  } catch (error: any) {
+    // Handle error cases
+    if (error.response) {
+      console.error('Google sign-in error response:', error.response.data);
+      console.error('Google sign-in error status:', error.response.status);
+      
+      // If user doesn't exist, return specific error so we can handle signup flow
+      if (error.response.status === 404) {
+        return {
+          message: 'User not found',
+          error: 'No account exists with this Google email. Please sign up first.',
+          success: false
+        };
+      }
+    }
+    
+    const errorMsg = error.response?.data?.error || error.message;
+    toast.error(errorMsg);
+
+    return {
+      message: 'Google authentication failed',
+      error: errorMsg,
+      success: false
+    };
+  }
+}
+
+/**
+ * Google sign-up for new users
+ * @param googleData - Data from Google authentication
+ * @param userType - Type of user (customer, restaurant, driver)
+ * @param profile - Additional user profile data
+ */
+export async function googleSignUp(
+  googleData: any,
+  userType: string,
+  profile: Record<string, any>
+): Promise<AuthResponse> {
+  try {
+    // Get IP address and device info
+    const device = navigator.userAgent;
+    const ipAddress = await getClientIpAddress();
+
+    // Prepare the request payload
+    const payload = {
+      googleToken: googleData.accessToken,
+      googleId: googleData.googleId,
+      email: googleData.email,
+      userType,
+      profile: {
+        ...profile,
+        firstName: profile.firstName || googleData.firstName,
+        lastName: profile.lastName || googleData.lastName,
+        profilePictureUrl: profile.profilePictureUrl || googleData.profilePictureUrl,
+        provider: 'google'
+      },
+      device,
+      ipAddress
+    };
+
+    console.log('Google sign-up request payload:', {
+      ...payload,
+      googleToken: '***hidden***'
+    });
+
+    // Update endpoint from auth/google/signup to auth/google-signup to match backend route
+    const response = await axios.post<AuthResponse>(`${AUTH_API}/auth/google-signup`, payload);
+
+    return response.data;
+  } catch (error: any) {
+    // Handle error cases including user already exists
+    if (error.response && error.response.status === 409) {
+      toast.info("Account already exists. Please sign in instead.");
+      return {
+        message: 'Email already exists',
+        error: 'An account with this email already exists. Please sign in instead.',
+        success: false
+      };
+    }
+    
+    const errorMsg = error.response?.data?.error || error.message;
+    toast.error(errorMsg);
+
+    return {
+      message: 'Google registration failed',
+      error: errorMsg,
+      success: false
+    };
+  }
+}
+
+// Get auth provider (standard or google)
+export const getAuthProvider = (): string => {
+  if (typeof window === 'undefined') {
+    return 'standard';
+  }
+  
+  return localStorage.getItem('authProvider') || getCookie('authProvider')?.toString() || 'standard';
 };

@@ -14,17 +14,18 @@ import { checkEmailExists } from "@/services/auth-service"
 
 interface AccountStepProps {
   onSubmit: (email: string, password: string, confirmPassword: string) => void
+  onGoogleSignUp?: (userData: any) => void
 }
 
-export function AccountStep({ onSubmit }: AccountStepProps) {
+export function AccountStep({ onSubmit, onGoogleSignUp }: AccountStepProps) {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [errors, setErrors] = useState<{ email?: string; password?: string; confirmPassword?: string }>({})
   const [isCheckingEmail, setIsCheckingEmail] = useState(false)
   const [emailDebounceTimer, setEmailDebounceTimer] = useState<NodeJS.Timeout | null>(null)
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false)
 
-  
   useEffect(() => {
     if (emailDebounceTimer) {
       clearTimeout(emailDebounceTimer)
@@ -111,6 +112,25 @@ export function AccountStep({ onSubmit }: AccountStepProps) {
     }
   }
 
+  const handleGoogleSignIn = async (googleData: any) => {
+    if (!onGoogleSignUp) return;
+    
+    setIsGoogleLoading(true);
+    try {
+      const emailCheckResult = await checkEmailExists(googleData.email);
+      
+      if (emailCheckResult.exists) {
+        setErrors(prev => ({ ...prev, email: "This email is already registered. Please sign in instead." }));
+      } else {
+        await onGoogleSignUp(googleData);
+      }
+    } catch (error: any) {
+      console.error("Google sign up error:", error);
+    } finally {
+      setIsGoogleLoading(false);
+    }
+  };
+
   const containerVariants = {
     hidden: { opacity: 0, x: 100 },
     visible: {
@@ -195,14 +215,22 @@ export function AccountStep({ onSubmit }: AccountStepProps) {
       </motion.div>
 
       <motion.div variants={itemVariants}>
-        <Button type="submit" className="w-full">
+        <Button 
+          type="submit" 
+          className="w-full"
+          disabled={isGoogleLoading}
+        >
           Continue
           <ArrowRight className="ml-2 h-4 w-4" />
         </Button>
       </motion.div>
 
       <motion.div variants={itemVariants}>
-        <SocialSignIn onGoogleSignIn={() => console.log("Google sign in")} />
+        <SocialSignIn 
+          onGoogleSignIn={handleGoogleSignIn} 
+          isSignUp={true}
+          isLoading={isGoogleLoading}
+        />
       </motion.div>
     </motion.form>
   )

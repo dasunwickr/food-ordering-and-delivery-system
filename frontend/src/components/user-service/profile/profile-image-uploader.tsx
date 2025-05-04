@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Camera, Loader2 } from "lucide-react"
+import { Camera, Loader2, LockIcon } from "lucide-react"
 import { CldUploadButton } from "next-cloudinary"
 import { toast } from "sonner"
 
@@ -10,12 +10,14 @@ interface ProfileImageUploaderProps {
   currentImage: string
   onImageUpdate: (imageUrl: string) => void
   folder?: string
+  disabled?: boolean
 }
 
 export function ProfileImageUploader({ 
   currentImage, 
   onImageUpdate,
-  folder = "food-ordering-system/profiles"
+  folder = "food-ordering-system/profiles",
+  disabled = false
 }: ProfileImageUploaderProps) {
   const [isHovering, setIsHovering] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
@@ -63,10 +65,10 @@ export function ProfileImageUploader({
   return (
     <div 
       className="relative" 
-      onMouseEnter={() => setIsHovering(true)} 
-      onMouseLeave={() => setIsHovering(false)}
+      onMouseEnter={() => !disabled && setIsHovering(true)} 
+      onMouseLeave={() => !disabled && setIsHovering(false)}
     >
-      <Avatar className="h-24 w-24">
+      <Avatar className={`h-24 w-24 ${disabled ? 'ring-2 ring-blue-300 ring-offset-2' : ''}`}>
         <AvatarImage 
           src={localImage || "/placeholder.svg"} 
           alt="Profile" 
@@ -78,43 +80,53 @@ export function ProfileImageUploader({
         </AvatarFallback>
       </Avatar>
 
-      <div 
-        className={`absolute inset-0 flex items-center justify-center rounded-full bg-black/50 transition-opacity duration-200 ${
-          isHovering || isUploading ? "opacity-100" : "opacity-0"
-        }`}
-      >
-        <CldUploadButton
-          options={{
-            maxFiles: 1,
-            resourceType: "image",
-            folder: folder,
-            clientAllowedFormats: ["png", "jpeg", "jpg", "webp"],
-            maxImageFileSize: 2000000, 
-            sources: ["local", "camera", "url"],
-            showUploadMoreButton: false,
-            singleUploadAutoClose: true,
-            cropping: true,
-            croppingAspectRatio: 1,
-            croppingShowDimensions: true
-          }}
-          onSuccess={handleUploadSuccess}
-          onUpload={handleUploadStart}
-          onError={handleUploadError}
-          className="h-full w-full flex items-center justify-center"
-        >
-          <div 
-            className="h-10 w-10 rounded-full bg-black/50 text-white hover:bg-black/70 flex items-center justify-center cursor-pointer disabled:opacity-50"
-            aria-disabled={isUploading}
-          >
-            {isUploading ? (
-              <Loader2 className="h-5 w-5 animate-spin" />
-            ) : (
-              <Camera className="h-5 w-5" />
-            )}
-            <span className="sr-only">Change profile picture</span>
+      {disabled ? (
+        <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/30 cursor-not-allowed">
+          <div className="h-10 w-10 rounded-full bg-black/50 text-white flex items-center justify-center">
+            <LockIcon className="h-4 w-4" />
+            <span className="sr-only">Profile image from Google</span>
           </div>
-        </CldUploadButton>
-      </div>
+        </div>
+      ) : (
+        <div 
+          className={`absolute inset-0 flex items-center justify-center rounded-full bg-black/50 transition-opacity duration-200 ${
+            isHovering || isUploading ? "opacity-100" : "opacity-0"
+          }`}
+        >
+          <CldUploadButton
+            options={{
+              maxFiles: 1,
+              resourceType: "image",
+              folder: folder,
+              clientAllowedFormats: ["png", "jpeg", "jpg", "webp"],
+              maxImageFileSize: 2000000, 
+              sources: ["local", "camera", "url"],
+              showUploadMoreButton: false,
+              singleUploadAutoClose: true,
+              cropping: true,
+              croppingAspectRatio: 1,
+              croppingShowDimensions: true
+            }}
+            onSuccess={handleUploadSuccess}
+            onUpload={handleUploadStart}
+            onError={handleUploadError}
+            className="h-full w-full flex items-center justify-center"
+            disabled={disabled}
+          >
+            <div 
+              className="h-10 w-10 rounded-full bg-black/50 text-white hover:bg-black/70 flex items-center justify-center cursor-pointer disabled:opacity-50"
+              aria-disabled={isUploading}
+            >
+              {isUploading ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : (
+                <Camera className="h-5 w-5" />
+              )}
+              <span className="sr-only">Change profile picture</span>
+            </div>
+          </CldUploadButton>
+        </div>
+      )}
     </div>
   )
 }

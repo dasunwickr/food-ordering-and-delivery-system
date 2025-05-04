@@ -309,8 +309,8 @@ export const userService = {
           } else if (location.x !== undefined && location.y !== undefined) {
             // Convert from {x, y} to {lat, lng} format
             return {
-              lat: Number(location.y), // y coordinate maps to latitude
-              lng: Number(location.x)  // x coordinate maps to longitude
+              lat: Number(location.y), 
+              lng: Number(location.x)  
             };
           }
         }
@@ -328,7 +328,7 @@ export const userService = {
       if (driver) {
         // The driver object may have these properties directly, or they might be nested
         const vehicleDetails: {type?: string, vehicleNumber?: string} = {};
-        const driverData = driver as any; // Type assertion to handle the dynamic properties
+        const driverData = driver as any; 
         
         if ('vehicleTypeId' in driverData && driverData.vehicleTypeId && typeof driverData.vehicleTypeId === 'string') {
           try {
@@ -449,7 +449,6 @@ export const userService = {
         setCookie('sessionId', sessionId, { maxAge: 30 * 24 * 60 * 60, path: '/' });
       }
 
-      // Fetch user profile for additional data but don't overwrite critical auth info
       try {
         const userResponse = await api.get(`${USER_URL}/users/email/${email}`);
         if (userResponse.data) {
@@ -483,33 +482,99 @@ export const userService = {
     try {
       const sessionId = localStorage.getItem('sessionId');
       
+      
+      const performLocalLogout = () => {
+        if (typeof window !== 'undefined') {
+          // Clear auth data from localStorage
+          localStorage.removeItem('authToken');
+          localStorage.removeItem('userId');
+          localStorage.removeItem('userType');
+          localStorage.removeItem('sessionId');
+          // Clear user profile data
+          localStorage.removeItem('userProfile');
+        }
+
+        // Clear cookies
+        document.cookie = 'authToken=; Max-Age=0; path=/;';
+        document.cookie = 'userId=; Max-Age=0; path=/;';
+        document.cookie = 'userType=; Max-Age=0; path=/;';
+        document.cookie = 'sessionId=; Max-Age=0; path=/;';
+        
+        console.log('Local logout completed successfully');
+      };
+      
+      // Try to invalidate the session on the backend
       if (sessionId) {
         try {
-          await api.post('/session-service/sessions/invalidate', { sessionId });
-          console.log('Session invalidated');
+          console.log('Attempting to invalidate session:', sessionId);
+          
+          // We'll use a timeout to ensure the logout doesn't hang for too long
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Session invalidation timed out')), 3000)
+          );
+          
+          try {
+            const authInvalidationPromise = api.post(`${AUTH_API}/auth/invalidate-session`, { 
+              sessionId,
+              sessionToken: sessionId,
+              token: localStorage.getItem('authToken')
+            });
+            
+            await Promise.race([authInvalidationPromise, timeoutPromise]);
+            console.log('Session invalidated via auth service');
+          } catch (authError) {
+            console.warn('Auth service invalidation failed, trying session service:', authError);
+            
+            try {
+              const sessionInvalidationPromise = api.post(`${API_URL}/session-service/invalidate/session`, { 
+                sessionId,
+                id: sessionId,
+                sessionToken: sessionId
+              });
+              
+              await Promise.race([sessionInvalidationPromise, timeoutPromise]);
+              console.log('Session invalidated via session service');
+            } catch (sessionError) {
+              console.warn('Session service invalidation failed:', sessionError);
+              
+              try {
+                const lastAttemptPromise = api.post(`${API_URL}/session-service/invalidate`, {
+                  session: sessionId
+                });
+                
+                await Promise.race([lastAttemptPromise, timeoutPromise]);
+                console.log('Session invalidated via direct endpoint');
+              } catch (lastError) {
+                console.error('All session invalidation attempts failed:', lastError);
+              }
+            }
+          }
         } catch (sessionError) {
           console.error('Error invalidating session:', sessionError);
-          // Continue with logout even if session invalidation fails
+          console.warn('Continuing with local logout despite session invalidation error');
         }
       }
-
+      
+      // Always perform local logout regardless of server-side session invalidation success
+      performLocalLogout();
+      
+    } catch (err) {
+      console.error('Error during logout:', err);
+      
+      // Make sure we still clear local data even if there's an error
       if (typeof window !== 'undefined') {
-        // Clear auth data from localStorage
         localStorage.removeItem('authToken');
         localStorage.removeItem('userId');
         localStorage.removeItem('userType');
         localStorage.removeItem('sessionId');
-        // Clear user profile data
         localStorage.removeItem('userProfile');
+        
+        // Clear cookies
+        document.cookie = 'authToken=; Max-Age=0; path=/;';
+        document.cookie = 'userId=; Max-Age=0; path=/;';
+        document.cookie = 'userType=; Max-Age=0; path=/;';
+        document.cookie = 'sessionId=; Max-Age=0; path=/;';
       }
-
-      // Clear cookies
-      document.cookie = 'authToken=; Max-Age=0; path=/;';
-      document.cookie = 'userId=; Max-Age=0; path=/;';
-      document.cookie = 'userType=; Max-Age=0; path=/;';
-      document.cookie = 'sessionId=; Max-Age=0; path=/;';
-    } catch (err) {
-      console.error('Error during logout:', err);
     }
   },
 
@@ -998,7 +1063,158 @@ export const userService = {
       // The server-side validation will catch any conflicts
       return false;
     }
-  }
+  },
+
+  // Handle Google OAuth login
+  googleLogin: async (googleUserData: any): Promise<any> => {
+    try {
+      const clientInfo = await getClientIdentifier();
+
+      // Create authentication payload for Google login
+      const authPayload = {
+        googleToken: googleUserData.accessToken,
+        googleId: googleUserData.googleId,
+        email: googleUserData.email,
+        device: clientInfo.userAgent,
+        ipAddress: clientInfo.ip
+      };
+
+      console.log('Google login request payload:', {
+        ...authPayload,
+        googleToken: '***hidden***',
+      });
+
+      // Use our dedicated Google auth endpoints
+      interface GoogleAuthResponse {
+        token?: string;
+        sessionToken?: string;
+        sessionId?: string;
+        userId: string;
+        userType?: string;
+      }
+      
+      const response = await api.post<GoogleAuthResponse>(`${AUTH_API}/auth/google/signin`, authPayload);
+      
+      console.log('Google auth response:', response.data);
+
+      const token = response.data.token || response.data.sessionToken;
+      const sessionId = response.data.sessionId;
+      const userId = response.data.userId;
+      const userType = response.data.userType?.toLowerCase();
+
+      if (!token || !userId) {
+        throw new Error('Invalid authentication response');
+      }
+
+      // Store in localStorage
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('authToken', token);
+        localStorage.setItem('userId', userId);
+        localStorage.setItem('authProvider', 'google'); // Mark as Google authentication
+        
+        if (userType) {
+          localStorage.setItem('userType', userType);
+        }
+        if (sessionId) {
+          localStorage.setItem('sessionId', sessionId);
+        }
+      }
+
+      // Set cookies
+      setCookie('authToken', token, { maxAge: 30 * 24 * 60 * 60, path: '/' });
+      setCookie('userId', userId, { maxAge: 30 * 24 * 60 * 60, path: '/' });
+      setCookie('authProvider', 'google', { maxAge: 30 * 24 * 60 * 60, path: '/' }); // Mark as Google authentication
+      
+      if (userType) {
+        setCookie('userType', userType, { maxAge: 30 * 24 * 60 * 60, path: '/' });
+      }
+      if (sessionId) {
+        setCookie('sessionId', sessionId, { maxAge: 30 * 24 * 60 * 60, path: '/' });
+      }
+
+      // Store user profile data
+      if (typeof window !== 'undefined') {
+        try {
+          const userResponse = await api.get(`${USER_URL}/users/email/${googleUserData.email}`);
+          if (userResponse.data) {
+            localStorage.setItem('userProfile', JSON.stringify(userResponse.data));
+          }
+        } catch (profileError) {
+          console.error('Error fetching Google user profile:', profileError);
+        }
+      }
+
+      return {
+        ...response.data,
+        userType
+      };
+    } catch (error: any) {
+      console.error('Google login failed:', error);
+      
+      if (error.message && error.message.includes('No account found')) {
+        throw error;
+      } else if (error.response?.status === 404) {
+        throw new Error('No account found with this Google email. Please sign up first.');
+      } else if (error.response?.status === 401) {
+        throw new Error('Authentication failed. Please try again.');
+      }
+      
+      throw error;
+    }
+  },
+
+  // Google OAuth registration (sign up)
+  registerWithGoogle: async (googleUserData: any, userType: 'customer' | 'restaurant' | 'driver', additionalProfile: Record<string, any> = {}): Promise<any> => {
+    try {
+      const clientInfo = await getClientIdentifier();
+      
+      // Create registration payload for Google signup
+      const registrationData = {
+        googleToken: googleUserData.accessToken,
+        googleId: googleUserData.googleId,
+        email: googleUserData.email,
+        userType: userType.toUpperCase(),
+        profile: {
+          firstName: googleUserData.firstName || additionalProfile.firstName,
+          lastName: googleUserData.lastName || additionalProfile.lastName,
+          profilePictureUrl: googleUserData.profilePictureUrl || additionalProfile.profilePictureUrl,
+          contactNumber: additionalProfile.phone || '',
+          ...additionalProfile
+        },
+        device: clientInfo.userAgent,
+        ipAddress: clientInfo.ip
+      };
+
+      console.log('Google registration payload:', {
+        ...registrationData,
+        googleToken: '***hidden***'
+      });
+
+      // Check if email already exists
+      try {
+        const emailCheckResponse = await api.get<{ exists: boolean }>(`${AUTH_API}/auth/email/${encodeURIComponent(googleUserData.email)}/exists`);
+        if (emailCheckResponse.data && emailCheckResponse.data.exists) {
+          // If email exists, we should sign in instead of registering
+          return userService.googleLogin(googleUserData);
+        }
+      } catch (checkError) {
+        console.warn('Error checking email existence:', checkError);
+        // Continue with registration attempt
+      }
+
+      // Send registration request to our dedicated endpoint
+      const response = await api.post(`${AUTH_API}/auth/google/signup`, registrationData);
+
+      return response.data;
+    } catch (error: any) {
+      console.error('Google registration error:', error);
+      if (error.response?.status === 409 || 
+          (error.message && (error.message.includes('already exists') || error.message.includes('already registered')))) {
+        throw new Error('This email is already registered. Please sign in instead.');
+      }
+      throw new Error(error.response?.data?.message || error.message || 'Google registration failed. Please try again.');
+    }
+  },
 };
 
 export default userService;
