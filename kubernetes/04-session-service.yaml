@@ -12,7 +12,7 @@ stringData:
   REDIS_PORT: "6379"
   SESSION_SECRET: "your-session-secret-here"
   MONGODB_URI: "mongodb+srv://username:password@your-atlas-cluster.mongodb.net/session-service?retryWrites=true&w=majority"
-  # Add other required environment variables for session service
+  
 ---
 apiVersion: apps/v1
 kind: Deployment
