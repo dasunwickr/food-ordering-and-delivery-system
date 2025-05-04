@@ -93,7 +93,7 @@ public class OrderService implements IOrderService {
                             item.getImage()
                     )).toList());
             order.setOrderTotal(orderTotal);
-            order.setDeliveryFee(5.0); // Example fixed delivery fee
+            order.setDeliveryFee(5.0); 
             order.setTotalAmount(orderTotal + 5.0);
             order.setPaymentType(request.getPaymentType());
             order.setOrderStatus(Order.OrderStatus.PENDING.toString());
@@ -145,17 +145,17 @@ public class OrderService implements IOrderService {
                 .bodyToMono(Void.class)
                 .doOnSuccess(result -> {
                     System.out.println("Successfully created delivery for order: " + orderId);
-                    updateOrderStatus(orderId, Order.OrderStatus.PENDING_DELIVERY.toString());
+                    updateOrderStatus(orderId, Order.OrderStatus.PENDING.toString());
                 })
                 .doOnError(error -> {
                     System.err.println("Failed to create delivery record: " + error.getMessage());
-                    updateOrderStatus(orderId, Order.OrderStatus.DELIVERY_ASSIGNMENT_FAILED.toString());
+                    updateOrderStatus(orderId, Order.OrderStatus.PENDING.toString());
                 })
                 .block();
         } catch (Exception e) {
             System.err.println("Failed to create delivery record: " + e.getMessage());
             e.printStackTrace();
-            updateOrderStatus(orderId, Order.OrderStatus.DELIVERY_ASSIGNMENT_FAILED.toString());
+            updateOrderStatus(orderId, Order.OrderStatus.PENDING.toString());
         }
     }
 
