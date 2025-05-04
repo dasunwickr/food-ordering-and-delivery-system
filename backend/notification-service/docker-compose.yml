@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  notification-service:
+    build: .
+    container_name: notification-service
+    ports:
+      - "${PORT}:${PORT}"
+    env_file:
+      - .env
+    environment:
+      # Ensures NODE_ENV is set properly inside container
+      - NODE_ENV=production
+    restart: unless-stopped

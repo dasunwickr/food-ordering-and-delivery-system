@@ -4,7 +4,6 @@ import { UserModel } from '../models/User';
 import { createSession } from '../utils/sessionClient';
 import { OtpModel } from '../models/Otp';
 import { sendEmail } from '../utils/email';
-import mongoose from 'mongoose';
 
 const USER_SERVICE_URL = process.env.USER_SERVICE_URL || 'http://user-service:8085/api/users';
 
@@ -31,26 +30,26 @@ export const registerUser = async (
   };
 
   try {
+    // Save in User Service
     const { data: createdUser } = await axios.post(USER_SERVICE_URL, fullUserData);
-    console.log('RegisterUser Created User:', createdUser); 
+    console.log('RegisterUser Created User:', createdUser); // Debugging log
 
-   
+    // Ensure userType and userId are saved in the local auth database
     const localUser = new UserModel({
-      _id: new mongoose.Types.ObjectId(createdUser.id),
       email,
       password: hashedPassword,
-      userType, 
-      userId: createdUser.id 
+      userType, // Save userType explicitly
+      userId: createdUser.id // Save userId explicitly
     });
 
     await localUser.save();
-    console.log('Local auth user created with userType and userId:', localUser.userId);
+    console.log('Local auth user created with userType and userId:', localUser._id);
 
     return { 
-      userId: createdUser.userId
+      userId: createdUser.id
     };
   } catch (userServiceError: any) {
-    console.error('RegisterUser Error:', userServiceError); 
+    console.error('RegisterUser Error:', userServiceError); // Debugging log
 
     // Specific error handling for debugging
     if (userServiceError.response) {
@@ -86,17 +85,18 @@ export const loginUser = async (
   // Create a session for the user
   try {
     const sessionResult = await createSession(user._id.toString(), ipAddress, device);
-    console.log('LoginUser Session Result:', sessionResult); 
+    console.log('LoginUser Session Result:', sessionResult); // Debugging log
     
-    // Fix: Ensure userType is treated as string (TypeScript will now know it's not undefined)
+    
     return { 
       userId: user._id.toString(),
       sessionId: sessionResult.sessionId, 
       sessionToken: sessionResult.token,
-      userType: user.userType as string // Type assertion to fix TypeScript error
+      userType: user.userType as string 
+
     };
   } catch (error: any) {
-    console.error('LoginUser Error:', error); 
+    console.error('LoginUser Error:', error); // Debugging log
     throw new Error('Failed to create session');
   }
 };

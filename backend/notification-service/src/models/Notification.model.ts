@@ -19,7 +19,7 @@ const NotificationSchema = new Schema<INotification>({
   message: { type: String, required: true },
   phoneNumber: { type: String, required: true },
   email: { type: String, required: true },
-  userId: { type: String, required: true },
+  userId: { type: String },
   orderId: { type: String },
   deliveryId: { type: String },
   isSms: { type: Boolean, default: false },
